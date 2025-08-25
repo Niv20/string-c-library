@@ -41,6 +41,58 @@ const char* list_error_string(ListResult result) {
     }
 }
 
+
+/*
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃                                               ┃
+┃                  Create List                  ┃
+┃                                               ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+ */
+
+/**
+ * @brief Creates and initializes a new linked list (pointer-based by default).
+ * @param element_size The size of each element in bytes.
+ * @return A pointer to the newly created LinkedList, or NULL on failure.
+ */
+LinkedList* list_create(size_t element_size) {
+
+    LinkedList* list = (LinkedList*)malloc(sizeof(LinkedList));
+    if (!list) return NULL;
+
+    // Initialize all fields with default values
+    list->head = NULL;
+    list->tail = NULL;
+    list->length = 0;
+    list->element_size = element_size;
+    list->max_size = 0;                     // Unlimited by default
+    list->allow_overwrite = false;          // No overwrite by default
+    list->print_node_function = NULL;       // User must set if needed
+    list->compare_node_function = NULL;     // User must set if needed
+    list->free_node_function = NULL;        // User must set if needed
+    list->copy_node_function = NULL;        // User must set if needed
+
+    // Create dummy nodes
+    list->head = (Node*)calloc(1, sizeof(Node));
+    if (!list->head) {
+        free(list);
+        return NULL;
+    }
+    list->tail = (Node*)calloc(1, sizeof(Node));
+    if (!list->tail) {
+        free(list->head);
+        free(list);
+        return NULL;
+    }
+
+    // Link dummy nodes
+    list->head->next = list->tail;
+    list->tail->prev = list->head;
+    
+    return list;
+}
+
+
 /*
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃                                               ┃
@@ -138,60 +190,6 @@ void list_set_copy_function(LinkedList* list, CopyFunction copy_fn) {
     if (list)
         list->copy_node_function = copy_fn;
 }
-
-
-
-
-/*
-┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃                                               ┃
-┃                  Create List                  ┃
-┃                                               ┃
-┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
- */
-
-/**
- * @brief Creates and initializes a new linked list (pointer-based by default).
- * @param element_size The size of each element in bytes.
- * @return A pointer to the newly created LinkedList, or NULL on failure.
- */
-LinkedList* list_create(size_t element_size) {
-
-    LinkedList* list = (LinkedList*)malloc(sizeof(LinkedList));
-    if (!list) return NULL;
-
-    // Initialize all fields with default values
-    list->head = NULL;
-    list->tail = NULL;
-    list->length = 0;
-    list->element_size = element_size;
-    list->max_size = 0;                     // Unlimited by default
-    list->allow_overwrite = false;          // No overwrite by default
-    list->print_node_function = NULL;       // User must set if needed
-    list->compare_node_function = NULL;     // User must set if needed
-    list->free_node_function = NULL;        // User must set if needed
-    list->copy_node_function = NULL;        // User must set if needed
-
-    // Create dummy nodes
-    list->head = (Node*)calloc(1, sizeof(Node));
-    if (!list->head) {
-        free(list);
-        return NULL;
-    }
-    list->tail = (Node*)calloc(1, sizeof(Node));
-    if (!list->tail) {
-        free(list->head);
-        free(list);
-        return NULL;
-    }
-
-    // Link dummy nodes
-    list->head->next = list->tail;
-    list->tail->prev = list->head;
-    
-    return list;
-}
-
 
 
 /*
@@ -1403,11 +1401,17 @@ LinkedList* list_load_from_file(const char* filename, size_t element_size,
         return NULL;
     }
     
-    LinkedList* list = list_create_value_based(element_size, print_fn, compare_fn, free_fn, copy_fn);
+    LinkedList* list = list_create(element_size);
     if (!list) {
         fclose(file);
         return NULL;
     }
+    
+    // Set the function pointers if provided
+    if (print_fn) list_set_print_function(list, print_fn);
+    if (compare_fn) list_set_compare_function(list, compare_fn);
+    if (free_fn) list_set_free_function(list, free_fn);
+    if (copy_fn) list_set_copy_function(list, copy_fn);
     
     // Read elements
     for (size_t i = 0; i < saved_length; i++) {
@@ -1759,7 +1763,13 @@ int compare_int(const void* a, const void* b) {
  * @return A new LinkedList configured for integers, or NULL on failure.
  */
 LinkedList* list_create_int(void) {
-    return list_create_value_based(sizeof(int), print_int, compare_int, NULL, NULL);
+    LinkedList* list = list_create(sizeof(int));
+    if (!list) return NULL;
+    
+    list_set_print_function(list, print_int);
+    list_set_compare_function(list, compare_int);
+    
+    return list;
 }
 
 // Double helpers  
@@ -1788,7 +1798,13 @@ int compare_double(const void* a, const void* b) {
  * @return A new LinkedList configured for doubles, or NULL on failure.
  */
 LinkedList* list_create_double(void) {
-    return list_create_value_based(sizeof(double), print_double, compare_double, NULL, NULL);
+    LinkedList* list = list_create(sizeof(double));
+    if (!list) return NULL;
+    
+    list_set_print_function(list, print_double);
+    list_set_compare_function(list, compare_double);
+    
+    return list;
 }
 
 // Character helpers
@@ -1817,7 +1833,13 @@ int compare_char(const void* a, const void* b) {
  * @return A new LinkedList configured for characters, or NULL on failure.
  */
 LinkedList* list_create_char(void) {
-    return list_create_value_based(sizeof(char), print_char, compare_char, NULL, NULL);
+    LinkedList* list = list_create(sizeof(char));
+    if (!list) return NULL;
+    
+    list_set_print_function(list, print_char);
+    list_set_compare_function(list, compare_char);
+    
+    return list;
 }
 
 // String helpers (char*)
@@ -1861,60 +1883,13 @@ void copy_string_builtin(void* dest, const void* src) {
  * @return A new LinkedList configured for strings, or NULL on failure.
  */
 LinkedList* list_create_string(void) {
-    return list_create_value_based(sizeof(char*), print_string_builtin, compare_string_builtin, 
-                                  free_string_builtin, copy_string_builtin);
-}
-
-/*
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-     Specialized Creation Functions         
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- */
-
-/**
- * @brief Creates a value-based linked list (stores copies of data).
- * @param element_size The size of the data type that will be stored in the list.
- * @param print_fn Optional function pointer for printing elements.
- * @param compare_fn Optional function pointer for comparing elements.
- * @param free_fn Optional function pointer for freeing complex elements.
- * @param copy_fn Optional function pointer for deep copying complex elements.
- * @return A pointer to the newly created LinkedList, or NULL on failure.
- */
-LinkedList* list_create_value_based(size_t element_size, PrintFunction print_fn,
-                                   CompareFunction compare_fn, FreeFunction free_fn, CopyFunction copy_fn) {
-    
-    LinkedList* list = (LinkedList*)malloc(sizeof(LinkedList));
+    LinkedList* list = list_create(sizeof(char*));
     if (!list) return NULL;
-
-    // Initialize all fields
-    list->head = NULL;
-    list->tail = NULL;
-    list->length = 0;
-    list->element_size = element_size;
-    list->max_size = 0;
-    list->allow_overwrite = false;
-    list->print_node_function = print_fn;
-    list->compare_node_function = compare_fn;
-    list->free_node_function = free_fn;
-    list->copy_node_function = copy_fn;
-
-    // Create dummy nodes
-    list->head = (Node*)calloc(1, sizeof(Node));
-    if (!list->head) {
-        free(list);
-        return NULL;
-    }
-    list->tail = (Node*)calloc(1, sizeof(Node));
-    if (!list->tail) {
-        free(list->head);
-        free(list);
-        return NULL;
-    }
-
-    // Link dummy nodes
-    list->head->next = list->tail;
-    list->tail->prev = list->head;
+    
+    list_set_print_function(list, print_string_builtin);
+    list_set_compare_function(list, compare_string_builtin);
+    list_set_free_function(list, free_string_builtin);
+    list_set_copy_function(list, copy_string_builtin);
     
     return list;
 }
-

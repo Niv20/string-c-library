@@ -134,8 +134,6 @@ const char* list_error_string(ListResult result);
 
 // --- Lifecycle Functions ---
 LinkedList* list_create(size_t element_size);
-LinkedList* list_create_value_based(size_t element_size, PrintFunction print_fn,
-                                   CompareFunction compare_fn, FreeFunction free_fn, CopyFunction copy_fn);
 void list_destroy(LinkedList* list);
 
 // --- Insertion Functions ---
