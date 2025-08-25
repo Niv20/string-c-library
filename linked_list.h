@@ -17,9 +17,13 @@
 
 #define UNLIMITED 100
 
-typedef enum {
-    FALSE, TRUE
-} bool;
+typedef enum { FALSE, TRUE } bool;
+
+// Constants for advanced delete operations
+#define DELETE_ALL_OCCURRENCES -1
+#define SEARCH_FROM_HEAD 0
+#define SEARCH_FROM_TAIL 1
+
 
 // --- Error Codes ---
 
@@ -92,6 +96,13 @@ typedef void (*MapFunction)(void* dest, const void* src);
 typedef void (*AggregateFunction)(void* accumulator, const void* current);
 
 /**
+ * @brief A function pointer type for performing an action on each element.
+ * @param data Pointer to the element's data.
+ * @param index The current index in the list (0-based).
+ */
+typedef void (*ForEachFunction)(void* data, size_t index);
+
+/**
  * @brief Internal structure representing a node in the linked list.
  * @note Users of the library should not manipulate this structure directly.
  */
@@ -122,17 +133,13 @@ typedef struct LinkedList {
 
 
 // --- Setters for LinkedList fields ---
-void list_set_element_size(LinkedList* list, size_t element_size);
 void list_set_print_function(LinkedList* list, PrintFunction print_fn);
 void list_set_compare_function(LinkedList* list, CompareFunction compare_fn);
 void list_set_free_function(LinkedList* list, FreeFunction free_fn);
 void list_set_copy_function(LinkedList* list, CopyFunction copy_fn);
-void list_set_storage_mode(LinkedList* list, bool stores_pointers, bool owns_data);
 
 // --- Size and Overwrite Management ---
 ListResult list_set_max_size(LinkedList* list, size_t max_size, bool allow_overwrite);
-size_t list_get_max_size(const LinkedList* list);
-bool list_allows_overwrite(const LinkedList* list);
 
 // --- Error Handling ---
 const char* list_error_string(ListResult result);
@@ -144,21 +151,18 @@ void list_destroy(LinkedList* list);
 // --- Insertion Functions ---
 ListResult list_insert_at_head(LinkedList* list, void* data);
 ListResult list_insert_at_tail(LinkedList* list, void* data);
-ListResult list_append(LinkedList* list, void* data);
 ListResult list_insert_at_index(LinkedList* list, size_t index, void* data);
 
 // --- Deletion Functions ---
 ListResult list_delete_from_head(LinkedList* list);
 ListResult list_delete_from_tail(LinkedList* list);
-ListResult list_pop(LinkedList* list, int index, void* out_data);
-ListResult list_remove(LinkedList* list, void* data);
+ListResult list_remove_advanced(LinkedList* list, void* data, int count, int direction);
 void list_clear(LinkedList* list);
 
 // --- Utility Functions ---
 size_t list_get_length(const LinkedList* list);
 bool list_is_empty(const LinkedList* list);
 void list_print(const LinkedList* list);
-void list_print_reverse(const LinkedList* list);
 
 // Iterator functions for doubly-linked traversal
 Node* list_begin(const LinkedList* list);
@@ -185,6 +189,10 @@ ListResult list_min(const LinkedList* list, void* out_min);
 ListResult list_max(const LinkedList* list, void* out_max);
 ListResult list_sum(const LinkedList* list, void* out_sum);
 LinkedList* list_filter(const LinkedList* list, FilterFunction filter_fn);
+
+// --- Iteration Functions ---
+void list_for_each(const LinkedList* list, ForEachFunction action);
+void list_for_each_reverse(const LinkedList* list, ForEachFunction action);
 
 // --- Transformation Functions ---
 LinkedList* list_map(const LinkedList* list, MapFunction map_fn, size_t new_element_size);

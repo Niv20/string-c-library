@@ -13,10 +13,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+
 // Function only for internal use
 static ListResult handle_size_limit(LinkedList*);
 static Node* create_node_with_data(LinkedList*, void*);
-static ListResult insert_node_common(LinkedList*, void*, Node**);
+static ListResult insert_node_core(LinkedList*, void*, Node**);  // Core insertion helper
+static ListResult delete_node_core(LinkedList*, Node*);          // Core deletion helper
 
 /*
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
@@ -221,8 +223,8 @@ static Node* create_node_with_data(LinkedList* list, void* data) {
     return new_node;
 }
 
-// INTERNAL HELPER FUNCTION for insertion logic
-static ListResult insert_node_common(LinkedList* list, void* data, Node** out_new_node) {
+// INTERNAL CORE HELPER FUNCTION for insertion logic
+static ListResult insert_node_core(LinkedList* list, void* data, Node** out_new_node) {
     
     // Input validation
     if (!list || !data) return LIST_ERROR_NULL_POINTER;
@@ -248,7 +250,7 @@ static ListResult insert_node_common(LinkedList* list, void* data, Node** out_ne
 ListResult list_insert_at_head(LinkedList* list, void* data) {
     
     Node* new_node;
-    ListResult result = insert_node_common(list, data, &new_node);
+    ListResult result = insert_node_core(list, data, &new_node);
     if (result != LIST_SUCCESS) return result;
 
     // Link the new node at the head
@@ -271,7 +273,7 @@ ListResult list_insert_at_head(LinkedList* list, void* data) {
 ListResult list_insert_at_tail(LinkedList* list, void* data) {
     
     Node* new_node;
-    ListResult result = insert_node_common(list, data, &new_node);
+    ListResult result = insert_node_core(list, data, &new_node);
     if (result != LIST_SUCCESS) return result;
 
     // Link the new node at the tail
@@ -295,7 +297,7 @@ ListResult list_insert_at_tail(LinkedList* list, void* data) {
 ListResult list_insert_at_index(LinkedList* list, size_t index, void* data) {
 
     Node* new_node;
-    ListResult result = insert_node_common(list, data, &new_node);
+    ListResult result = insert_node_core(list, data, &new_node);
     if (result != LIST_SUCCESS) return result;
     
     Node* current;
@@ -333,6 +335,34 @@ ListResult list_insert_at_index(LinkedList* list, size_t index, void* data) {
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
  */
 
+// INTERNAL CORE HELPER FUNCTION for deletion logic
+static ListResult delete_node_core(LinkedList* list, Node* node_to_delete) {
+    
+    if (!list || !node_to_delete) return LIST_ERROR_NULL_POINTER;
+    if (node_to_delete == list->head || node_to_delete == list->tail) {
+        return LIST_ERROR_INVALID_OPERATION; // Cannot delete dummy nodes
+    }
+
+    // Re-link the list around the node
+    Node* prev_node = node_to_delete->prev;
+    Node* next_node = node_to_delete->next;
+    prev_node->next = next_node;
+    next_node->prev = prev_node;
+    
+    // Free the data using free function if provided
+    if (list->free_node_function) {
+        list->free_node_function(node_to_delete->data);
+    } else {
+        free(node_to_delete->data);
+    }
+
+    // Free the node itself
+    free(node_to_delete);
+    
+    list->length--;
+    return LIST_SUCCESS;
+}
+
 /**
  * @brief Deletes the element at the head of the list.
  * @param list The list to delete from.
@@ -343,26 +373,8 @@ ListResult list_delete_from_head(LinkedList* list) {
     if (!list) return LIST_ERROR_NULL_POINTER;
     if (list_is_empty(list)) return LIST_ERROR_INVALID_OPERATION;
 
-    // Identify the node to delete (always dummy nodes)
-    Node* node_to_delete = list->head->next;
-
-    // Re-link the list
-    Node* prev_node = node_to_delete->prev;
-    Node* next_node = node_to_delete->next;
-    
-    prev_node->next = next_node;
-    next_node->prev = prev_node;
-    
-    // Free the data using free function if provided
-    if (list->free_node_function) {
-        list->free_node_function(node_to_delete->data);
-    }
-    
-    free(node_to_delete->data);
-    free(node_to_delete);
-    
-    list->length--;
-    return LIST_SUCCESS;
+    // Use common deletion logic
+    return delete_node_core(list, list->head->next);
 }
 
 
@@ -372,107 +384,92 @@ ListResult list_delete_from_head(LinkedList* list) {
  * @return LIST_SUCCESS on success, error code if the list is empty.
  */
 ListResult list_delete_from_tail(LinkedList* list) {
+    
     if (!list) return LIST_ERROR_NULL_POINTER;
     if (list_is_empty(list)) return LIST_ERROR_INVALID_OPERATION;
 
-    // Identify the node to delete (always dummy nodes)
-    Node* node_to_delete = list->tail->prev;
-    
-    // Re-link the list
-    Node* prev_node = node_to_delete->prev;
-    Node* next_node = node_to_delete->next;
-    
-    prev_node->next = next_node;
-    next_node->prev = prev_node;
-    
-    // Free the data using free function if provided
-    if (list->free_node_function) {
-        list->free_node_function(node_to_delete->data);
-    }
-    
-    free(node_to_delete->data);
-    free(node_to_delete);
-    
-    list->length--;
-    return LIST_SUCCESS;
+    // Use common deletion logic
+    return delete_node_core(list, list->tail->prev);
 }
 
 /**
- * @brief Removes and returns the element at the given index (like Python's pop).
- * @param list The list to pop from.
- * @param index The index to pop (if -1 or list->length, pops last element).
- * @param out_data Buffer to store the popped data (optional).
+ * @brief Deletes an element at a specific index.
+ * @param list The list to delete from.
+ * @param index The index to delete at (0-based).
  * @return LIST_SUCCESS on success, error code on failure.
  */
-ListResult list_pop(LinkedList* list, int index, void* out_data) {
+ListResult list_delete_at_index(LinkedList* list, size_t index) {
+    
     if (!list) return LIST_ERROR_NULL_POINTER;
     if (list_is_empty(list)) return LIST_ERROR_INVALID_OPERATION;
+    if (index < 0 || index >= list->length) return LIST_ERROR_INDEX_OUT_OF_BOUNDS;
     
-    size_t actual_index;
-    if (index < 0 || (size_t)index >= list->length) {
-        actual_index = list->length - 1; // Pop last element
+    Node* current;
+    
+    // Choose direction based on which half the index is in
+    if (index <= list->length / 2) {
+        // Index is in first half - traverse forward from head
+        current = list->head->next;
+        for (size_t i = 0; i < index; i++) {
+            current = current->next;
+        }
     } else {
-        actual_index = (size_t)index;
-    }
-    
-    // Find the node
-    Node* current = list->head->next;
-    for (size_t i = 0; i < actual_index; i++) {
-        current = current->next;
-    }
-    
-    // Copy data if requested
-    if (out_data) {
-        if (list->copy_node_function) {
-            list->copy_node_function(out_data, current->data);
-        } else {
-            memcpy(out_data, current->data, list->element_size);
+        // Index is in second half - traverse backward from tail
+        current = list->tail->prev;
+        for (size_t i = list->length - 1; i > index; i--) {
+            current = current->prev;
         }
     }
     
-    // Remove node
-    current->prev->next = current->next;
-    current->next->prev = current->prev;
-    
-    if (list->free_node_function) {
-        list->free_node_function(current->data);
-    }
-    free(current->data);
-    free(current);
-    
-    list->length--;
-    return LIST_SUCCESS;
+    // Use common deletion logic
+    return delete_node_core(list, current);
 }
 
+
 /**
- * @brief Removes the first occurrence of a value (like Python's remove).
+ * @brief Advanced removal function with multiple options.
  * @param list The list to remove from.
  * @param data The data to find and remove.
- * @return LIST_SUCCESS if found and removed, error code otherwise.
+ * @param count Number of occurrences to remove (DELETE_ALL_OCCURRENCES for all).
+ * @param direction SEARCH_FROM_HEAD or SEARCH_FROM_TAIL.
+ * @return LIST_SUCCESS if at least one element was removed, error code otherwise.
  */
-ListResult list_remove(LinkedList* list, void* data) {
+ListResult list_remove_advanced(LinkedList* list, void* data, int count, int direction) {
+    
     if (!list || !data) return LIST_ERROR_NULL_POINTER;
+    if (list_is_empty(list)) return LIST_ERROR_ELEMENT_NOT_FOUND;
     if (!list->compare_node_function) return LIST_ERROR_NO_COMPARE_FUNCTION;
     
-    Node* current = list->head->next;
-    while (current != list->tail) {
-        if (list->compare_node_function(current->data, data) == 0) {
-            // Found it, remove
-            current->prev->next = current->next;
-            current->next->prev = current->prev;
-            
-            if (list->free_node_function) {
-                list->free_node_function(current->data);
-            }
-            free(current->data);
-            free(current);
-            
-            list->length--;
-            return LIST_SUCCESS;
-        }
-        current = current->next;
+    int removed_count = 0;
+    Node* current;
+    Node* end_sentinel;
+    
+    // Set up traversal direction
+    if (direction == SEARCH_FROM_TAIL) {
+        current = list->tail->prev;
+        end_sentinel = list->head;
+    } else {
+        current = list->head->next;
+        end_sentinel = list->tail;
     }
-    return LIST_ERROR_ELEMENT_NOT_FOUND;
+    
+    // Traverse and remove matching elements
+    while (current != end_sentinel && (count == DELETE_ALL_OCCURRENCES || removed_count < count)) {
+        
+        Node* next_node = (direction == SEARCH_FROM_TAIL) ? current->prev : current->next;
+        
+        if (list->compare_node_function(current->data, data) == 0) {
+            // Found a match - remove it using common deletion logic
+            ListResult result = delete_node_core(list, current);
+            if (result == LIST_SUCCESS) {
+                removed_count++;
+            }
+        }
+        
+        current = next_node;
+    }
+    
+    return (removed_count > 0) ? LIST_SUCCESS : LIST_ERROR_ELEMENT_NOT_FOUND;
 }
 
 
@@ -484,57 +481,9 @@ void list_clear(LinkedList* list) {
     
     if (!list) return;
     
-    while (!list_is_empty(list)) {
+    while (!list_is_empty(list))
         list_delete_from_head(list);
-    }
 }
-
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-// Legacy Node function for removing all matching values
-void delete_all_matches(Node **head, int value_to_delete) {
-    Node *current = *head;
-    Node *next;
-
-    while (current) {
-        next = current->next;
-        if (*(int*)current->data == value_to_delete) {
-            if (current == *head) {
-                *head = current->next;
-            } else {
-                current->prev->next = current->next;
-            }
-            if (current->next) {
-                current->next->prev = current->prev;
-            }
-            free(current);
-        }
-        current = next;
-    }
-}
-
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-// Legacy Node function for efficient single match deletion
-bool efficient_delete_match(Node **head, int value) {
-    Node *current = *head;
-    
-    while (current) {
-        if (*(int*)current->data == value) {
-            if (current == *head) {
-                *head = current->next;
-            } else {
-                current->prev->next = current->next;
-            }
-            if (current->next) {
-                current->next->prev = current->prev;
-            }
-            free(current);
-            return TRUE;
-        }
-        current = current->next;
-    }
-    return FALSE;
-}
-
 
 /**
  * @brief Frees all memory associated with the list.
@@ -542,9 +491,10 @@ bool efficient_delete_match(Node **head, int value) {
  * @param list A pointer to the LinkedList to be destroyed.
  */
 void list_destroy(LinkedList* list) {
+    
     if (!list) return;
 
-    // Start from the first actual node (always dummy nodes now)
+    // Start from the first actual node (pass dummy)
     Node* current = list->head->next;
     Node* end_sentinel = list->tail;
 
@@ -903,7 +853,7 @@ ListResult list_extend(LinkedList* list, const LinkedList* other) {
     
     Node* current = other->head->next;
     while (current != other->tail) {
-        ListResult result = list_append(list, current->data);
+        ListResult result = list_insert_at_tail(list, current->data);
         if (result != LIST_SUCCESS) {
             return result;
         }
@@ -1074,7 +1024,7 @@ LinkedList* list_filter(const LinkedList* list, FilterFunction filter_fn) {
     Node* current = list->head->next;
     while (current != list->tail) {
         if (filter_fn(current->data)) {
-            if (list_append(filtered, current->data) != LIST_SUCCESS) {
+            if (list_insert_at_tail(filtered, current->data) != LIST_SUCCESS) {
                 list_destroy(filtered);
                 return NULL;
             }
@@ -1083,6 +1033,50 @@ LinkedList* list_filter(const LinkedList* list, FilterFunction filter_fn) {
     }
     
     return filtered;
+}
+
+/*
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃                                               ┃
+┃              Iteration Functions              ┃
+┃                                               ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+ */
+
+/**
+ * @brief Applies a function to each element in the list (forward iteration).
+ * @param list The list to iterate over.
+ * @param action Function to call on each element.
+ */
+void list_for_each(const LinkedList* list, ForEachFunction action) {
+    if (!list || !action) return;
+    
+    Node* current = list->head->next;
+    size_t index = 0;
+    
+    while (current != list->tail) {
+        action(current->data, index);
+        current = current->next;
+        index++;
+    }
+}
+
+/**
+ * @brief Applies a function to each element in the list (reverse iteration).
+ * @param list The list to iterate over.
+ * @param action Function to call on each element.
+ */
+void list_for_each_reverse(const LinkedList* list, ForEachFunction action) {
+    if (!list || !action) return;
+    
+    Node* current = list->tail->prev;
+    size_t index = list->length - 1;
+    
+    while (current != list->head) {
+        action(current->data, index);
+        current = current->prev;
+        index--;
+    }
 }
 
 /*
@@ -1120,7 +1114,7 @@ LinkedList* list_map(const LinkedList* list, MapFunction map_fn, size_t new_elem
         
         map_fn(transformed, current->data);
         
-        if (list_append(mapped, transformed) != LIST_SUCCESS) {
+        if (list_insert_at_tail(mapped, transformed) != LIST_SUCCESS) {
             free(transformed);
             list_destroy(mapped);
             return NULL;
@@ -1163,7 +1157,7 @@ LinkedList* list_slice(const LinkedList* list, size_t start, size_t end) {
     
     // Copy elements from start to end
     for (size_t i = start; i < end && current != list->tail; i++) {
-        if (list_append(sliced, current->data) != LIST_SUCCESS) {
+        if (list_insert_at_tail(sliced, current->data) != LIST_SUCCESS) {
             list_destroy(sliced);
             return NULL;
         }
@@ -1353,7 +1347,7 @@ LinkedList* list_load_from_file(const char* filename, size_t element_size,
             return NULL;
         }
         
-        if (list_append(list, element) != LIST_SUCCESS) {
+        if (list_insert_at_tail(list, element) != LIST_SUCCESS) {
             free(element);
             list_destroy(list);
             fclose(file);
@@ -1396,7 +1390,7 @@ LinkedList* list_unique(const LinkedList* list) {
     while (current != list->tail) {
         // Check if element already exists in unique list
         if (list_index(unique, current->data) == -1) {
-            if (list_append(unique, current->data) != LIST_SUCCESS) {
+            if (list_insert_at_tail(unique, current->data) != LIST_SUCCESS) {
                 list_destroy(unique);
                 return NULL;
             }
@@ -1431,7 +1425,7 @@ LinkedList* list_intersection(const LinkedList* list1, const LinkedList* list2) 
         // If element exists in both lists and not already in result
         if (list_index(list2, current->data) != -1 && 
             list_index(intersection, current->data) == -1) {
-            if (list_append(intersection, current->data) != LIST_SUCCESS) {
+            if (list_insert_at_tail(intersection, current->data) != LIST_SUCCESS) {
                 list_destroy(intersection);
                 return NULL;
             }
@@ -1460,7 +1454,7 @@ LinkedList* list_union(const LinkedList* list1, const LinkedList* list2) {
     Node* current = list2->head->next;
     while (current != list2->tail) {
         if (list_index(union_list, current->data) == -1) {
-            if (list_append(union_list, current->data) != LIST_SUCCESS) {
+            if (list_insert_at_tail(union_list, current->data) != LIST_SUCCESS) {
                 list_destroy(union_list);
                 return NULL;
             }
