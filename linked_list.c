@@ -102,17 +102,6 @@ LinkedList* list_create(size_t element_size) {
  */
 
 /**
- * @brief Sets the element size of the list.
- * @param list The list to configure.
- * @param element_size The size of elements in bytes.
- */
-void list_set_element_size(LinkedList* list, size_t element_size) {
-    if (list) {
-        list->element_size = element_size;
-    }
-}
-
-/**
  * @brief Sets the maximum size of the list and overwrite behavior.
  * @param list The list to configure.
  * @param max_size Maximum number of elements (0 = unlimited).
@@ -140,16 +129,6 @@ ListResult list_set_max_size(LinkedList* list, size_t max_size, bool allow_overw
     list->allow_overwrite = allow_overwrite;
     return LIST_SUCCESS;
 }
-
-/**
- * @brief Checks if the list allows overwriting when full.
- * @param list The list to query.
- * @return True if overwrite is allowed, false otherwise.
- */
-bool list_allows_overwrite(const LinkedList* list) {
-    return list ? list->allow_overwrite : false;
-}
-
 
 /**
  * @brief Sets the print function for the list.
