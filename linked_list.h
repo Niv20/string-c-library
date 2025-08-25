@@ -107,6 +107,8 @@ typedef struct LinkedList {
     size_t element_size;       /**< The size in bytes of the data type stored. */
     size_t max_size;           /**< Maximum number of elements (0 = unlimited). */
     bool allow_overwrite;      /**< Whether to overwrite oldest elements when full. */
+    bool stores_pointers;      /**< True if storing pointers (default), false if storing values directly. */
+    bool owns_data;            /**< Whether list should free pointed-to data when destroyed (only for pointer mode). */
 
     // --- User-provided helper functions ---
     PrintFunction print_function;   /**< Function to print an element. */
@@ -122,6 +124,7 @@ void list_set_print_function(LinkedList* list, PrintFunction print_fn);
 void list_set_compare_function(LinkedList* list, CompareFunction compare_fn);
 void list_set_free_function(LinkedList* list, FreeFunction free_fn);
 void list_set_copy_function(LinkedList* list, CopyFunction copy_fn);
+void list_set_storage_mode(LinkedList* list, bool stores_pointers, bool owns_data);
 
 // --- Size and Overwrite Management ---
 ListResult list_set_max_size(LinkedList* list, size_t max_size, bool allow_overwrite);
@@ -132,11 +135,12 @@ bool list_allows_overwrite(const LinkedList* list);
 const char* list_error_string(ListResult result);
 
 // --- Lifecycle Functions ---
-LinkedList* list_create(size_t element_size, PrintFunction print_fn,
-                        CompareFunction compare_fn, FreeFunction free_fn, CopyFunction copy_fn);
+LinkedList* list_create(void);
 LinkedList* list_create_with_limits(size_t element_size, size_t max_size, bool allow_overwrite,
                                    PrintFunction print_fn, CompareFunction compare_fn, 
                                    FreeFunction free_fn, CopyFunction copy_fn);
+LinkedList* list_create_value_based(size_t element_size, PrintFunction print_fn,
+                                   CompareFunction compare_fn, FreeFunction free_fn, CopyFunction copy_fn);
 void list_destroy(LinkedList* list);
 
 // --- Insertion Functions ---
@@ -227,33 +231,12 @@ LinkedList* list_create_char(void);
 LinkedList* list_create_string(void);
 
 // --- Standalone Node-based list functions ---
-void print_list(Node *head);
-Node *insert_at_head(Node *head, int new_value);
-Node *insert_at_tail(Node *head, int new_value);
-Node *delete_at_head(Node *head);
-Node *delete_at_tail(Node *head);
-int length(Node *head);
 int recursive_length(Node *node);
-bool is_member(Node *node, int find_value);
-int count_matches(Node *node, int find_value);
 void replace_matches(Node *node, int find_value, int replace_value);
-Node *delete_first_match(Node *head, int delete_value, bool *was_deleted);
 void delete_all_matches(Node **head, int value_to_delete);
 bool efficient_delete_match(Node **head, int value);
-Node *append_list(Node *head1, Node *head2);
-Node *reverse_list(Node *head);
-void sort_list(Node *head);
-void delete_duplicates(Node *head);
 bool insert_after(Node *node, int data);
-Node *delete_list(Node *node);
 Node* add_lists(Node *list1, Node *list2);
-Node *duplicate_list(Node *node);
 Node *merge_sorted_lists(Node *list1, Node *list2);
-
-// Additional useful functions
-Node *find_node(Node *head, int value);
-int get_nth_value(Node *head, int n);
-Node *insert_at_index(Node *head, int new_value, int index);
-Node *delete_at_index(Node *head, int index);
 
 #endif // LINKED_LIST_H
