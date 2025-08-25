@@ -16,6 +16,7 @@
 // Function only for internal use
 static ListResult handle_size_limit(LinkedList*);
 static Node* create_node_with_data(LinkedList*, void*);
+static ListResult insert_node_common(LinkedList*, void*, Node**);
 
 /*
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
@@ -220,13 +221,10 @@ static Node* create_node_with_data(LinkedList* list, void* data) {
     return new_node;
 }
 
-/**
- * @brief Inserts a new element at the head of the list.
- * @param list The list to insert into.
- * @param data A pointer to the data to be inserted. The data is copied into the list.
- * @return LIST_SUCCESS on success, error code on failure.
- */
-ListResult list_insert_at_head(LinkedList* list, void* data) {
+// INTERNAL HELPER FUNCTION for insertion logic
+static ListResult insert_node_common(LinkedList* list, void* data, Node** out_new_node) {
+    
+    // Input validation
     if (!list || !data) return LIST_ERROR_NULL_POINTER;
 
     // Check size limits before insertion
@@ -236,8 +234,24 @@ ListResult list_insert_at_head(LinkedList* list, void* data) {
     // Create new node with data
     Node* new_node = create_node_with_data(list, data);
     if (!new_node) return LIST_ERROR_MEMORY_ALLOC;
+    
+    *out_new_node = new_node;
+    return LIST_SUCCESS;
+}
 
-    // Link the new node into the list (always with dummy nodes)
+/**
+ * @brief Inserts a new element at the head of the list.
+ * @param list The list to insert into.
+ * @param data A pointer to the data to be inserted. The data is copied into the list.
+ * @return LIST_SUCCESS on success, error code on failure.
+ */
+ListResult list_insert_at_head(LinkedList* list, void* data) {
+    
+    Node* new_node;
+    ListResult result = insert_node_common(list, data, &new_node);
+    if (result != LIST_SUCCESS) return result;
+
+    // Link the new node at the head
     Node* old_first = list->head->next;
     list->head->next = new_node;
     new_node->prev = list->head;
@@ -255,17 +269,12 @@ ListResult list_insert_at_head(LinkedList* list, void* data) {
  * @return LIST_SUCCESS on success, error code on failure.
  */
 ListResult list_insert_at_tail(LinkedList* list, void* data) {
-    if (!list || !data) return LIST_ERROR_NULL_POINTER;
+    
+    Node* new_node;
+    ListResult result = insert_node_common(list, data, &new_node);
+    if (result != LIST_SUCCESS) return result;
 
-    // Check size limits before insertion
-    ListResult size_check = handle_size_limit(list);
-    if (size_check != LIST_SUCCESS) return size_check;
-
-    // Create new node with data
-    Node* new_node = create_node_with_data(list, data);
-    if (!new_node) return LIST_ERROR_MEMORY_ALLOC;
-
-    // Link the new node into the list (always with dummy nodes)
+    // Link the new node at the tail
     Node* old_last = list->tail->prev;
     list->tail->prev = new_node;
     new_node->next = list->tail;
@@ -284,19 +293,10 @@ ListResult list_insert_at_tail(LinkedList* list, void* data) {
  * @return LIST_SUCCESS on success, error code on failure.
  */
 ListResult list_insert_at_index(LinkedList* list, size_t index, void* data) {
-    
-    if (!list || !data) return LIST_ERROR_NULL_POINTER;
-    
-    if (index == 0) return list_insert_at_head(list, data);
-    if (index >= list->length) return list_insert_at_tail(list, data);
-    
-    // Check size limits before insertion
-    ListResult size_check = handle_size_limit(list);
-    if (size_check != LIST_SUCCESS) return size_check;
-    
-    // Create new node with data
-    Node* new_node = create_node_with_data(list, data);
-    if (!new_node) return LIST_ERROR_MEMORY_ALLOC;
+
+    Node* new_node;
+    ListResult result = insert_node_common(list, data, &new_node);
+    if (result != LIST_SUCCESS) return result;
     
     Node* current;
     
@@ -339,6 +339,7 @@ ListResult list_insert_at_index(LinkedList* list, size_t index, void* data) {
  * @return LIST_SUCCESS on success, error code if the list is empty.
  */
 ListResult list_delete_from_head(LinkedList* list) {
+
     if (!list) return LIST_ERROR_NULL_POINTER;
     if (list_is_empty(list)) return LIST_ERROR_INVALID_OPERATION;
 
