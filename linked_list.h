@@ -107,14 +107,12 @@ typedef struct LinkedList {
     size_t element_size;       /**< The size in bytes of the data type stored. */
     size_t max_size;           /**< Maximum number of elements (0 = unlimited). */
     bool allow_overwrite;      /**< Whether to overwrite oldest elements when full. */
-    bool stores_pointers;      /**< True if storing pointers (default), false if storing values directly. */
-    bool owns_data;            /**< Whether list should free pointed-to data when destroyed (only for pointer mode). */
 
     // --- User-provided helper functions ---
-    PrintFunction print_function;   /**< Function to print an element. */
-    CompareFunction compare_function; /**< Function to compare two elements. */
-    FreeFunction free_function;     /**< Function to free a complex element. */
-    CopyFunction copy_function;     /**< Function to deep copy a complex element. */
+    PrintFunction print_node_function;   /**< Function to print an element. */
+    CompareFunction compare_node_function; /**< Function to compare two elements. */
+    FreeFunction free_node_function;     /**< Function to free a complex element. */
+    CopyFunction copy_node_function;     /**< Function to deep copy a complex element. */
 } LinkedList;
 
 
@@ -135,10 +133,7 @@ bool list_allows_overwrite(const LinkedList* list);
 const char* list_error_string(ListResult result);
 
 // --- Lifecycle Functions ---
-LinkedList* list_create(void);
-LinkedList* list_create_with_limits(size_t element_size, size_t max_size, bool allow_overwrite,
-                                   PrintFunction print_fn, CompareFunction compare_fn, 
-                                   FreeFunction free_fn, CopyFunction copy_fn);
+LinkedList* list_create(size_t element_size);
 LinkedList* list_create_value_based(size_t element_size, PrintFunction print_fn,
                                    CompareFunction compare_fn, FreeFunction free_fn, CopyFunction copy_fn);
 void list_destroy(LinkedList* list);

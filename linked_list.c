@@ -90,15 +90,6 @@ ListResult list_set_max_size(LinkedList* list, size_t max_size, bool allow_overw
 }
 
 /**
- * @brief Gets the maximum size setting of the list.
- * @param list The list to query.
- * @return The maximum size (0 = unlimited).
- */
-size_t list_get_max_size(const LinkedList* list) {
-    return list ? list->max_size : 0;
-}
-
-/**
  * @brief Checks if the list allows overwriting when full.
  * @param list The list to query.
  * @return True if overwrite is allowed, false otherwise.
@@ -115,7 +106,7 @@ bool list_allows_overwrite(const LinkedList* list) {
  */
 void list_set_print_function(LinkedList* list, PrintFunction print_fn) {
     if (list)
-        list->print_function = print_fn;
+        list->print_node_function = print_fn;
 }
 
 /**
@@ -125,7 +116,7 @@ void list_set_print_function(LinkedList* list, PrintFunction print_fn) {
  */
 void list_set_compare_function(LinkedList* list, CompareFunction compare_fn) {
     if (list)
-        list->compare_function = compare_fn;
+        list->compare_node_function = compare_fn;
 }
 
 /**
@@ -135,7 +126,7 @@ void list_set_compare_function(LinkedList* list, CompareFunction compare_fn) {
  */
 void list_set_free_function(LinkedList* list, FreeFunction free_fn) {
     if (list)
-        list->free_function = free_fn;
+        list->free_node_function = free_fn;
 }
 
 /**
@@ -145,57 +136,41 @@ void list_set_free_function(LinkedList* list, FreeFunction free_fn) {
  */
 void list_set_copy_function(LinkedList* list, CopyFunction copy_fn) {
     if (list)
-        list->copy_function = copy_fn;
+        list->copy_node_function = copy_fn;
 }
 
-/**
- * @brief Sets the storage mode for the list.
- * @param list The list to configure.
- * @param stores_pointers True for pointer-based storage, false for value-based.
- * @param owns_data True if list should free pointed-to data (only relevant for pointer mode).
- */
-void list_set_storage_mode(LinkedList* list, bool stores_pointers, bool owns_data) {
-    if (list) {
-        list->stores_pointers = stores_pointers;
-        list->owns_data = owns_data;
-        // Adjust element size based on storage mode
-        if (stores_pointers) {
-            list->element_size = sizeof(void*);
-        }
-    }
-}
+
 
 
 /*
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃                                               ┃
-┃              Lifecycle Functions              ┃
+┃                  Create List                  ┃
 ┃                                               ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
  */
 
 /**
  * @brief Creates and initializes a new linked list (pointer-based by default).
- * All other settings can be configured using setter functions.
+ * @param element_size The size of each element in bytes.
  * @return A pointer to the newly created LinkedList, or NULL on failure.
  */
-LinkedList* list_create(void) {
+LinkedList* list_create(size_t element_size) {
+
     LinkedList* list = (LinkedList*)malloc(sizeof(LinkedList));
     if (!list) return NULL;
 
-    // Initialize all fields with default values (pointer-based)
+    // Initialize all fields with default values
     list->head = NULL;
     list->tail = NULL;
     list->length = 0;
-    list->element_size = sizeof(void*);  // Default for pointer storage
-    list->max_size = 0;                  // Unlimited by default
-    list->allow_overwrite = false;       // No overwrite by default
-    list->stores_pointers = true;        // Pointer-based by default
-    list->owns_data = true;              // Own data by default
-    list->print_function = NULL;         // User must set if needed
-    list->compare_function = NULL;       // User must set if needed
-    list->free_function = NULL;          // User must set if needed
-    list->copy_function = NULL;          // Not used in pointer mode
+    list->element_size = element_size;
+    list->max_size = 0;                     // Unlimited by default
+    list->allow_overwrite = false;          // No overwrite by default
+    list->print_node_function = NULL;       // User must set if needed
+    list->compare_node_function = NULL;     // User must set if needed
+    list->free_node_function = NULL;        // User must set if needed
+    list->copy_node_function = NULL;        // User must set if needed
 
     // Create dummy nodes
     list->head = (Node*)calloc(1, sizeof(Node));
@@ -217,58 +192,7 @@ LinkedList* list_create(void) {
     return list;
 }
 
-/**
- * @brief Creates and initializes a new linked list with size constraints.
- * @param element_size The size of the data type that will be stored in the list.
- * @param max_size Maximum number of elements (0 = unlimited).
- * @param allow_overwrite Whether to overwrite oldest elements when full.
- * @param print_fn Optional function pointer for printing elements.
- * @param compare_fn Optional function pointer for comparing elements.
- * @param free_fn Optional function pointer for freeing complex data types.
- * @param copy_fn Optional function pointer for deep copying complex data types.
- * @return A pointer to the newly created LinkedList, or NULL on failure.
- */
-LinkedList* list_create_with_limits(size_t element_size, size_t max_size, bool allow_overwrite,
-                                   PrintFunction print_fn, CompareFunction compare_fn, 
-                                   FreeFunction free_fn, CopyFunction copy_fn) {
-    
-    // Allocate memory for the list manager structure
-    LinkedList* list = (LinkedList*)malloc(sizeof(LinkedList));
-    if (!list) {
-        return NULL; // Allocation failed
-    }
 
-    // Initialize all fields
-    list->head = NULL;
-    list->tail = NULL;
-    list->length = 0;
-    list->element_size = element_size;
-    list->max_size = max_size;
-    list->allow_overwrite = allow_overwrite;
-    list->print_function = print_fn;
-    list->compare_function = compare_fn;
-    list->free_function = free_fn;
-    list->copy_function = copy_fn;
-
-    // Create dummy nodes
-    list->head = (Node*)calloc(1, sizeof(Node)); // Dummy head
-    if (!list->head) {
-        free(list);
-        return NULL;
-    }
-    list->tail = (Node*)calloc(1, sizeof(Node)); // Dummy tail
-    if (!list->tail) {
-        free(list->head);
-        free(list);
-        return NULL;
-    }
-
-    // Link dummy nodes
-    list->head->next = list->tail;
-    list->tail->prev = list->head;
-    
-    return list;
-}
 
 /*
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
@@ -305,28 +229,18 @@ static Node* create_node_with_data(LinkedList* list, void* data) {
     Node* new_node = (Node*)malloc(sizeof(Node));
     if (!new_node) return NULL;
 
-    if (list->stores_pointers) {
-        // Pointer-based mode: just store the pointer (no copying)
-        new_node->data = malloc(sizeof(void*));
-        if (!new_node->data) {
-            free(new_node);
-            return NULL;
-        }
-        *(void**)new_node->data = data; // Store the pointer itself
+    // Allocate memory for the data
+    new_node->data = malloc(list->element_size);
+    if (!new_node->data) {
+        free(new_node);
+        return NULL;
+    }
+    
+    // Copy the data using appropriate method
+    if (list->copy_node_function) {
+        list->copy_node_function(new_node->data, data);
     } else {
-        // Value-based mode: copy the data
-        new_node->data = malloc(list->element_size);
-        if (!new_node->data) {
-            free(new_node);
-            return NULL;
-        }
-        
-        // Copy the data using appropriate method
-        if (list->copy_function) {
-            list->copy_function(new_node->data, data);
-        } else {
-            memcpy(new_node->data, data, list->element_size);
-        }
+        memcpy(new_node->data, data, list->element_size);
     }
     
     // Initialize pointers
@@ -511,20 +425,9 @@ ListResult list_delete_from_head(LinkedList* list) {
     prev_node->next = next_node;
     next_node->prev = prev_node;
     
-    // Free the data appropriately based on mode
-    if (list->stores_pointers) {
-        // Pointer-based mode: free pointed-to data if we own it
-        if (list->owns_data && list->free_function) {
-            void* pointed_data = *(void**)node_to_delete->data;
-            if (pointed_data) {
-                list->free_function(pointed_data);
-            }
-        }
-    } else {
-        // Value-based mode: use free function if provided
-        if (list->free_function) {
-            list->free_function(node_to_delete->data);
-        }
+    // Free the data using free function if provided
+    if (list->free_node_function) {
+        list->free_node_function(node_to_delete->data);
     }
     
     free(node_to_delete->data);
@@ -554,20 +457,9 @@ ListResult list_delete_from_tail(LinkedList* list) {
     prev_node->next = next_node;
     next_node->prev = prev_node;
     
-    // Free the data appropriately based on mode
-    if (list->stores_pointers) {
-        // Pointer-based mode: free pointed-to data if we own it
-        if (list->owns_data && list->free_function) {
-            void* pointed_data = *(void**)node_to_delete->data;
-            if (pointed_data) {
-                list->free_function(pointed_data);
-            }
-        }
-    } else {
-        // Value-based mode: use free function if provided
-        if (list->free_function) {
-            list->free_function(node_to_delete->data);
-        }
+    // Free the data using free function if provided
+    if (list->free_node_function) {
+        list->free_node_function(node_to_delete->data);
     }
     
     free(node_to_delete->data);
@@ -603,8 +495,8 @@ ListResult list_pop(LinkedList* list, int index, void* out_data) {
     
     // Copy data if requested
     if (out_data) {
-        if (list->copy_function) {
-            list->copy_function(out_data, current->data);
+        if (list->copy_node_function) {
+            list->copy_node_function(out_data, current->data);
         } else {
             memcpy(out_data, current->data, list->element_size);
         }
@@ -614,8 +506,8 @@ ListResult list_pop(LinkedList* list, int index, void* out_data) {
     current->prev->next = current->next;
     current->next->prev = current->prev;
     
-    if (list->free_function) {
-        list->free_function(current->data);
+    if (list->free_node_function) {
+        list->free_node_function(current->data);
     }
     free(current->data);
     free(current);
@@ -632,17 +524,17 @@ ListResult list_pop(LinkedList* list, int index, void* out_data) {
  */
 ListResult list_remove(LinkedList* list, void* data) {
     if (!list || !data) return LIST_ERROR_NULL_POINTER;
-    if (!list->compare_function) return LIST_ERROR_NO_COMPARE_FUNCTION;
+    if (!list->compare_node_function) return LIST_ERROR_NO_COMPARE_FUNCTION;
     
     Node* current = list->head->next;
     while (current != list->tail) {
-        if (list->compare_function(current->data, data) == 0) {
+        if (list->compare_node_function(current->data, data) == 0) {
             // Found it, remove
             current->prev->next = current->next;
             current->next->prev = current->prev;
             
-            if (list->free_function) {
-                list->free_function(current->data);
+            if (list->free_node_function) {
+                list->free_node_function(current->data);
             }
             free(current->data);
             free(current);
@@ -733,8 +625,8 @@ void list_destroy(LinkedList* list) {
         Node* next = current->next;
         
         // If a custom free function is provided, use it to free the data
-        if (list->free_function) {
-            list->free_function(current->data);
+        if (list->free_node_function) {
+            list->free_node_function(current->data);
         }
         // Always free the data pointer itself and the node
         free(current->data);
@@ -786,7 +678,7 @@ void list_print(const LinkedList* list) {
         printf("List is NULL.\n");
         return;
     }
-    if (!list->print_function) {
+    if (!list->print_node_function) {
         printf("No print function provided for this list.\n");
         return;
     }
@@ -803,7 +695,7 @@ void list_print(const LinkedList* list) {
     int index = 0;
     while(current != end_sentinel) {
         printf("  [%d]: ", index++);
-        list->print_function(current->data);
+        list->print_node_function(current->data);
         printf("\n");
         current = current->next;
     }
@@ -891,16 +783,11 @@ ListResult list_get(const LinkedList* list, size_t index, void* out_data) {
         }
     }
     
-    if (list->stores_pointers) {
-        // Pointer-based mode: return the pointer itself
-        *(void**)out_data = *(void**)current->data;
+    // Copy the data using appropriate method
+    if (list->copy_node_function) {
+        list->copy_node_function(out_data, current->data);
     } else {
-        // Value-based mode: copy the data
-        if (list->copy_function) {
-            list->copy_function(out_data, current->data);
-        } else {
-            memcpy(out_data, current->data, list->element_size);
-        }
+        memcpy(out_data, current->data, list->element_size);
     }
     
     return LIST_SUCCESS;
@@ -935,27 +822,15 @@ ListResult list_set(LinkedList* list, size_t index, void* data) {
     }
     
     // Free old data if needed and update with new data
-    if (list->stores_pointers) {
-        // Pointer-based mode
-        if (list->owns_data && list->free_function) {
-            void* old_pointed_data = *(void**)current->data;
-            if (old_pointed_data) {
-                list->free_function(old_pointed_data);
-            }
-        }
-        // Store the new pointer
-        *(void**)current->data = data;
+    if (list->free_node_function) {
+        list->free_node_function(current->data);
+    }
+    
+    // Copy new data
+    if (list->copy_node_function) {
+        list->copy_node_function(current->data, data);
     } else {
-        // Value-based mode: free old data if needed
-        if (list->free_function) {
-            list->free_function(current->data);
-        }
-        // Copy new data
-        if (list->copy_function) {
-            list->copy_function(current->data, data);
-        } else {
-            memcpy(current->data, data, list->element_size);
-        }
+        memcpy(current->data, data, list->element_size);
     }
     
     return LIST_SUCCESS;
@@ -968,12 +843,12 @@ ListResult list_set(LinkedList* list, size_t index, void* data) {
  * @return The index if found, -1 if not found.
  */
 int list_index(const LinkedList* list, void* data) {
-    if (!list || !data || !list->compare_function) return -1;
+    if (!list || !data || !list->compare_node_function) return -1;
     
     Node* current = list->head->next;
     int index = 0;
     while (current != list->tail) {
-        if (list->compare_function(current->data, data) == 0) {
+        if (list->compare_node_function(current->data, data) == 0) {
             return index;
         }
         current = current->next;
@@ -989,12 +864,12 @@ int list_index(const LinkedList* list, void* data) {
  * @return The number of occurrences.
  */
 size_t list_count(const LinkedList* list, void* data) {
-    if (!list || !data || !list->compare_function) return 0;
+    if (!list || !data || !list->compare_node_function) return 0;
     
     size_t count = 0;
     Node* current = list->head->next;
     while (current != list->tail) {
-        if (list->compare_function(current->data, data) == 0) {
+        if (list->compare_node_function(current->data, data) == 0) {
             count++;
         }
         current = current->next;
@@ -1057,7 +932,7 @@ void list_reverse(LinkedList* list) {
  * @param reverse If true, sorts in descending order.
  */
 void list_sort(LinkedList* list, bool reverse_order) {
-    if (!list || !list->compare_function || list->length <= 1) return;
+    if (!list || !list->compare_node_function || list->length <= 1) return;
     
     // Simple bubble sort for now (can be optimized later)
     bool swapped;
@@ -1067,7 +942,7 @@ void list_sort(LinkedList* list, bool reverse_order) {
         
         while (current->next != list->tail) {
             Node* next_node = current->next;
-            int cmp = list->compare_function(current->data, next_node->data);
+            int cmp = list->compare_node_function(current->data, next_node->data);
             
             if ((reverse_order && cmp < 0) || (!reverse_order && cmp > 0)) {
                 // Swap data
@@ -1118,15 +993,14 @@ ListResult list_extend(LinkedList* list, const LinkedList* other) {
 LinkedList* list_copy(const LinkedList* list) {
     if (!list) return NULL;
     
-    LinkedList* new_list = list_create();
+    LinkedList* new_list = list_create(list->element_size);
     if (!new_list) return NULL;
     
     // Configure the new list with same settings as the original
-    list_set_element_size(new_list, list->element_size);
-    list_set_print_function(new_list, list->print_function);
-    list_set_compare_function(new_list, list->compare_function);
-    list_set_free_function(new_list, list->free_function);
-    list_set_copy_function(new_list, list->copy_function);
+    list_set_print_function(new_list, list->print_node_function);
+    list_set_compare_function(new_list, list->compare_node_function);
+    list_set_free_function(new_list, list->free_node_function);
+    list_set_copy_function(new_list, list->copy_node_function);
     
     if (!list_extend(new_list, list)) {
         list_destroy(new_list);
@@ -1152,14 +1026,14 @@ LinkedList* list_copy(const LinkedList* list) {
  */
 ListResult list_min(const LinkedList* list, void* out_min) {
     if (!list || !out_min) return LIST_ERROR_NULL_POINTER;
-    if (!list->compare_function) return LIST_ERROR_NO_COMPARE_FUNCTION;
+    if (!list->compare_node_function) return LIST_ERROR_NO_COMPARE_FUNCTION;
     if (list_is_empty(list)) return LIST_ERROR_INVALID_OPERATION;
     
     Node* current = list->head->next;
     
     // Initialize with first element
-    if (list->copy_function) {
-        list->copy_function(out_min, current->data);
+    if (list->copy_node_function) {
+        list->copy_node_function(out_min, current->data);
     } else {
         memcpy(out_min, current->data, list->element_size);
     }
@@ -1168,9 +1042,9 @@ ListResult list_min(const LinkedList* list, void* out_min) {
     
     // Compare with rest of elements
     while (current != list->tail) {
-        if (list->compare_function(current->data, out_min) < 0) {
-            if (list->copy_function) {
-                list->copy_function(out_min, current->data);
+        if (list->compare_node_function(current->data, out_min) < 0) {
+            if (list->copy_node_function) {
+                list->copy_node_function(out_min, current->data);
             } else {
                 memcpy(out_min, current->data, list->element_size);
             }
@@ -1189,14 +1063,14 @@ ListResult list_min(const LinkedList* list, void* out_min) {
  */
 ListResult list_max(const LinkedList* list, void* out_max) {
     if (!list || !out_max) return LIST_ERROR_NULL_POINTER;
-    if (!list->compare_function) return LIST_ERROR_NO_COMPARE_FUNCTION;
+    if (!list->compare_node_function) return LIST_ERROR_NO_COMPARE_FUNCTION;
     if (list_is_empty(list)) return LIST_ERROR_INVALID_OPERATION;
     
     Node* current = list->head->next;
     
     // Initialize with first element
-    if (list->copy_function) {
-        list->copy_function(out_max, current->data);
+    if (list->copy_node_function) {
+        list->copy_node_function(out_max, current->data);
     } else {
         memcpy(out_max, current->data, list->element_size);
     }
@@ -1205,9 +1079,9 @@ ListResult list_max(const LinkedList* list, void* out_max) {
     
     // Compare with rest of elements
     while (current != list->tail) {
-        if (list->compare_function(current->data, out_max) > 0) {
-            if (list->copy_function) {
-                list->copy_function(out_max, current->data);
+        if (list->compare_node_function(current->data, out_max) > 0) {
+            if (list->copy_node_function) {
+                list->copy_node_function(out_max, current->data);
             } else {
                 memcpy(out_max, current->data, list->element_size);
             }
@@ -1260,15 +1134,14 @@ ListResult list_sum(const LinkedList* list, void* out_sum) {
 LinkedList* list_filter(const LinkedList* list, FilterFunction filter_fn) {
     if (!list || !filter_fn) return NULL;
     
-    LinkedList* filtered = list_create();
+    LinkedList* filtered = list_create(list->element_size);
     if (!filtered) return NULL;
     
     // Configure the filtered list with same settings as the original
-    list_set_element_size(filtered, list->element_size);
-    list_set_print_function(filtered, list->print_function);
-    list_set_compare_function(filtered, list->compare_function);
-    list_set_free_function(filtered, list->free_function);
-    list_set_copy_function(filtered, list->copy_function);
+    list_set_print_function(filtered, list->print_node_function);
+    list_set_compare_function(filtered, list->compare_node_function);
+    list_set_free_function(filtered, list->free_node_function);
+    list_set_copy_function(filtered, list->copy_node_function);
     
     Node* current = list->head->next;
     while (current != list->tail) {
@@ -1302,13 +1175,12 @@ LinkedList* list_filter(const LinkedList* list, FilterFunction filter_fn) {
 LinkedList* list_map(const LinkedList* list, MapFunction map_fn, size_t new_element_size) {
     if (!list || !map_fn) return NULL;
     
-    LinkedList* mapped = list_create();
+    LinkedList* mapped = list_create(new_element_size);
     if (!mapped) return NULL;
     
-    // Configure the mapped list for new element size
-    list_set_element_size(mapped, new_element_size);
-    list_set_free_function(mapped, list->free_function);
-    list_set_copy_function(mapped, list->copy_function);
+    // Configure the mapped list
+    list_set_free_function(mapped, list->free_node_function);
+    list_set_copy_function(mapped, list->copy_node_function);
     
     Node* current = list->head->next;
     while (current != list->tail) {
@@ -1345,15 +1217,14 @@ LinkedList* list_slice(const LinkedList* list, size_t start, size_t end) {
     
     if (end > list->length) end = list->length;
     
-    LinkedList* sliced = list_create();
+    LinkedList* sliced = list_create(list->element_size);
     if (!sliced) return NULL;
     
     // Configure the sliced list with same settings as the original
-    list_set_element_size(sliced, list->element_size);
-    list_set_print_function(sliced, list->print_function);
-    list_set_compare_function(sliced, list->compare_function);
-    list_set_free_function(sliced, list->free_function);
-    list_set_copy_function(sliced, list->copy_function);
+    list_set_print_function(sliced, list->print_node_function);
+    list_set_compare_function(sliced, list->compare_node_function);
+    list_set_free_function(sliced, list->free_node_function);
+    list_set_copy_function(sliced, list->copy_node_function);
     
     Node* current = list->head->next;
     
@@ -1384,15 +1255,14 @@ LinkedList* list_concat(const LinkedList* list1, const LinkedList* list2) {
     if (!list1 || !list2) return NULL;
     if (list1->element_size != list2->element_size) return NULL;
     
-    LinkedList* concatenated = list_create();
+    LinkedList* concatenated = list_create(list1->element_size);
     if (!concatenated) return NULL;
     
     // Configure the concatenated list with settings from first list
-    list_set_element_size(concatenated, list1->element_size);
-    list_set_print_function(concatenated, list1->print_function);
-    list_set_compare_function(concatenated, list1->compare_function);
-    list_set_free_function(concatenated, list1->free_function);
-    list_set_copy_function(concatenated, list1->copy_function);
+    list_set_print_function(concatenated, list1->print_node_function);
+    list_set_compare_function(concatenated, list1->compare_node_function);
+    list_set_free_function(concatenated, list1->free_node_function);
+    list_set_copy_function(concatenated, list1->copy_node_function);
     
     // Copy all elements from first list
     if (list_extend(concatenated, list1) != LIST_SUCCESS) {
@@ -1426,7 +1296,7 @@ LinkedList* list_concat(const LinkedList* list1, const LinkedList* list2) {
  */
 char* list_to_string(const LinkedList* list, const char* separator) {
     if (!list || !separator) return NULL;
-    if (!list->print_function) return NULL;
+    if (!list->print_node_function) return NULL;
     if (list_is_empty(list)) {
         char* empty = malloc(1);
         if (empty) empty[0] = '\0';
@@ -1577,17 +1447,16 @@ LinkedList* list_load_from_file(const char* filename, size_t element_size,
  * @return A new list with unique elements, or NULL on failure.
  */
 LinkedList* list_unique(const LinkedList* list) {
-    if (!list || !list->compare_function) return NULL;
+    if (!list || !list->compare_node_function) return NULL;
     
-    LinkedList* unique = list_create();
+    LinkedList* unique = list_create(list->element_size);
     if (!unique) return NULL;
     
     // Configure the unique list with same settings as the original
-    list_set_element_size(unique, list->element_size);
-    list_set_print_function(unique, list->print_function);
-    list_set_compare_function(unique, list->compare_function);
-    list_set_free_function(unique, list->free_function);
-    list_set_copy_function(unique, list->copy_function);
+    list_set_print_function(unique, list->print_node_function);
+    list_set_compare_function(unique, list->compare_node_function);
+    list_set_free_function(unique, list->free_node_function);
+    list_set_copy_function(unique, list->copy_node_function);
     
     Node* current = list->head->next;
     while (current != list->tail) {
@@ -1611,18 +1480,17 @@ LinkedList* list_unique(const LinkedList* list) {
  * @return A new list with common elements, or NULL on failure.
  */
 LinkedList* list_intersection(const LinkedList* list1, const LinkedList* list2) {
-    if (!list1 || !list2 || !list1->compare_function) return NULL;
+    if (!list1 || !list2 || !list1->compare_node_function) return NULL;
     if (list1->element_size != list2->element_size) return NULL;
     
-    LinkedList* intersection = list_create();
+    LinkedList* intersection = list_create(list1->element_size);
     if (!intersection) return NULL;
     
     // Configure the intersection list with settings from first list
-    list_set_element_size(intersection, list1->element_size);
-    list_set_print_function(intersection, list1->print_function);
-    list_set_compare_function(intersection, list1->compare_function);
-    list_set_free_function(intersection, list1->free_function);
-    list_set_copy_function(intersection, list1->copy_function);
+    list_set_print_function(intersection, list1->print_node_function);
+    list_set_compare_function(intersection, list1->compare_node_function);
+    list_set_free_function(intersection, list1->free_node_function);
+    list_set_copy_function(intersection, list1->copy_node_function);
     
     Node* current = list1->head->next;
     while (current != list1->tail) {
@@ -1844,8 +1712,8 @@ void* list_to_array(const LinkedList* list, size_t* out_size) {
         void* dest = byte_array + (index * list->element_size);
         
         // Use custom copy function if available, otherwise memcpy
-        if (list->copy_function) {
-            list->copy_function(dest, current->data);
+        if (list->copy_node_function) {
+            list->copy_node_function(dest, current->data);
         } else {
             memcpy(dest, current->data, list->element_size);
         }
@@ -2018,19 +1886,17 @@ LinkedList* list_create_value_based(size_t element_size, PrintFunction print_fn,
     LinkedList* list = (LinkedList*)malloc(sizeof(LinkedList));
     if (!list) return NULL;
 
-    // Initialize all fields for value-based mode
+    // Initialize all fields
     list->head = NULL;
     list->tail = NULL;
     list->length = 0;
     list->element_size = element_size;
     list->max_size = 0;
     list->allow_overwrite = false;
-    list->stores_pointers = false;  // Value-based mode
-    list->owns_data = false;        // Not relevant for value mode
-    list->print_function = print_fn;
-    list->compare_function = compare_fn;
-    list->free_function = free_fn;
-    list->copy_function = copy_fn;
+    list->print_node_function = print_fn;
+    list->compare_node_function = compare_fn;
+    list->free_node_function = free_fn;
+    list->copy_node_function = copy_fn;
 
     // Create dummy nodes
     list->head = (Node*)calloc(1, sizeof(Node));
