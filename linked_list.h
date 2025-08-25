@@ -13,8 +13,13 @@
 #ifndef LINKED_LIST_H
 #define LINKED_LIST_H
 
-#include <stdbool.h>
 #include <stddef.h>
+
+#define UNLIMITED 100
+
+typedef enum {
+    FALSE, TRUE
+} bool;
 
 // --- Error Codes ---
 

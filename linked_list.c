@@ -13,6 +13,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+// Function only for internal use
+static ListResult handle_size_limit(LinkedList*);
+static Node* create_node_with_data(LinkedList*, void*);
+
 /*
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃                                               ┃
@@ -51,26 +55,15 @@ const char* list_error_string(ListResult result) {
  */
 
 /**
- * @brief Creates and initializes a new linked list (pointer-based by default).
+ * @brief Creates and initializes a new linked list. The data is pointer to structures.
  * @param element_size The size of each element in bytes.
  * @return A pointer to the newly created LinkedList, or NULL on failure.
  */
 LinkedList* list_create(size_t element_size) {
 
+    // Allocate memory for the list structure
     LinkedList* list = (LinkedList*)malloc(sizeof(LinkedList));
     if (!list) return NULL;
-
-    // Initialize all fields with default values
-    list->head = NULL;
-    list->tail = NULL;
-    list->length = 0;
-    list->element_size = element_size;
-    list->max_size = 0;                     // Unlimited by default
-    list->allow_overwrite = false;          // No overwrite by default
-    list->print_node_function = NULL;       // User must set if needed
-    list->compare_node_function = NULL;     // User must set if needed
-    list->free_node_function = NULL;        // User must set if needed
-    list->copy_node_function = NULL;        // User must set if needed
 
     // Create dummy nodes
     list->head = (Node*)calloc(1, sizeof(Node));
@@ -88,10 +81,19 @@ LinkedList* list_create(size_t element_size) {
     // Link dummy nodes
     list->head->next = list->tail;
     list->tail->prev = list->head;
-    
+
+    // Initialize all fields in the list with default values
+    list->length = 0;
+    list->element_size = element_size;
+    list->max_size = UNLIMITED;             // Unlimited by default
+    list->allow_overwrite = FALSE;          // No overwrite by default
+    list->print_node_function = NULL;      
+    list->compare_node_function = NULL;    
+    list->free_node_function = NULL;       
+    list->copy_node_function = NULL;       
+
     return list;
 }
-
 
 /*
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
@@ -100,35 +102,6 @@ LinkedList* list_create(size_t element_size) {
 ┃                                               ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
  */
-
-/**
- * @brief Sets the maximum size of the list and overwrite behavior.
- * @param list The list to configure.
- * @param max_size Maximum number of elements (0 = unlimited).
- * @param allow_overwrite Whether to overwrite oldest elements when full.
- * @return LIST_SUCCESS on success, error code on failure.
- */
-ListResult list_set_max_size(LinkedList* list, size_t max_size, bool allow_overwrite) {
-    
-    if (!list) return LIST_ERROR_NULL_POINTER;
-    
-    // If reducing max_size and current length exceeds new limit
-    if (max_size > 0 && list->length > max_size) {
-        if (!allow_overwrite) {
-            return LIST_ERROR_OVERWRITE_DISABLED;
-        }
-        
-        // Remove excess elements from the head (oldest in FIFO)
-        while (list->length > max_size) {
-            ListResult result = list_delete_from_head(list);
-            if (result != LIST_SUCCESS) return result;
-        }
-    }
-    
-    list->max_size = max_size;
-    list->allow_overwrite = allow_overwrite;
-    return LIST_SUCCESS;
-}
 
 /**
  * @brief Sets the print function for the list.
@@ -170,23 +143,39 @@ void list_set_copy_function(LinkedList* list, CopyFunction copy_fn) {
         list->copy_node_function = copy_fn;
 }
 
-
-/*
-┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃                                               ┃
-┃          Internal helper functions            ┃
-┃                                               ┃
-┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
- */ 
-
-static ListResult handle_size_limit(LinkedList* list) {
-    if (list->max_size == 0) return LIST_SUCCESS; // No limit
+/**
+ * @brief Sets the maximum size of the list and overwrite behavior.
+ * @param list The list to configure.
+ * @param max_size Maximum number of elements (0 = unlimited).
+ * @param allow_overwrite Whether to overwrite oldest elements when full.
+ * @return LIST_SUCCESS on success, error code on failure.
+ */
+ListResult list_set_max_size(LinkedList* list, size_t max_size, bool allow_overwrite) {
     
-    if (list->length >= list->max_size) {
-        if (!list->allow_overwrite) {
-            return LIST_ERROR_LIST_FULL;
-        }
-        
+    if (!list) return LIST_ERROR_NULL_POINTER;
+
+    if (max_size <= 0) return LIST_ERROR_INVALID_OPERATION;
+
+    // Update the list's configuration first
+    list->max_size = max_size;
+    list->allow_overwrite = allow_overwrite;
+
+    // Check if we need to remove excess elements due to new size limit
+    return handle_size_limit(list);
+}
+
+// INTERNAL HELPER FUNCTION for handling size limits
+static ListResult handle_size_limit(LinkedList* list) {
+
+    // If current length is within limits - no action needed
+    if (list->length < list->max_size) return LIST_SUCCESS;
+
+    // If we reach this point, the list is full, but overwrite is not allowed
+    if (!list->allow_overwrite) return LIST_ERROR_LIST_FULL;
+
+    // Handle any case where we need to remove elements to stay within limit
+    while (list->length >= list->max_size) {
+
         // Remove oldest element (from head) to make room for FIFO behavior
         ListResult result = list_delete_from_head(list);
         if (result != LIST_SUCCESS) return result;
@@ -195,13 +184,17 @@ static ListResult handle_size_limit(LinkedList* list) {
     return LIST_SUCCESS;
 }
 
-/**
- * @brief Creates a new node with data (internal helper function).
- * @param list The list (for element_size and copy_function).
- * @param data The data to copy into the new node.
- * @return Pointer to new node on success, NULL on failure.
+/*
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃                                               ┃
+┃           Insertion in Linked List            ┃
+┃                                               ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
  */
+
+// INTERNAL HELPER FUNCTION for creating a new node with data
 static Node* create_node_with_data(LinkedList* list, void* data) {
+    
     // Create a new node
     Node* new_node = (Node*)malloc(sizeof(Node));
     if (!new_node) return NULL;
@@ -226,15 +219,6 @@ static Node* create_node_with_data(LinkedList* list, void* data) {
     
     return new_node;
 }
-
-
-/*
-┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃                                               ┃
-┃           Insertion in Linked List            ┃
-┃                                               ┃
-┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
- */
 
 /**
  * @brief Inserts a new element at the head of the list.
@@ -293,16 +277,6 @@ ListResult list_insert_at_tail(LinkedList* list, void* data) {
 }
 
 /**
- * @brief Appends an element to the end of the list (like Python's append).
- * @param list The list to append to.
- * @param data The data to append.
- * @return LIST_SUCCESS on success, error code on failure.
- */
-ListResult list_append(LinkedList* list, void* data) {
-    return list_insert_at_tail(list, data);
-}
-
-/**
  * @brief Inserts an element at a specific index (like Python's insert).
  * @param list The list to insert into.
  * @param index The index to insert at (0-based).
@@ -310,10 +284,11 @@ ListResult list_append(LinkedList* list, void* data) {
  * @return LIST_SUCCESS on success, error code on failure.
  */
 ListResult list_insert_at_index(LinkedList* list, size_t index, void* data) {
+    
     if (!list || !data) return LIST_ERROR_NULL_POINTER;
     
     if (index == 0) return list_insert_at_head(list, data);
-    if (index >= list->length) return list_append(list, data);
+    if (index >= list->length) return list_insert_at_tail(list, data);
     
     // Check size limits before insertion
     ListResult size_check = handle_size_limit(list);
@@ -348,31 +323,6 @@ ListResult list_insert_at_index(LinkedList* list, size_t index, void* data) {
     
     list->length++;
     return LIST_SUCCESS;
-}
-
-// Legacy Node function for inserting after a specific node
-bool insert_after(Node *node, int data) {
-    if (!node) return false;
-    
-    Node *new_node = (Node*)malloc(sizeof(Node));
-    if (!new_node) return false;
-    
-    new_node->data = malloc(sizeof(int));
-    if (!new_node->data) {
-        free(new_node);
-        return false;
-    }
-    
-    *(int*)new_node->data = data;
-    new_node->next = node->next;
-    new_node->prev = node;
-    
-    if (node->next) {
-        node->next->prev = new_node;
-    }
-    node->next = new_node;
-    
-    return true;
 }
 
 /*
@@ -577,11 +527,11 @@ bool efficient_delete_match(Node **head, int value) {
                 current->next->prev = current->prev;
             }
             free(current);
-            return true;
+            return TRUE;
         }
         current = current->next;
     }
-    return false;
+    return FALSE;
 }
 
 
@@ -640,7 +590,7 @@ size_t list_get_length(const LinkedList* list) {
 /**
  * @brief Checks if the list is empty.
  * @param list The list to check.
- * @return True if the list is empty, false otherwise.
+ * @return TRUE if the list is empty, FALSE otherwise.
  */
 bool list_is_empty(const LinkedList* list) {
     return !list || list->length == 0;
@@ -906,7 +856,7 @@ void list_reverse(LinkedList* list) {
 /**
  * @brief Sorts the list in place (like Python's sort).
  * @param list The list to sort.
- * @param reverse If true, sorts in descending order.
+ * @param reverse If TRUE, sorts in descending order.
  */
 void list_sort(LinkedList* list, bool reverse_order) {
     if (!list || !list->compare_node_function || list->length <= 1) return;
@@ -914,7 +864,7 @@ void list_sort(LinkedList* list, bool reverse_order) {
     // Simple bubble sort for now (can be optimized later)
     bool swapped;
     do {
-        swapped = false;
+        swapped = FALSE;
         Node* current = list->head->next;
         
         while (current->next != list->tail) {
@@ -926,7 +876,7 @@ void list_sort(LinkedList* list, bool reverse_order) {
                 void* temp = current->data;
                 current->data = next_node->data;
                 next_node->data = temp;
-                swapped = true;
+                swapped = TRUE;
             }
             current = current->next;
         }
@@ -1287,7 +1237,7 @@ char* list_to_string(const LinkedList* list, const char* separator) {
     if (!result) return NULL;
     
     result[0] = '\0';
-    bool first = true;
+    bool first = TRUE;
     
     Node* current = list->head->next;
     while (current != list->tail) {
@@ -1313,7 +1263,7 @@ char* list_to_string(const LinkedList* list, const char* separator) {
             strcat(result, "[data]");
         }
         
-        first = false;
+        first = FALSE;
         current = current->next;
     }
     
