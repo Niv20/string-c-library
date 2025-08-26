@@ -39,7 +39,10 @@ typedef enum {
     LIST_ERROR_LIST_FULL,       /**< List has reached maximum capacity */
     LIST_ERROR_OVERWRITE_DISABLED,  /**< Overwrite is disabled and list is full */
     LIST_ERROR_INVALID_OPERATION,   /**< Invalid operation for current state */
-    LIST_ERROR_NO_COMPARE_FUNCTION  /**< Compare function required but not provided */
+    LIST_ERROR_NO_COMPARE_FUNCTION,  /**< Compare function required but not provided */
+    LIST_ERROR_NO_PRINT_FUNCTION,    /**< Print function required but not provided */
+    LIST_ERROR_NO_FREE_FUNCTION,     /**< Free function required but not provided */
+    LIST_ERROR_NO_COPY_FUNCTION      /**< Copy function required but not provided */
 } ListResult;
 
 // --- Type Definitions ---
@@ -162,13 +165,8 @@ void list_clear(LinkedList* list);
 // --- Utility Functions ---
 size_t list_get_length(const LinkedList* list);
 bool list_is_empty(const LinkedList* list);
-void list_print(const LinkedList* list);
-
-// Iterator functions for doubly-linked traversal
-Node* list_begin(const LinkedList* list);
-Node* list_rbegin(const LinkedList* list);
-Node* list_end(const LinkedList* list);
-Node* list_rend(const LinkedList* list);
+ListResult list_print(const LinkedList* list);
+ListResult list_print_advanced(const LinkedList* list, bool show_index, const char* separator);
 
 // --- Search and Access Functions ---
 ListResult list_get(const LinkedList* list, size_t index, void* out_data);
@@ -237,8 +235,6 @@ LinkedList* list_create_char(void);
 LinkedList* list_create_string(void);
 
 // --- Standalone Node-based list functions ---
-int recursive_length(Node *node);
-void replace_matches(Node *node, int find_value, int replace_value);
 void delete_all_matches(Node **head, int value_to_delete);
 bool efficient_delete_match(Node **head, int value);
 bool insert_after(Node *node, int data);

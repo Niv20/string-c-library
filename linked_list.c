@@ -44,6 +44,9 @@ const char* list_error_string(ListResult result) {
         case LIST_ERROR_OVERWRITE_DISABLED: return "Overwrite is disabled and list is full";
         case LIST_ERROR_INVALID_OPERATION: return "Invalid operation for current state";
         case LIST_ERROR_NO_COMPARE_FUNCTION: return "Compare function required but not provided";
+        case LIST_ERROR_NO_PRINT_FUNCTION: return "Print function required but not provided";
+        case LIST_ERROR_NO_FREE_FUNCTION: return "Free function required but not provided";
+        case LIST_ERROR_NO_COPY_FUNCTION: return "Copy function required but not provided";
         default: return "Unknown error";
     }
 }
@@ -373,7 +376,7 @@ ListResult list_delete_from_head(LinkedList* list) {
     if (!list) return LIST_ERROR_NULL_POINTER;
     if (list_is_empty(list)) return LIST_ERROR_INVALID_OPERATION;
 
-    // Use common deletion logic
+    // Use core deletion logic
     return delete_node_core(list, list->head->next);
 }
 
@@ -388,7 +391,7 @@ ListResult list_delete_from_tail(LinkedList* list) {
     if (!list) return LIST_ERROR_NULL_POINTER;
     if (list_is_empty(list)) return LIST_ERROR_INVALID_OPERATION;
 
-    // Use common deletion logic
+    // Use core deletion logic
     return delete_node_core(list, list->tail->prev);
 }
 
@@ -421,7 +424,7 @@ ListResult list_delete_at_index(LinkedList* list, size_t index) {
         }
     }
     
-    // Use common deletion logic
+    // Use core deletion logic
     return delete_node_core(list, current);
 }
 
@@ -459,7 +462,7 @@ ListResult list_remove_advanced(LinkedList* list, void* data, int count, int dir
         Node* next_node = (direction == SEARCH_FROM_TAIL) ? current->prev : current->next;
         
         if (list->compare_node_function(current->data, data) == 0) {
-            // Found a match - remove it using common deletion logic
+            // Found a match - remove it using core deletion logic
             ListResult result = delete_node_core(list, current);
             if (result == LIST_SUCCESS) {
                 removed_count++;
@@ -494,26 +497,10 @@ void list_destroy(LinkedList* list) {
     
     if (!list) return;
 
-    // Start from the first actual node (pass dummy)
-    Node* current = list->head->next;
-    Node* end_sentinel = list->tail;
+    // Clear all real nodes
+    list_clear(list);
 
-    // Iterate through all nodes and free them
-    while (current != end_sentinel) {
-        Node* next = current->next;
-        
-        // If a custom free function is provided, use it to free the data
-        if (list->free_node_function) {
-            list->free_node_function(current->data);
-        }
-        // Always free the data pointer itself and the node
-        free(current->data);
-        free(current);
-        
-        current = next;
-    }
-
-    // Free dummy nodes
+    // Free the dummy nodes
     free(list->head);
     free(list->tail);
     
@@ -548,81 +535,59 @@ bool list_is_empty(const LinkedList* list) {
 }
 
 /**
- * @brief Prints all elements in the list using the provided print function.
+ * @brief Prints all elements in the list using default formatting (with indices and newlines).
  * @param list The list to print.
+ * @return LIST_SUCCESS on success, error code on failure.
  */
-void list_print(const LinkedList* list) {
-    if (!list) {
-        printf("List is NULL.\n");
-        return;
-    }
-    if (!list->print_node_function) {
-        printf("No print function provided for this list.\n");
-        return;
-    }
-    if (list_is_empty(list)) {
-        printf("List is empty.\n");
-        return;
-    }
+ListResult list_print(const LinkedList* list) {
+    return list_print_advanced(list, TRUE, "\n");
+}
+
+/**
+ * @brief Prints all elements in the list with customizable formatting.
+ * @param list The list to print.
+ * @param show_index Whether to show element indices.
+ * @param separator String to print between elements.
+ * @return LIST_SUCCESS on success, error code on failure.
+ */
+ListResult list_print_advanced(const LinkedList* list, bool show_index, const char* separator) {
+
+    if (!list) return LIST_ERROR_NULL_POINTER;
+    if (list_is_empty(list)) return LIST_ERROR_ELEMENT_NOT_FOUND;
+    if (!list->print_node_function) return LIST_ERROR_NO_PRINT_FUNCTION;
+    
+    if (!separator) separator = "\n"; // Default separator
 
     // Determine starting and ending points (always dummy nodes)
-    Node* current = list->head->next;
-    Node* end_sentinel = list->tail;
+    Node* current_node = list->head->next;
+    Node* end_node = list->tail;
 
-    printf("List (length %zu):\n", list->length);
+    if (show_index)
+        printf("List len: %zu\n", list->length);
+
     int index = 0;
-    while(current != end_sentinel) {
-        printf("  [%d]: ", index++);
-        list->print_node_function(current->data);
-        printf("\n");
-        current = current->next;
+    while(current_node != end_node) {
+
+        // Print the index, if required
+        if (show_index)
+            printf("  [%d]: ", index++);
+
+        // Print the element data itself
+        list->print_node_function(current_node->data);
+
+        // Move to the next node
+        current_node = current_node->next;
+
+        // Print the separator (if not the last element)
+        if (current_node != end_node)
+            printf("%s", separator);
     }
-}
 
-// Legacy Node utility function
-int recursive_length(Node *node) {
-    if (!node) return 0;
-    return 1 + recursive_length(node->next);
-}
-
-/**
- * @brief Gets a pointer to the first node for forward iteration.
- * @param list The list to iterate.
- * @return Pointer to the first node, or NULL if empty.
- */
-Node* list_begin(const LinkedList* list) {
-    if (!list || list_is_empty(list)) return NULL;
-    return list->head->next;
-}
-
-/**
- * @brief Gets a pointer to the last node for backward iteration.
- * @param list The list to iterate.
- * @return Pointer to the last node, or NULL if empty.
- */
-Node* list_rbegin(const LinkedList* list) {
-    if (!list || list_is_empty(list)) return NULL;
-    return list->tail->prev;
-}
-
-/**
- * @brief Gets the end sentinel for forward iteration.
- * @param list The list to iterate.
- * @return Pointer to the end sentinel (dummy tail).
- */
-Node* list_end(const LinkedList* list) {
-    if (!list) return NULL;
-    return list->tail;
-}
-
-/**
- * @brief Gets the reverse end sentinel for backward iteration.
- * @param list The list to iterate.
- * @return Pointer to the reverse end sentinel (dummy head).
- */
-Node* list_rend(const LinkedList* list) {
-    if (!list) return NULL;
-    return list->head;
+    // Edge case: if using custom separator, ensure it ends with a newline
+    if (strcmp(separator, "\n") != 0)
+        printf("\n");
+    
+    return LIST_SUCCESS;
 }
 
 /*
@@ -640,13 +605,15 @@ Node* list_rend(const LinkedList* list) {
  * @param out_data Buffer to store the retrieved data.
  * @return LIST_SUCCESS on success, error code on failure.
  */
+אני חושב שעדיף שכאן דווקא נחזיר פוינטר
 ListResult list_get(const LinkedList* list, size_t index, void* out_data) {
+    
     if (!list || !out_data) return LIST_ERROR_NULL_POINTER;
     if (index >= list->length) return LIST_ERROR_INDEX_OUT_OF_BOUNDS;
     
     Node* current;
-    
-    // Optimization: choose direction based on which half the index is in
+
+    // Cute optimization: choose direction based on which half the index is in
     if (index <= list->length / 2) {
         // Index is in first half - traverse forward from head
         current = list->head->next;
@@ -755,13 +722,6 @@ size_t list_count(const LinkedList* list, void* data) {
     return count;
 }
 
-// Legacy Node function for value replacement
-void replace_matches(Node *node, int find_value, int replace_value) {
-    while (node) {
-        if (*(int*)node->data == find_value) *(int*)node->data = replace_value;
-        node = node->next;
-    }
-}
 
 /*
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
@@ -804,6 +764,25 @@ void list_reverse(LinkedList* list) {
     list->tail->prev = current;
 }
 
+// Static variables for qsort comparison context
+static CompareFunction g_compare_function = NULL;
+static bool g_reverse_order = FALSE;
+
+/* 
+ * Decision to use qsort with array conversion:
+ * While this requires O(n) additional memory (not space-efficient), modern computers
+ * don't have memory constraints, so I prefer fast O(n log n) over slow O(n²).
+ * The time savings are dramatic - for 1000 elements: qsort ~10K operations vs bubble sort ~1M operations.
+ * The cost of two conversions (list->array->list) is negligible compared to the runtime performance gain.
+ */
+
+// Helper function for qsort comparison
+static int qsort_compare_wrapper(const void* a, const void* b) {
+    if (!g_compare_function) return 0;
+    int result = g_compare_function(a, b);
+    return g_reverse_order ? -result : result;
+}
+
 /**
  * @brief Sorts the list in place (like Python's sort).
  * @param list The list to sort.
@@ -812,26 +791,25 @@ void list_reverse(LinkedList* list) {
 void list_sort(LinkedList* list, bool reverse_order) {
     if (!list || !list->compare_node_function || list->length <= 1) return;
     
-    // Simple bubble sort for now (can be optimized later)
-    bool swapped;
-    do {
-        swapped = FALSE;
-        Node* current = list->head->next;
-        
-        while (current->next != list->tail) {
-            Node* next_node = current->next;
-            int cmp = list->compare_node_function(current->data, next_node->data);
-            
-            if ((reverse_order && cmp < 0) || (!reverse_order && cmp > 0)) {
-                // Swap data
-                void* temp = current->data;
-                current->data = next_node->data;
-                next_node->data = temp;
-                swapped = TRUE;
-            }
-            current = current->next;
-        }
-    } while (swapped);
+    // Convert list to array for qsort
+    size_t array_size;
+    void* array = list_to_array(list, &array_size);
+    if (!array) return;
+    
+    // Set up comparison context
+    g_compare_function = list->compare_node_function;
+    g_reverse_order = reverse_order;
+    
+    // Sort the array using qsort
+    qsort(array, array_size, list->element_size, qsort_compare_wrapper);
+    
+    // Convert array back to list
+    array_to_list(list, array, array_size);
+    
+    // Clean up
+    g_compare_function = NULL;
+    g_reverse_order = FALSE;
+    free(array);
 }
 
 /*
@@ -880,6 +858,7 @@ LinkedList* list_copy(const LinkedList* list) {
     list_set_free_function(new_list, list->free_node_function);
     list_set_copy_function(new_list, list->copy_node_function);
     
+    // מה????? רגע למה?!?!?!??!?!?!?!?!??!?!?!?!?!?!?!??!!!!!!!!!!!?!????!??!????
     if (!list_extend(new_list, list)) {
         list_destroy(new_list);
         return NULL;
