@@ -304,8 +304,8 @@ ListResult list_insert_at_index(LinkedList* list, size_t index, void* data) {
     if (result != LIST_SUCCESS) return result;
     
     Node* current;
-    
-    // Optimization: choose direction based on which half the index is in
+
+    // Choose direction based on which half the index is in
     if (index <= list->length / 2) {
         // Index is in first half - traverse forward from head
         current = list->head->next;
@@ -598,22 +598,14 @@ ListResult list_print_advanced(const LinkedList* list, bool show_index, const ch
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
  */
 
-/**
- * @brief Gets an element at a specific index (like Python's list[index]).
- * @param list The list to get from.
- * @param index The index to get.
- * @param out_data Buffer to store the retrieved data.
- * @return LIST_SUCCESS on success, error code on failure.
- */
-אני חושב שעדיף שכאן דווקא נחזיר פוינטר
-ListResult list_get(const LinkedList* list, size_t index, void* out_data) {
+// INTERNAL HELPER FUNCTION for finding node by index
+static Node* find_node_by_index(const LinkedList* list, size_t index) {
     
-    if (!list || !out_data) return LIST_ERROR_NULL_POINTER;
-    if (index >= list->length) return LIST_ERROR_INDEX_OUT_OF_BOUNDS;
+    if (!list || index >= list->length) return NULL;
     
     Node* current;
 
-    // Cute optimization: choose direction based on which half the index is in
+    // Choose direction based on which half the index is in
     if (index <= list->length / 2) {
         // Index is in first half - traverse forward from head
         current = list->head->next;
@@ -628,14 +620,22 @@ ListResult list_get(const LinkedList* list, size_t index, void* out_data) {
         }
     }
     
-    // Copy the data using appropriate method
-    if (list->copy_node_function) {
-        list->copy_node_function(out_data, current->data);
-    } else {
-        memcpy(out_data, current->data, list->element_size);
-    }
+    return current;
+}
+
+/**
+ * @brief Gets a pointer to an element at a specific index (direct access without copying).
+ * @param list The list to get from.
+ * @param index The index to get.
+ * @return Pointer to the data at the specified index, or NULL on failure.
+ * @warning The returned pointer is valid only as long as the list structure remains unchanged.
+ */
+void* list_get(const LinkedList* list, size_t index) {
     
-    return LIST_SUCCESS;
+    if (!list || index >= list->length) return NULL;
+    
+    Node* current = find_node_by_index(list, index);
+    return current ? current->data : NULL;
 }
 
 /**
@@ -645,31 +645,17 @@ ListResult list_get(const LinkedList* list, size_t index, void* out_data) {
  * @param data The data to set.
  * @return LIST_SUCCESS on success, error code on failure.
  */
-ListResult list_set(LinkedList* list, size_t index, void* data) {
+ListResult list_set_new_data(LinkedList* list, size_t index, void* data) {
+    
     if (!list || !data) return LIST_ERROR_NULL_POINTER;
     if (index >= list->length) return LIST_ERROR_INDEX_OUT_OF_BOUNDS;
+    if (!list->free_node_function) return LIST_ERROR_NO_FREE_FUNCTION;
+
+    Node* current = find_node_by_index(list, index);
+    if (!current) return LIST_ERROR_INDEX_OUT_OF_BOUNDS;
     
-    Node* current;
-    
-    // Optimization: choose direction based on which half the index is in
-    if (index <= list->length / 2) {
-        // Index is in first half - traverse forward from head
-        current = list->head->next;
-        for (size_t i = 0; i < index; i++) {
-            current = current->next;
-        }
-    } else {
-        // Index is in second half - traverse backward from tail
-        current = list->tail->prev;
-        for (size_t i = list->length - 1; i > index; i--) {
-            current = current->prev;
-        }
-    }
-    
-    // Free old data if needed and update with new data
-    if (list->free_node_function) {
-        list->free_node_function(current->data);
-    }
+    // Free old data
+    list->free_node_function(current->data);
     
     // Copy new data
     if (list->copy_node_function) {
@@ -688,16 +674,41 @@ ListResult list_set(LinkedList* list, size_t index, void* data) {
  * @return The index if found, -1 if not found.
  */
 int list_index(const LinkedList* list, void* data) {
+    return list_index_advanced(list, data, SEARCH_FROM_HEAD);
+}
+
+/**
+ * @brief Returns the index of the first/last occurrence of a value with direction control.
+ * @param list The list to search in.
+ * @param data The data to find.
+ * @param direction SEARCH_FROM_HEAD (default) or SEARCH_FROM_TAIL.
+ * @return The index if found, -1 if not found.
+ */
+int list_index_advanced(const LinkedList* list, void* data, int direction) {
     if (!list || !data || !list->compare_node_function) return -1;
     
-    Node* current = list->head->next;
-    int index = 0;
-    while (current != list->tail) {
-        if (list->compare_node_function(current->data, data) == 0) {
-            return index;
+    if (direction == SEARCH_FROM_TAIL) {
+        // Search from tail to head
+        Node* current = list->tail->prev;
+        int index = list->length - 1;
+        while (current != list->head) {
+            if (list->compare_node_function(current->data, data) == 0) {
+                return index;
+            }
+            current = current->prev;
+            index--;
         }
-        current = current->next;
-        index++;
+    } else {
+        // Search from head to tail (default)
+        Node* current = list->head->next;
+        int index = 0;
+        while (current != list->tail) {
+            if (list->compare_node_function(current->data, data) == 0) {
+                return index;
+            }
+            current = current->next;
+            index++;
+        }
     }
     return -1;
 }
@@ -708,7 +719,8 @@ int list_index(const LinkedList* list, void* data) {
  * @param data The data to count.
  * @return The number of occurrences.
  */
-size_t list_count(const LinkedList* list, void* data) {
+size_t list_count_occurrences(const LinkedList* list, void* data) {
+    
     if (!list || !data || !list->compare_node_function) return 0;
     
     size_t count = 0;
