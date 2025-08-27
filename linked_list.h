@@ -161,7 +161,7 @@ ListResult list_delete_from_head(LinkedList* list);
 ListResult list_delete_from_tail(LinkedList* list);
 ListResult list_delete_at_index(LinkedList* list, size_t index);
 ListResult list_remove_advanced(LinkedList* list, void* data, int count, int direction);
-void list_clear(LinkedList* list);
+ListResult list_clear(LinkedList* list);
 
 // --- Utility Functions ---
 size_t list_get_length(const LinkedList* list);
@@ -177,8 +177,8 @@ int list_index_advanced(const LinkedList* list, void* data, int direction);
 size_t list_count_occurrences(const LinkedList* list, void* data);
 
 // --- Sorting and Manipulation Functions ---
-void list_reverse(LinkedList* list);
-void list_sort(LinkedList* list, bool reverse);
+ListResult list_reverse(LinkedList* list);
+ListResult list_sort(LinkedList* list, bool reverse);
 
 // --- List Operations Functions ---
 ListResult list_extend(LinkedList* list, const LinkedList* other);
@@ -191,8 +191,8 @@ ListResult list_sum(const LinkedList* list, void* out_sum);
 LinkedList* list_filter(const LinkedList* list, FilterFunction filter_fn);
 
 // --- Iteration Functions ---
-void list_for_each(const LinkedList* list, ForEachFunction action);
-void list_for_each_reverse(const LinkedList* list, ForEachFunction action);
+ListResult list_for_each(const LinkedList* list, ForEachFunction action);
+ListResult list_for_each_reverse(const LinkedList* list, ForEachFunction action);
 
 // --- Transformation Functions ---
 LinkedList* list_map(const LinkedList* list, MapFunction map_fn, size_t new_element_size);

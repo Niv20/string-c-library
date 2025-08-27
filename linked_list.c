@@ -479,13 +479,20 @@ ListResult list_remove_advanced(LinkedList* list, void* data, int count, int dir
 /**
  * @brief Clears all elements from the list (like Python's clear).
  * @param list The list to clear.
+ * @return LIST_SUCCESS on success, error code on failure.
  */
-void list_clear(LinkedList* list) {
+ListResult list_clear(LinkedList* list) {
     
-    if (!list) return;
+    if (!list) return LIST_ERROR_NULL_POINTER;
     
-    while (!list_is_empty(list))
-        list_delete_from_head(list);
+    while (!list_is_empty(list)) {
+        ListResult result = list_delete_from_head(list);
+        if (result != LIST_SUCCESS) {
+            return result;
+        }
+    }
+    
+    return LIST_SUCCESS;
 }
 
 /**
@@ -497,7 +504,7 @@ void list_destroy(LinkedList* list) {
     
     if (!list) return;
 
-    // Clear all real nodes
+    // Clear all real nodes - ignore errors during destruction
     list_clear(list);
 
     // Free the dummy nodes
@@ -748,11 +755,14 @@ size_t list_count_occurrences(const LinkedList* list, void* data) {
  */
 
 /**
- * @brief Reverses the list in place (like Python's reverse).
+ * @brief Reverses the list in place.
  * @param list The list to reverse.
+ * @return LIST_SUCCESS on success, error code on failure.
  */
-void list_reverse(LinkedList* list) {
-    if (!list || list->length <= 1) return;
+ListResult list_reverse(LinkedList* list) {
+    
+    if (!list) return LIST_ERROR_NULL_POINTER;
+    if (list->length <= 1) return LIST_SUCCESS;
     
     Node* current = list->head->next;
     Node* prev_node = list->head;
@@ -778,9 +788,9 @@ void list_reverse(LinkedList* list) {
     }
     current->next = list->tail;
     list->tail->prev = current;
-}
-
-// Static variables for qsort comparison context
+    
+    return LIST_SUCCESS;
+}// Static variables for qsort comparison context
 static CompareFunction g_compare_function = NULL;
 static bool g_reverse_order = FALSE;
 
@@ -803,14 +813,17 @@ static int qsort_compare_wrapper(const void* a, const void* b) {
  * @brief Sorts the list in place (like Python's sort).
  * @param list The list to sort.
  * @param reverse If TRUE, sorts in descending order.
+ * @return LIST_SUCCESS on success, error code on failure.
  */
-void list_sort(LinkedList* list, bool reverse_order) {
-    if (!list || !list->compare_node_function || list->length <= 1) return;
+ListResult list_sort(LinkedList* list, bool reverse_order) {
+    if (!list) return LIST_ERROR_NULL_POINTER;
+    if (!list->compare_node_function) return LIST_ERROR_NO_COMPARE_FUNCTION;
+    if (list->length <= 1) return LIST_SUCCESS;
     
     // Convert list to array for qsort
     size_t array_size;
     void* array = list_to_array(list, &array_size);
-    if (!array) return;
+    if (!array) return LIST_ERROR_MEMORY_ALLOC;
     
     // Set up comparison context
     g_compare_function = list->compare_node_function;
@@ -820,12 +833,14 @@ void list_sort(LinkedList* list, bool reverse_order) {
     qsort(array, array_size, list->element_size, qsort_compare_wrapper);
     
     // Convert array back to list
-    array_to_list(list, array, array_size);
+    ListResult result = array_to_list(list, array, array_size);
     
     // Clean up
     g_compare_function = NULL;
     g_reverse_order = FALSE;
     free(array);
+    
+    return result;
 }
 
 /*
@@ -863,7 +878,7 @@ ListResult list_extend(LinkedList* list, const LinkedList* other) {
  * @return A new list that is a copy of the original, or NULL on failure.
  */
 LinkedList* list_copy(const LinkedList* list) {
-    
+
     if (!list) return NULL;
     
     LinkedList* new_list = list_create(list->element_size);
@@ -1044,9 +1059,11 @@ LinkedList* list_filter(const LinkedList* list, FilterFunction filter_fn) {
  * @brief Applies a function to each element in the list (forward iteration).
  * @param list The list to iterate over.
  * @param action Function to call on each element.
+ * @return LIST_SUCCESS on success, error code on failure.
  */
-void list_for_each(const LinkedList* list, ForEachFunction action) {
-    if (!list || !action) return;
+ListResult list_for_each(const LinkedList* list, ForEachFunction action) {
+    if (!list) return LIST_ERROR_NULL_POINTER;
+    if (!action) return LIST_ERROR_NULL_POINTER;
     
     Node* current = list->head->next;
     size_t index = 0;
@@ -1056,15 +1073,19 @@ void list_for_each(const LinkedList* list, ForEachFunction action) {
         current = current->next;
         index++;
     }
+    
+    return LIST_SUCCESS;
 }
 
 /**
  * @brief Applies a function to each element in the list (reverse iteration).
  * @param list The list to iterate over.
  * @param action Function to call on each element.
+ * @return LIST_SUCCESS on success, error code on failure.
  */
-void list_for_each_reverse(const LinkedList* list, ForEachFunction action) {
-    if (!list || !action) return;
+ListResult list_for_each_reverse(const LinkedList* list, ForEachFunction action) {
+    if (!list) return LIST_ERROR_NULL_POINTER;
+    if (!action) return LIST_ERROR_NULL_POINTER;
     
     Node* current = list->tail->prev;
     size_t index = list->length - 1;
@@ -1074,6 +1095,8 @@ void list_for_each_reverse(const LinkedList* list, ForEachFunction action) {
         current = current->prev;
         index--;
     }
+    
+    return LIST_SUCCESS;
 }
 
 /*
