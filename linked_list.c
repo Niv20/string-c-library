@@ -20,6 +20,7 @@ static Node* create_node_with_data(LinkedList*, void*);
 static ListResult insert_node_core(LinkedList*, void*, Node**);  // Core insertion helper
 static ListResult delete_node_core(LinkedList*, Node*);          // Core deletion helper
 static void copy_list_configuration(LinkedList*, const LinkedList*); // Helper to copy function pointers
+static void list_set_all_functions(LinkedList*, PrintFunction, CompareFunction, FreeFunction, CopyFunction); // Helper to set all function pointers
 
 /*
 
@@ -1416,81 +1417,166 @@ LinkedList* list_load_from_file(const char* filename, size_t element_size,
 /*
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃                                               ┃
-┃      Array to List Conversion Functions       ┃
+┃           I/O and Format Functions            ┃
 ┃                                               ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
  */
 
 /**
- * @brief Converts an array to a linked list (using generic LinkedList structure).
- * @param list The LinkedList to populate with array data.
- * @param arr A pointer to the array data.
- * @param n The number of elements in the array.
- * @return LIST_SUCCESS on success, error code on failure.
+ * @brief Converts the list to a string representation.
+ * @param list The list to convert.
+ * @param separator String to separate elements.
+ * @return A newly allocated string, or NULL on failure.
+ * @note The caller is responsible for freeing the returned string.
  */
-ListResult array_to_list(LinkedList* list, const void* arr, size_t n) {
-    if (!list || !arr || n == 0) return LIST_ERROR_NULL_POINTER;
+char* list_to_string(const LinkedList* list, const char* separator) {
     
-    // Clear existing list content if any
-    while (!list_is_empty(list)) {
-        ListResult result = list_delete_from_head(list);
-        if (result != LIST_SUCCESS) break;
+    if (!list || !separator) return NULL;
+    if (!list->print_node_function) return NULL;
+
+    // Edge case: empty list
+    if (list_is_empty(list)) {
+        char* empty = malloc(1);
+        if (empty) empty[0] = '\0';
+        return empty;
     }
     
-    const char* byte_arr = (const char*)arr;
+    // Calculate approximate size needed
+    size_t sep_len = strlen(separator);
+    size_t estimated_size = list->length * 50 + (list->length - 1) * sep_len + 1;
+    char* result = malloc(estimated_size);
+    if (!result) return NULL;
     
-    // Insert each element from the array
-    for (size_t i = 0; i < n; i++) {
-        const void* element = byte_arr + (i * list->element_size);
-        ListResult result = list_insert_at_tail(list, (void*)element);
-        if (result != LIST_SUCCESS) {
-            return result; // Failed to insert
+    result[0] = '\0';
+    bool first = TRUE;
+    
+    Node* current = list->head->next;
+    while (current != list->tail) {
+        if (!first) {
+            strcat(result, separator);
         }
+        
+        // For basic types, we can convert directly
+        if (list->element_size == sizeof(int)) {
+            char temp[32];
+            snprintf(temp, sizeof(temp), "%d", *(int*)current->data);
+            strcat(result, temp);
+        } else if (list->element_size == sizeof(double)) {
+            char temp[64];
+            snprintf(temp, sizeof(temp), "%.2f", *(double*)current->data);
+            strcat(result, temp);
+        } else if (list->element_size == sizeof(char)) {
+            char temp[4];
+            snprintf(temp, sizeof(temp), "%c", *(char*)current->data);
+            strcat(result, temp);
+        } else {
+            // For other types, show generic representation
+            strcat(result, "[data]");
+        }
+        
+        first = FALSE;
+        current = current->next;
     }
     
+    return result;
+}
+
+/**
+ * @brief Saves the list to a file.
+ * @param list The list to save.
+ * @param filename Path to the output file.
+ * @return LIST_SUCCESS on success, error code otherwise.
+ */
+ListResult list_save_to_file(const LinkedList* list, const char* filename) {
+    if (!list || !filename) return LIST_ERROR_NULL_POINTER;
+    
+    FILE* file = fopen(filename, "wb");
+    if (!file) return LIST_ERROR_INVALID_OPERATION;
+    
+    // Write header information
+    fwrite(&list->length, sizeof(size_t), 1, file);
+    fwrite(&list->element_size, sizeof(size_t), 1, file);
+    
+    // Write elements
+    Node* current = list->head->next;
+    while (current != list->tail) {
+        fwrite(current->data, list->element_size, 1, file);
+        current = current->next;
+    }
+    
+    fclose(file);
     return LIST_SUCCESS;
 }
 
 /**
- * @brief Converts a linked list to an array.
- * @param list The LinkedList to convert.
- * @param out_size Pointer to store the size of the returned array.
- * @return A pointer to the newly allocated array, or NULL on failure.
- * @note The caller is responsible for freeing the returned array.
+ * @brief Loads a list from a file.
+ * @param filename Path to the input file.
+ * @param element_size Size of each element.
+ * @param print_fn Print function for the elements.
+ * @param compare_fn Compare function for the elements.
+ * @param free_fn Free function for the elements (optional).
+ * @param copy_fn Copy function for the elements (optional).
+ * @return A new list loaded from file, or NULL on failure.
  */
-void* list_to_array(const LinkedList* list, size_t* out_size) {
-    if (!list || !out_size) return NULL;
+LinkedList* list_load_from_file(const char* filename, size_t element_size,
+                                PrintFunction print_fn, CompareFunction compare_fn,
+                                FreeFunction free_fn, CopyFunction copy_fn) {
+    if (!filename) return NULL;
     
-    *out_size = list->length;
-    if (list->length == 0) return NULL;
+    FILE* file = fopen(filename, "rb");
+    if (!file) return NULL;
     
-    // Allocate memory for the array
-    void* array = malloc(list->length * list->element_size);
-    if (!array) return NULL;
+    size_t saved_length, saved_element_size;
     
-    char* byte_array = (char*)array;
-    
-    // Determine starting point (always dummy nodes)
-    Node* current = list->head->next;
-    Node* end_sentinel = list->tail;
-    
-    // Copy each element to the array
-    size_t index = 0;
-    while (current != end_sentinel && index < list->length) {
-        void* dest = byte_array + (index * list->element_size);
-        
-        // Use custom copy function if available, otherwise memcpy
-        if (list->copy_node_function) {
-            list->copy_node_function(dest, current->data);
-        } else {
-            memcpy(dest, current->data, list->element_size);
-        }
-        
-        current = current->next;
-        index++;
+    // Read header
+    if (fread(&saved_length, sizeof(size_t), 1, file) != 1 ||
+        fread(&saved_element_size, sizeof(size_t), 1, file) != 1) {
+        fclose(file);
+        return NULL;
     }
     
-    return array;
+    // Verify element size matches
+    if (saved_element_size != element_size) {
+        fclose(file);
+        return NULL;
+    }
+    
+    LinkedList* list = list_create(element_size);
+    if (!list) {
+        fclose(file);
+        return NULL;
+    }
+    
+    // Set the function pointers if provided
+    if (print_fn) list_set_print_function(list, print_fn);
+    if (compare_fn) list_set_compare_function(list, compare_fn);
+    if (free_fn) list_set_free_function(list, free_fn);
+    if (copy_fn) list_set_copy_function(list, copy_fn);
+    
+    // Read elements
+    for (size_t i = 0; i < saved_length; i++) {
+
+        void* element = malloc(element_size);
+        if (!element || fread(element, element_size, 1, file) != 1) {
+            free(element);
+            list_destroy(list);
+            fclose(file);
+            return NULL;
+        }
+
+        // Insert element into the list
+        if (list_insert_at_tail(list, element) != LIST_SUCCESS) {
+            free(element);
+            list_destroy(list);
+            fclose(file);
+            return NULL;
+        }
+        
+        free(element);
+    }
+    
+    fclose(file);
+    return list;
 }
 
 /*
@@ -1500,6 +1586,17 @@ void* list_to_array(const LinkedList* list, size_t* out_size) {
 ┃                                               ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
  */
+
+// INTERNAL HELPER to set all function pointers for a list.
+static void list_set_all_functions(LinkedList* list, PrintFunction print_fn, 
+                                   CompareFunction compare_fn, FreeFunction free_fn, 
+                                   CopyFunction copy_fn) {
+    if (!list) return;
+    list_set_print_function(list, print_fn);
+    list_set_compare_function(list, compare_fn);
+    list_set_free_function(list, free_fn);
+    list_set_copy_function(list, copy_fn);
+}
 
 // Integer helpers
 /**
@@ -1530,8 +1627,7 @@ LinkedList* list_create_int(void) {
     LinkedList* list = list_create(sizeof(int));
     if (!list) return NULL;
     
-    list_set_print_function(list, print_int);
-    list_set_compare_function(list, compare_int);
+    list_set_all_functions(list, print_int, compare_int, NULL, NULL);
     
     return list;
 }
@@ -1565,8 +1661,7 @@ LinkedList* list_create_double(void) {
     LinkedList* list = list_create(sizeof(double));
     if (!list) return NULL;
     
-    list_set_print_function(list, print_double);
-    list_set_compare_function(list, compare_double);
+    list_set_all_functions(list, print_double, compare_double, NULL, NULL);
     
     return list;
 }
@@ -1600,8 +1695,7 @@ LinkedList* list_create_char(void) {
     LinkedList* list = list_create(sizeof(char));
     if (!list) return NULL;
     
-    list_set_print_function(list, print_char);
-    list_set_compare_function(list, compare_char);
+    list_set_all_functions(list, print_char, compare_char, NULL, NULL);
     
     return list;
 }
@@ -1650,10 +1744,8 @@ LinkedList* list_create_string(void) {
     LinkedList* list = list_create(sizeof(char*));
     if (!list) return NULL;
     
-    list_set_print_function(list, print_string_builtin);
-    list_set_compare_function(list, compare_string_builtin);
-    list_set_free_function(list, free_string_builtin);
-    list_set_copy_function(list, copy_string_builtin);
+    list_set_all_functions(list, print_string_builtin, compare_string_builtin, free_string_builtin, copy_string_builtin);
     
     return list;
 }
+
