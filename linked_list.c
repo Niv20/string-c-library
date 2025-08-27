@@ -825,6 +825,17 @@ ListResult list_sort(LinkedList* list, bool reverse_order) {
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
  */
 
+// INTERNAL HELPER to copy all function pointers from a source list to a destination list.
+static void copy_list_configuration(LinkedList* dest, const LinkedList* src) {
+    
+    if (!dest || !src) return;
+    
+    dest->print_node_function = src->print_node_function;
+    dest->compare_node_function = src->compare_node_function;
+    dest->free_node_function = src->free_node_function;
+    dest->copy_node_function = src->copy_node_function;
+}
+
 /**
  * @brief Creates a copy of the list.
  * @param list The list to copy.
@@ -943,7 +954,6 @@ LinkedList* list_slice(const LinkedList* list, size_t start, size_t end) {
     return sliced;
 }
 
-
 /**
  * @brief Rotates the list elements by a specified number of positions.
  * @param list The list to rotate.
@@ -955,6 +965,7 @@ ListResult list_rotate(LinkedList* list, int positions) {
     
     // Normalize positions to be within list length
     int actual_positions = positions % (int)list->length;
+    
     if (actual_positions < 0) {
         actual_positions += list->length;
     }
@@ -1151,6 +1162,7 @@ void* list_max(const LinkedList* list) {
  * @return A new list with unique elements, or NULL on failure.
  */
 LinkedList* list_unique(const LinkedList* list) {
+    
     if (!list || !list->compare_node_function) return NULL;
     
     LinkedList* unique = list_create(list->element_size);
@@ -1379,8 +1391,6 @@ LinkedList* list_load_from_file(const char* filename, size_t element_size,
     for (size_t i = 0; i < saved_length; i++) {
 
         void* element = malloc(element_size);
-
-        //
         if (!element || fread(element, element_size, 1, file) != 1) {
             free(element);
             list_destroy(list);
