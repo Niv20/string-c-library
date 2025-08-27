@@ -159,6 +159,7 @@ ListResult list_insert_at_index(LinkedList* list, size_t index, void* data);
 // --- Deletion Functions ---
 ListResult list_delete_from_head(LinkedList* list);
 ListResult list_delete_from_tail(LinkedList* list);
+ListResult list_delete_at_index(LinkedList* list, size_t index);
 ListResult list_remove_advanced(LinkedList* list, void* data, int count, int direction);
 void list_clear(LinkedList* list);
 

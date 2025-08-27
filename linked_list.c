@@ -646,7 +646,7 @@ void* list_get(const LinkedList* list, size_t index) {
  * @param data The data to set.
  * @return LIST_SUCCESS on success, error code on failure.
  */
-ListResult list_set_new_data(LinkedList* list, size_t index, void* data) {
+ListResult list_set(LinkedList* list, size_t index, void* data) {
     
     if (!list || !data) return LIST_ERROR_NULL_POINTER;
     if (index >= list->length) return LIST_ERROR_INDEX_OUT_OF_BOUNDS;
@@ -672,7 +672,7 @@ ListResult list_set_new_data(LinkedList* list, size_t index, void* data) {
  * @brief Returns the index of the first occurrence of a value (like Python's index).
  * @param list The list to search in.
  * @param data The data to find.
- * @return The index if found, -1 if not found.
+ * @return The index if found, negative error code if error occurred.
  */
 int list_index(const LinkedList* list, void* data) {
     return list_index_advanced(list, data, SEARCH_FROM_HEAD);
@@ -683,10 +683,12 @@ int list_index(const LinkedList* list, void* data) {
  * @param list The list to search in.
  * @param data The data to find.
  * @param direction SEARCH_FROM_HEAD (default) or SEARCH_FROM_TAIL.
- * @return The index if found, -1 if not found.
+ * @return The index if found, negative error code if error occurred.
  */
 int list_index_advanced(const LinkedList* list, void* data, int direction) {
-    if (!list || !data || !list->compare_node_function) return -1;
+    if (!list) return -LIST_ERROR_NULL_POINTER;
+    if (!data) return -LIST_ERROR_NULL_POINTER;
+    if (!list->compare_node_function) return -LIST_ERROR_NO_COMPARE_FUNCTION;
     
     if (direction == SEARCH_FROM_TAIL) {
         // Search from tail to head
@@ -712,7 +714,7 @@ int list_index_advanced(const LinkedList* list, void* data, int direction) {
             index++;
         }
     }
-    return -1;
+    return -LIST_ERROR_ELEMENT_NOT_FOUND; // Element not found
 }
 
 /**
@@ -861,6 +863,7 @@ ListResult list_extend(LinkedList* list, const LinkedList* other) {
  * @return A new list that is a copy of the original, or NULL on failure.
  */
 LinkedList* list_copy(const LinkedList* list) {
+    
     if (!list) return NULL;
     
     LinkedList* new_list = list_create(list->element_size);
@@ -872,8 +875,9 @@ LinkedList* list_copy(const LinkedList* list) {
     list_set_free_function(new_list, list->free_node_function);
     list_set_copy_function(new_list, list->copy_node_function);
     
-    // מה????? רגע למה?!?!?!??!?!?!?!?!??!?!?!?!?!?!?!??!!!!!!!!!!!?!????!??!????
-    if (!list_extend(new_list, list)) {
+    // Copy all elements from original list
+    ListResult extend_result = list_extend(new_list, list);
+    if (extend_result != LIST_SUCCESS) {
         list_destroy(new_list);
         return NULL;
     }
