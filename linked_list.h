@@ -99,20 +99,6 @@ typedef bool (*FilterFunction)(const void* data);
 typedef void (*MapFunction)(void* dest, const void* src);
 
 /**
- * @brief A function pointer type for aggregation operations.
- * @param accumulator A void pointer to the accumulator value.
- * @param current A const void pointer to the current element.
- */
-typedef void (*AggregateFunction)(void* accumulator, const void* current);
-
-/**
- * @brief A function pointer type for performing an action on each element.
- * @param data Pointer to the element's data.
- * @param index The current index in the list (0-based).
- */
-typedef void (*ForEachFunction)(void* data, size_t index);
-
-/**
  * @brief Internal structure representing a node in the linked list.
  * @note Users of the library should not manipulate this structure directly.
  */
@@ -142,6 +128,12 @@ typedef struct LinkedList {
 } LinkedList;
 
 
+// --- Error Handling ---
+const char* list_error_string(ListResult result);
+
+// --- Lifecycle Functions ---
+LinkedList* list_create(size_t element_size);
+
 // --- Setters for LinkedList fields ---
 void list_set_print_function(LinkedList* list, PrintFunction print_fn);
 void list_set_compare_function(LinkedList* list, CompareFunction compare_fn);
@@ -150,13 +142,6 @@ void list_set_copy_function(LinkedList* list, CopyFunction copy_fn);
 
 // --- Size and Overwrite Management ---
 ListResult list_set_max_size(LinkedList* list, size_t max_size, bool allow_overwrite);
-
-// --- Error Handling ---
-const char* list_error_string(ListResult result);
-
-// --- Lifecycle Functions ---
-LinkedList* list_create(size_t element_size);
-void list_destroy(LinkedList* list);
 
 // --- Insertion Functions ---
 ListResult list_insert_at_head(LinkedList* list, void* data);
@@ -169,6 +154,7 @@ ListResult list_delete_from_tail(LinkedList* list);
 ListResult list_delete_at_index(LinkedList* list, size_t index);
 ListResult list_remove_advanced(LinkedList* list, void* data, int count, int direction);
 ListResult list_clear(LinkedList* list);
+void list_destroy(LinkedList* list);
 
 // --- Utility Functions ---
 size_t list_get_length(const LinkedList* list);
@@ -184,26 +170,30 @@ int list_index_advanced(const LinkedList* list, void* data, int direction);
 size_t list_count_occurrences(const LinkedList* list, void* data);
 
 // --- Sorting and Manipulation Functions ---
-ListResult list_reverse(LinkedList* list);
 ListResult list_sort(LinkedList* list, bool reverse);
 
 // --- List Operations Functions ---
-ListResult list_extend(LinkedList* list, const LinkedList* other);
 LinkedList* list_copy(const LinkedList* list);
-
-// --- Aggregation Functions ---
-void* list_min(const LinkedList* list);
-void* list_max(const LinkedList* list);
+ListResult list_extend(LinkedList* list, const LinkedList* other);
+LinkedList* list_concat(const LinkedList* list1, const LinkedList* list2);
+LinkedList* list_slice(const LinkedList* list, size_t start, size_t end);
+ListResult list_rotate(LinkedList* list, int positions);
+ListResult list_reverse(LinkedList* list);
 LinkedList* list_filter(const LinkedList* list, FilterFunction filter_fn);
-
-// --- Iteration Functions ---
-ListResult list_for_each(const LinkedList* list, ForEachFunction action);
-ListResult list_for_each_reverse(const LinkedList* list, ForEachFunction action);
 
 // --- Transformation Functions ---
 LinkedList* list_map(const LinkedList* list, MapFunction map_fn, size_t new_element_size);
-LinkedList* list_slice(const LinkedList* list, size_t start, size_t end);
-LinkedList* list_concat(const LinkedList* list1, const LinkedList* list2);
+
+// --- Mathematical Functions ---
+void* list_min(const LinkedList* list);
+void* list_max(const LinkedList* list);
+LinkedList* list_unique(const LinkedList* list);
+LinkedList* list_intersection(const LinkedList* list1, const LinkedList* list2);
+LinkedList* list_union(const LinkedList* list1, const LinkedList* list2);
+
+// --- Array to List Conversion Functions ---
+ListResult array_to_list(LinkedList* list, const void* arr, size_t n);
+void* list_to_array(const LinkedList* list, size_t* out_size);
 
 // --- I/O and Format Functions ---
 char* list_to_string(const LinkedList* list, const char* separator);
@@ -211,42 +201,5 @@ ListResult list_save_to_file(const LinkedList* list, const char* filename);
 LinkedList* list_load_from_file(const char* filename, size_t element_size,
                                 PrintFunction print_fn, CompareFunction compare_fn,
                                 FreeFunction free_fn, CopyFunction copy_fn);
-
-// --- Mathematical Functions ---
-LinkedList* list_unique(const LinkedList* list);
-LinkedList* list_intersection(const LinkedList* list1, const LinkedList* list2);
-LinkedList* list_union(const LinkedList* list1, const LinkedList* list2);
-ListResult list_rotate(LinkedList* list, int positions);
-
-// --- Array to List Conversion Functions ---
-ListResult array_to_list(LinkedList* list, const void* arr, size_t n);
-void* list_to_array(const LinkedList* list, size_t* out_size);
-
-// --- Helper Functions for Basic Data Types ---
-
-// Integer helpers
-void print_int(void* data);
-int compare_int(const void* a, const void* b);
-LinkedList* list_create_int(void);
-
-// Double helpers  
-void print_double(void* data);
-int compare_double(const void* a, const void* b);
-LinkedList* list_create_double(void);
-
-// Character helpers
-void print_char(void* data);
-int compare_char(const void* a, const void* b);
-LinkedList* list_create_char(void);
-
-// String helpers (char*)
-LinkedList* list_create_string(void);
-
-// --- Standalone Node-based list functions ---
-void delete_all_matches(Node **head, int value_to_delete);
-bool efficient_delete_match(Node **head, int value);
-bool insert_after(Node *node, int data);
-Node* add_lists(Node *list1, Node *list2);
-Node *merge_sorted_lists(Node *list1, Node *list2);
 
 #endif // LINKED_LIST_H
