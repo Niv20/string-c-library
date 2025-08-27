@@ -862,12 +862,13 @@ ListResult list_sort(LinkedList* list, bool reverse_order) {
  */
 
 /**
- * @brief Extends the list with elements from another list (like Python's extend).
+ * @brief Extends the list with elements from another list.
  * @param list The list to extend.
  * @param other The other list to extend with.
  * @return LIST_SUCCESS on success, error code on failure.
  */
 ListResult list_extend(LinkedList* list, const LinkedList* other) {
+    
     if (!list || !other) return LIST_ERROR_NULL_POINTER;
     
     Node* current = other->head->next;
@@ -883,7 +884,7 @@ ListResult list_extend(LinkedList* list, const LinkedList* other) {
 }
 
 /**
- * @brief Creates a copy of the list (like Python's list.copy()).
+ * @brief Creates a copy of the list.
  * @param list The list to copy.
  * @return A new list that is a copy of the original, or NULL on failure.
  */
@@ -918,112 +919,47 @@ LinkedList* list_copy(const LinkedList* list) {
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
  */
 
-/**
- * @brief Finds the minimum element in the list.
- * @param list The list to search in.
- * @param out_min Buffer to store the minimum element.
- * @return LIST_SUCCESS if found, error code otherwise.
- */
-ListResult list_min(const LinkedList* list, void* out_min) {
-    if (!list || !out_min) return LIST_ERROR_NULL_POINTER;
-    if (!list->compare_node_function) return LIST_ERROR_NO_COMPARE_FUNCTION;
-    if (list_is_empty(list)) return LIST_ERROR_INVALID_OPERATION;
-    
-    Node* current = list->head->next;
-    
-    // Initialize with first element
-    if (list->copy_node_function) {
-        list->copy_node_function(out_min, current->data);
-    } else {
-        memcpy(out_min, current->data, list->element_size);
+
+// INTERNAL HELPER FUNCTION for finding extreme elements
+static void* find_extreme_element(const LinkedList* list, ExtremeFindType type) {
+    if (!list || !list->compare_node_function || list_is_empty(list)) {
+        return NULL;
     }
     
-    current = current->next;
+    Node* extreme_node = list->head->next;
+    Node* current = extreme_node->next;
     
-    // Compare with rest of elements
+    // Iterate and compare with the rest of the elements
     while (current != list->tail) {
-        if (list->compare_node_function(current->data, out_min) < 0) {
-            if (list->copy_node_function) {
-                list->copy_node_function(out_min, current->data);
-            } else {
-                memcpy(out_min, current->data, list->element_size);
-            }
+        int comparison = list->compare_node_function(current->data, extreme_node->data);
+        
+        if ((type == FIND_MAX && comparison > 0) || (type == FIND_MIN && comparison < 0)) {
+            extreme_node = current;
         }
         current = current->next;
     }
     
-    return LIST_SUCCESS;
+    return extreme_node->data;
+}
+
+/**
+ * @brief Finds the minimum element in the list.
+ * @param list The list to search in.
+ * @return A direct pointer to the minimum element's data, or NULL if not found.
+ */
+void* list_min(const LinkedList* list) {
+    return find_extreme_element(list, FIND_MIN);
 }
 
 /**
  * @brief Finds the maximum element in the list.
  * @param list The list to search in.
- * @param out_max Buffer to store the maximum element.
- * @return LIST_SUCCESS if found, error code otherwise.
+ * @return A direct pointer to the maximum element's data, or NULL if not found.
  */
-ListResult list_max(const LinkedList* list, void* out_max) {
-    if (!list || !out_max) return LIST_ERROR_NULL_POINTER;
-    if (!list->compare_node_function) return LIST_ERROR_NO_COMPARE_FUNCTION;
-    if (list_is_empty(list)) return LIST_ERROR_INVALID_OPERATION;
-    
-    Node* current = list->head->next;
-    
-    // Initialize with first element
-    if (list->copy_node_function) {
-        list->copy_node_function(out_max, current->data);
-    } else {
-        memcpy(out_max, current->data, list->element_size);
-    }
-    
-    current = current->next;
-    
-    // Compare with rest of elements
-    while (current != list->tail) {
-        if (list->compare_node_function(current->data, out_max) > 0) {
-            if (list->copy_node_function) {
-                list->copy_node_function(out_max, current->data);
-            } else {
-                memcpy(out_max, current->data, list->element_size);
-            }
-        }
-        current = current->next;
-    }
-    
-    return LIST_SUCCESS;
+void* list_max(const LinkedList* list) {
+    return find_extreme_element(list, FIND_MAX);
 }
 
-/**
- * @brief Calculates the sum of all elements (for numeric types).
- * @param list The list to sum.
- * @param out_sum Buffer to store the sum result.
- * @return LIST_SUCCESS on success, error code otherwise.
- */
-ListResult list_sum(const LinkedList* list, void* out_sum) {
-    if (!list || !out_sum) return LIST_ERROR_NULL_POINTER;
-    if (list_is_empty(list)) return LIST_ERROR_INVALID_OPERATION;
-    
-    // Initialize sum to zero (works for most numeric types)
-    memset(out_sum, 0, list->element_size);
-    
-    Node* current = list->head->next;
-    while (current != list->tail) {
-        // For common numeric types
-        if (list->element_size == sizeof(int)) {
-            *(int*)out_sum += *(int*)current->data;
-        } else if (list->element_size == sizeof(double)) {
-            *(double*)out_sum += *(double*)current->data;
-        } else if (list->element_size == sizeof(float)) {
-            *(float*)out_sum += *(float*)current->data;
-        } else if (list->element_size == sizeof(long)) {
-            *(long*)out_sum += *(long*)current->data;
-        } else {
-            return LIST_ERROR_INVALID_OPERATION; // Unsupported type
-        }
-        current = current->next;
-    }
-    
-    return LIST_SUCCESS;
-}
 
 /**
  * @brief Creates a new list with elements that pass the filter function.
@@ -1032,6 +968,7 @@ ListResult list_sum(const LinkedList* list, void* out_sum) {
  * @return A new filtered list, or NULL on failure.
  */
 LinkedList* list_filter(const LinkedList* list, FilterFunction filter_fn) {
+    
     if (!list || !filter_fn) return NULL;
     
     LinkedList* filtered = list_create(list->element_size);

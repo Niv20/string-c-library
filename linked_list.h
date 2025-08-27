@@ -19,6 +19,13 @@
 
 typedef enum { FALSE, TRUE } bool;
 
+// Enum to specify whether to find the minimum or maximum element.
+typedef enum {
+    FIND_MIN,
+    FIND_MAX
+} ExtremeFindType;
+
+
 // Constants for advanced delete operations
 #define DELETE_ALL_OCCURRENCES -1
 #define SEARCH_FROM_HEAD 0
@@ -185,9 +192,8 @@ ListResult list_extend(LinkedList* list, const LinkedList* other);
 LinkedList* list_copy(const LinkedList* list);
 
 // --- Aggregation Functions ---
-ListResult list_min(const LinkedList* list, void* out_min);
-ListResult list_max(const LinkedList* list, void* out_max);
-ListResult list_sum(const LinkedList* list, void* out_sum);
+void* list_min(const LinkedList* list);
+void* list_max(const LinkedList* list);
 LinkedList* list_filter(const LinkedList* list, FilterFunction filter_fn);
 
 // --- Iteration Functions ---
