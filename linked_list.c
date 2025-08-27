@@ -767,7 +767,7 @@ ListResult list_reverse(LinkedList* list) {
     Node* current = list->head->next;
     Node* prev_node = list->head;
     
-    // Reverse all links
+    // Swap next and prev pointers for each node
     while (current != list->tail) {
         Node* next_node = current->next;
         current->next = prev_node;
@@ -790,22 +790,30 @@ ListResult list_reverse(LinkedList* list) {
     list->tail->prev = current;
     
     return LIST_SUCCESS;
-}// Static variables for qsort comparison context
+}
+
+/* 
+ * I made the decision to use qsort with array conversion (instead of bubble sort).
+ * While the following code requires O(n) additional memory (not space-efficient), modern computers
+ * don't have memory constraints, so I prefer fast O(n log n) over slow O(n^2).
+ */
+
+// The standard `qsort` function requires a comparison function with a fixed signature,
+// which doesn't allow passing custom context like the sort order or a specific compare function.
+// These static variables act as a context bridge to a wrapper function.
 static CompareFunction g_compare_function = NULL;
 static bool g_reverse_order = FALSE;
 
-/* 
- * Decision to use qsort with array conversion:
- * While this requires O(n) additional memory (not space-efficient), modern computers
- * don't have memory constraints, so I prefer fast O(n log n) over slow O(n²).
- * The time savings are dramatic - for 1000 elements: qsort ~10K operations vs bubble sort ~1M operations.
- * The cost of two conversions (list->array->list) is negligible compared to the runtime performance gain.
- */
 
 // Helper function for qsort comparison
 static int qsort_compare_wrapper(const void* a, const void* b) {
+
     if (!g_compare_function) return 0;
+
+    // Use the globally set compare function to perform the actual comparison.
     int result = g_compare_function(a, b);
+
+    // Adjust the result based on the desired sort order (ascending/descending).
     return g_reverse_order ? -result : result;
 }
 
@@ -816,6 +824,7 @@ static int qsort_compare_wrapper(const void* a, const void* b) {
  * @return LIST_SUCCESS on success, error code on failure.
  */
 ListResult list_sort(LinkedList* list, bool reverse_order) {
+
     if (!list) return LIST_ERROR_NULL_POINTER;
     if (!list->compare_node_function) return LIST_ERROR_NO_COMPARE_FUNCTION;
     if (list->length <= 1) return LIST_SUCCESS;
@@ -825,17 +834,18 @@ ListResult list_sort(LinkedList* list, bool reverse_order) {
     void* array = list_to_array(list, &array_size);
     if (!array) return LIST_ERROR_MEMORY_ALLOC;
     
-    // Set up comparison context
+    // Set up the global context for the qsort_compare_wrapper function.
+    // This allows us to pass the list-specific comparison logic and sort order.
     g_compare_function = list->compare_node_function;
     g_reverse_order = reverse_order;
     
-    // Sort the array using qsort
+    // Sort the array using qsort with our custom wrapper.
     qsort(array, array_size, list->element_size, qsort_compare_wrapper);
     
     // Convert array back to list
     ListResult result = array_to_list(list, array, array_size);
     
-    // Clean up
+    // Clean up the global context to prevent side effects in other parts of the program.
     g_compare_function = NULL;
     g_reverse_order = FALSE;
     free(array);
