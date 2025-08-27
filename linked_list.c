@@ -647,7 +647,7 @@ void* list_get(const LinkedList* list, size_t index) {
 }
 
 /**
- * @brief Sets an element at a specific index (like Python's list[index] = value).
+ * @brief Sets an element at a specific index.
  * @param list The list to set in.
  * @param index The index to set.
  * @param data The data to set.
@@ -749,48 +749,10 @@ size_t list_count_occurrences(const LinkedList* list, void* data) {
 /*
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃                                               ┃
-┃       Sorting and Manipulation Functions      ┃
+┃               Sorting Functions               ┃
 ┃                                               ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
  */
-
-/**
- * @brief Reverses the list in place.
- * @param list The list to reverse.
- * @return LIST_SUCCESS on success, error code on failure.
- */
-ListResult list_reverse(LinkedList* list) {
-    
-    if (!list) return LIST_ERROR_NULL_POINTER;
-    if (list->length <= 1) return LIST_SUCCESS;
-    
-    Node* current = list->head->next;
-    Node* prev_node = list->head;
-    
-    // Swap next and prev pointers for each node
-    while (current != list->tail) {
-        Node* next_node = current->next;
-        current->next = prev_node;
-        current->prev = next_node;
-        prev_node = current;
-        current = next_node;
-    }
-    
-    // Update dummy nodes
-    list->head->next = prev_node;
-    prev_node->prev = list->head;
-    list->tail->prev = list->head->next;
-    
-    // Fix the last node
-    current = list->head->next;
-    while (current->next != list->head) {
-        current = current->next;
-    }
-    current->next = list->tail;
-    list->tail->prev = current;
-    
-    return LIST_SUCCESS;
-}
 
 /* 
  * I made the decision to use qsort with array conversion (instead of bubble sort).
@@ -856,32 +818,10 @@ ListResult list_sort(LinkedList* list, bool reverse_order) {
 /*
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃                                               ┃
-┃            List Operations Functions          ┃
+┃          Structural Transformations           ┃
 ┃                                               ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
  */
-
-/**
- * @brief Extends the list with elements from another list.
- * @param list The list to extend.
- * @param other The other list to extend with.
- * @return LIST_SUCCESS on success, error code on failure.
- */
-ListResult list_extend(LinkedList* list, const LinkedList* other) {
-    
-    if (!list || !other) return LIST_ERROR_NULL_POINTER;
-    
-    Node* current = other->head->next;
-    while (current != other->tail) {
-        ListResult result = list_insert_at_tail(list, current->data);
-        if (result != LIST_SUCCESS) {
-            return result;
-        }
-        current = current->next;
-    }
-    
-    return LIST_SUCCESS;
-}
 
 /**
  * @brief Creates a copy of the list.
@@ -911,55 +851,188 @@ LinkedList* list_copy(const LinkedList* list) {
     return new_list;
 }
 
-/*
-┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃                                               ┃
-┃             Aggregation Functions             ┃
-┃                                               ┃
-┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+/**
+ * @brief Extends the list with elements from another list.
+ * @param list The list to extend.
+ * @param other The other list to extend with.
+ * @return LIST_SUCCESS on success, error code on failure.
  */
-
-
-// INTERNAL HELPER FUNCTION for finding extreme elements
-static void* find_extreme_element(const LinkedList* list, ExtremeFindType type) {
-    if (!list || !list->compare_node_function || list_is_empty(list)) {
-        return NULL;
-    }
+ListResult list_extend(LinkedList* list, const LinkedList* other) {
     
-    Node* extreme_node = list->head->next;
-    Node* current = extreme_node->next;
+    if (!list || !other) return LIST_ERROR_NULL_POINTER;
     
-    // Iterate and compare with the rest of the elements
-    while (current != list->tail) {
-        int comparison = list->compare_node_function(current->data, extreme_node->data);
-        
-        if ((type == FIND_MAX && comparison > 0) || (type == FIND_MIN && comparison < 0)) {
-            extreme_node = current;
+    Node* current = other->head->next;
+    while (current != other->tail) {
+        ListResult result = list_insert_at_tail(list, current->data);
+        if (result != LIST_SUCCESS) {
+            return result;
         }
         current = current->next;
     }
     
-    return extreme_node->data;
+    return LIST_SUCCESS;
+}
+
+
+/**
+ * @brief Creates a new list by concatenating two lists.
+ * @param list1 First list.
+ * @param list2 Second list.
+ * @return A new concatenated list, or NULL on failure.
+ */
+LinkedList* list_concat(const LinkedList* list1, const LinkedList* list2) {
+    if (!list1 || !list2) return NULL;
+    if (list1->element_size != list2->element_size) return NULL;
+    
+    LinkedList* concatenated = list_create(list1->element_size);
+    if (!concatenated) return NULL;
+    
+    // Configure the concatenated list with settings from first list
+    list_set_print_function(concatenated, list1->print_node_function);
+    list_set_compare_function(concatenated, list1->compare_node_function);
+    list_set_free_function(concatenated, list1->free_node_function);
+    list_set_copy_function(concatenated, list1->copy_node_function);
+    
+    // Copy all elements from first list
+    if (list_extend(concatenated, list1) != LIST_SUCCESS) {
+        list_destroy(concatenated);
+        return NULL;
+    }
+    
+    // Copy all elements from second list
+    if (list_extend(concatenated, list2) != LIST_SUCCESS) {
+        list_destroy(concatenated);
+        return NULL;
+    }
+    
+    return concatenated;
+}
+
+
+/**
+ * @brief Creates a new list containing a slice of the original.
+ * @param list The source list.
+ * @param start Start index (inclusive).
+ * @param end End index (exclusive).
+ * @return A new sliced list, or NULL on failure.
+ */
+LinkedList* list_slice(const LinkedList* list, size_t start, size_t end) {
+    
+    if (!list || start >= end || start >= list->length) return NULL;
+    
+    if (end > list->length) end = list->length;
+    
+    LinkedList* sliced = list_create(list->element_size);
+    if (!sliced) return NULL;
+    
+    // Configure the sliced list with same settings as the original
+    list_set_print_function(sliced, list->print_node_function);
+    list_set_compare_function(sliced, list->compare_node_function);
+    list_set_free_function(sliced, list->free_node_function);
+    list_set_copy_function(sliced, list->copy_node_function);
+    
+    Node* current = list->head->next;
+    
+    // Skip to start position
+    for (size_t i = 0; i < start && current != list->tail; i++) {
+        current = current->next;
+    }
+    
+    // Copy elements from start to end
+    for (size_t i = start; i < end && current != list->tail; i++) {
+        if (list_insert_at_tail(sliced, current->data) != LIST_SUCCESS) {
+            list_destroy(sliced);
+            return NULL;
+        }
+        current = current->next;
+    }
+    
+    return sliced;
+}
+
+
+/**
+ * @brief Rotates the list elements by a specified number of positions.
+ * @param list The list to rotate.
+ * @param positions Number of positions to rotate (positive = right, negative = left).
+ * @return LIST_SUCCESS on success, error code otherwise.
+ */
+ListResult list_rotate(LinkedList* list, int positions) {
+    if (!list || list->length <= 1) return LIST_SUCCESS;
+    
+    // Normalize positions to be within list length
+    int actual_positions = positions % (int)list->length;
+    if (actual_positions < 0) {
+        actual_positions += list->length;
+    }
+    
+    if (actual_positions == 0) return LIST_SUCCESS;
+    
+    // Find the split point
+    Node* split_point = list->head->next;
+    for (int i = 0; i < actual_positions; i++) {
+        split_point = split_point->next;
+    }
+    
+    // If split point is at the end, no rotation needed
+    if (split_point == list->tail) return LIST_SUCCESS;
+    
+    // Save the nodes we're moving
+    Node* first_part_start = list->head->next;
+    Node* first_part_end = split_point->prev;
+    Node* second_part_start = split_point;
+    Node* second_part_end = list->tail->prev;
+    
+    // Reconnect: dummy_head -> second_part -> first_part -> dummy_tail
+    list->head->next = second_part_start;
+    second_part_start->prev = list->head;
+    
+    second_part_end->next = first_part_start;
+    first_part_start->prev = second_part_end;
+    
+    first_part_end->next = list->tail;
+    list->tail->prev = first_part_end;
+    
+    return LIST_SUCCESS;
 }
 
 /**
- * @brief Finds the minimum element in the list.
- * @param list The list to search in.
- * @return A direct pointer to the minimum element's data, or NULL if not found.
+ * @brief Reverses the list in place.
+ * @param list The list to reverse.
+ * @return LIST_SUCCESS on success, error code on failure.
  */
-void* list_min(const LinkedList* list) {
-    return find_extreme_element(list, FIND_MIN);
+ListResult list_reverse(LinkedList* list) {
+    
+    if (!list) return LIST_ERROR_NULL_POINTER;
+    if (list->length <= 1) return LIST_SUCCESS;
+    
+    Node* current = list->head->next;
+    Node* prev_node = list->head;
+    
+    // Swap next and prev pointers for each node
+    while (current != list->tail) {
+        Node* next_node = current->next;
+        current->next = prev_node;
+        current->prev = next_node;
+        prev_node = current;
+        current = next_node;
+    }
+    
+    // Update dummy nodes
+    list->head->next = prev_node;
+    prev_node->prev = list->head;
+    list->tail->prev = list->head->next;
+    
+    // Fix the last node
+    current = list->head->next;
+    while (current->next != list->head) {
+        current = current->next;
+    }
+    current->next = list->tail;
+    list->tail->prev = current;
+    
+    return LIST_SUCCESS;
 }
-
-/**
- * @brief Finds the maximum element in the list.
- * @param list The list to search in.
- * @return A direct pointer to the maximum element's data, or NULL if not found.
- */
-void* list_max(const LinkedList* list) {
-    return find_extreme_element(list, FIND_MAX);
-}
-
 
 /**
  * @brief Creates a new list with elements that pass the filter function.
@@ -993,66 +1066,6 @@ LinkedList* list_filter(const LinkedList* list, FilterFunction filter_fn) {
     
     return filtered;
 }
-
-/*
-┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃                                               ┃
-┃              Iteration Functions              ┃
-┃                                               ┃
-┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
- */
-
-/**
- * @brief Applies a function to each element in the list (forward iteration).
- * @param list The list to iterate over.
- * @param action Function to call on each element.
- * @return LIST_SUCCESS on success, error code on failure.
- */
-ListResult list_for_each(const LinkedList* list, ForEachFunction action) {
-    if (!list) return LIST_ERROR_NULL_POINTER;
-    if (!action) return LIST_ERROR_NULL_POINTER;
-    
-    Node* current = list->head->next;
-    size_t index = 0;
-    
-    while (current != list->tail) {
-        action(current->data, index);
-        current = current->next;
-        index++;
-    }
-    
-    return LIST_SUCCESS;
-}
-
-/**
- * @brief Applies a function to each element in the list (reverse iteration).
- * @param list The list to iterate over.
- * @param action Function to call on each element.
- * @return LIST_SUCCESS on success, error code on failure.
- */
-ListResult list_for_each_reverse(const LinkedList* list, ForEachFunction action) {
-    if (!list) return LIST_ERROR_NULL_POINTER;
-    if (!action) return LIST_ERROR_NULL_POINTER;
-    
-    Node* current = list->tail->prev;
-    size_t index = list->length - 1;
-    
-    while (current != list->head) {
-        action(current->data, index);
-        current = current->prev;
-        index--;
-    }
-    
-    return LIST_SUCCESS;
-}
-
-/*
-┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃                                               ┃
-┃           Transformation Functions            ┃
-┃                                               ┃
-┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
- */
 
 /**
  * @brief Creates a new list with transformed elements.
@@ -1094,79 +1107,150 @@ LinkedList* list_map(const LinkedList* list, MapFunction map_fn, size_t new_elem
     return mapped;
 }
 
-/**
- * @brief Creates a new list containing a slice of the original.
- * @param list The source list.
- * @param start Start index (inclusive).
- * @param end End index (exclusive).
- * @return A new sliced list, or NULL on failure.
+/*
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃                                               ┃
+┃            Mathematical Functions             ┃
+┃                                               ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
  */
-LinkedList* list_slice(const LinkedList* list, size_t start, size_t end) {
-    if (!list || start >= end || start >= list->length) return NULL;
-    
-    if (end > list->length) end = list->length;
-    
-    LinkedList* sliced = list_create(list->element_size);
-    if (!sliced) return NULL;
-    
-    // Configure the sliced list with same settings as the original
-    list_set_print_function(sliced, list->print_node_function);
-    list_set_compare_function(sliced, list->compare_node_function);
-    list_set_free_function(sliced, list->free_node_function);
-    list_set_copy_function(sliced, list->copy_node_function);
-    
-    Node* current = list->head->next;
-    
-    // Skip to start position
-    for (size_t i = 0; i < start && current != list->tail; i++) {
-        current = current->next;
+
+// INTERNAL HELPER FUNCTION for finding extreme elements
+static void* find_extreme_element(const LinkedList* list, ExtremeFindType type) {
+    if (!list || !list->compare_node_function || list_is_empty(list)) {
+        return NULL;
     }
     
-    // Copy elements from start to end
-    for (size_t i = start; i < end && current != list->tail; i++) {
-        if (list_insert_at_tail(sliced, current->data) != LIST_SUCCESS) {
-            list_destroy(sliced);
-            return NULL;
+    Node* extreme_node = list->head->next;
+    Node* current = extreme_node->next;
+    
+    // Iterate and compare with the rest of the elements
+    while (current != list->tail) {
+        int comparison = list->compare_node_function(current->data, extreme_node->data);
+        
+        if ((type == FIND_MAX && comparison > 0) || (type == FIND_MIN && comparison < 0)) {
+            extreme_node = current;
         }
         current = current->next;
     }
     
-    return sliced;
+    return extreme_node->data;
 }
 
 /**
- * @brief Creates a new list by concatenating two lists.
+ * @brief Finds the minimum element in the list.
+ * @param list The list to search in.
+ * @return A direct pointer to the minimum element's data, or NULL if not found.
+ */
+void* list_min(const LinkedList* list) {
+    return find_extreme_element(list, FIND_MIN);
+}
+
+/**
+ * @brief Finds the maximum element in the list.
+ * @param list The list to search in.
+ * @return A direct pointer to the maximum element's data, or NULL if not found.
+ */
+void* list_max(const LinkedList* list) {
+    return find_extreme_element(list, FIND_MAX);
+}
+
+/**
+ * @brief Creates a new list with unique elements (preserves order).
+ * @param list The source list.
+ * @return A new list with unique elements, or NULL on failure.
+ */
+LinkedList* list_unique(const LinkedList* list) {
+    if (!list || !list->compare_node_function) return NULL;
+    
+    LinkedList* unique = list_create(list->element_size);
+    if (!unique) return NULL;
+    
+    // Configure the unique list with same settings as the original
+    list_set_print_function(unique, list->print_node_function);
+    list_set_compare_function(unique, list->compare_node_function);
+    list_set_free_function(unique, list->free_node_function);
+    list_set_copy_function(unique, list->copy_node_function);
+    
+    Node* current = list->head->next;
+    while (current != list->tail) {
+        // Check if element already exists in unique list
+        if (list_index(unique, current->data) == -1) {
+            if (list_insert_at_tail(unique, current->data) != LIST_SUCCESS) {
+                list_destroy(unique);
+                return NULL;
+            }
+        }
+        current = current->next;
+    }
+    
+    return unique;
+}
+
+/**
+ * @brief Creates a new list containing the intersection of two lists.
  * @param list1 First list.
  * @param list2 Second list.
- * @return A new concatenated list, or NULL on failure.
+ * @return A new list with common elements, or NULL on failure.
  */
-LinkedList* list_concat(const LinkedList* list1, const LinkedList* list2) {
+LinkedList* list_intersection(const LinkedList* list1, const LinkedList* list2) {
+    if (!list1 || !list2 || !list1->compare_node_function) return NULL;
+    if (list1->element_size != list2->element_size) return NULL;
+    
+    LinkedList* intersection = list_create(list1->element_size);
+    if (!intersection) return NULL;
+    
+    // Configure the intersection list with settings from first list
+    list_set_print_function(intersection, list1->print_node_function);
+    list_set_compare_function(intersection, list1->compare_node_function);
+    list_set_free_function(intersection, list1->free_node_function);
+    list_set_copy_function(intersection, list1->copy_node_function);
+    
+    Node* current = list1->head->next;
+    while (current != list1->tail) {
+        // If element exists in both lists and not already in result
+        if (list_index(list2, current->data) != -1 && 
+            list_index(intersection, current->data) == -1) {
+            if (list_insert_at_tail(intersection, current->data) != LIST_SUCCESS) {
+                list_destroy(intersection);
+                return NULL;
+            }
+        }
+        current = current->next;
+    }
+    
+    return intersection;
+}
+
+/**
+ * @brief Creates a new list containing the union of two lists.
+ * @param list1 First list.
+ * @param list2 Second list.
+ * @return A new list with all unique elements from both lists, or NULL on failure.
+ */
+LinkedList* list_union(const LinkedList* list1, const LinkedList* list2) {
     if (!list1 || !list2) return NULL;
     if (list1->element_size != list2->element_size) return NULL;
     
-    LinkedList* concatenated = list_create(list1->element_size);
-    if (!concatenated) return NULL;
+    // Start with unique elements from first list
+    LinkedList* union_list = list_unique(list1);
+    if (!union_list) return NULL;
     
-    // Configure the concatenated list with settings from first list
-    list_set_print_function(concatenated, list1->print_node_function);
-    list_set_compare_function(concatenated, list1->compare_node_function);
-    list_set_free_function(concatenated, list1->free_node_function);
-    list_set_copy_function(concatenated, list1->copy_node_function);
-    
-    // Copy all elements from first list
-    if (list_extend(concatenated, list1) != LIST_SUCCESS) {
-        list_destroy(concatenated);
-        return NULL;
+    // Add unique elements from second list
+    Node* current = list2->head->next;
+    while (current != list2->tail) {
+        if (list_index(union_list, current->data) == -1) {
+            if (list_insert_at_tail(union_list, current->data) != LIST_SUCCESS) {
+                list_destroy(union_list);
+                return NULL;
+            }
+        }
+        current = current->next;
     }
     
-    // Copy all elements from second list
-    if (list_extend(concatenated, list2) != LIST_SUCCESS) {
-        list_destroy(concatenated);
-        return NULL;
-    }
-    
-    return concatenated;
+    return union_list;
 }
+
 
 /*
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
@@ -1184,8 +1268,11 @@ LinkedList* list_concat(const LinkedList* list1, const LinkedList* list2) {
  * @note The caller is responsible for freeing the returned string.
  */
 char* list_to_string(const LinkedList* list, const char* separator) {
+    
     if (!list || !separator) return NULL;
     if (!list->print_node_function) return NULL;
+
+    // Edge case: empty list
     if (list_is_empty(list)) {
         char* empty = malloc(1);
         if (empty) empty[0] = '\0';
@@ -1306,14 +1393,18 @@ LinkedList* list_load_from_file(const char* filename, size_t element_size,
     
     // Read elements
     for (size_t i = 0; i < saved_length; i++) {
+
         void* element = malloc(element_size);
+
+        //
         if (!element || fread(element, element_size, 1, file) != 1) {
             free(element);
             list_destroy(list);
             fclose(file);
             return NULL;
         }
-        
+
+        // Insert element into the list
         if (list_insert_at_tail(list, element) != LIST_SUCCESS) {
             free(element);
             list_destroy(list);
@@ -1326,218 +1417,6 @@ LinkedList* list_load_from_file(const char* filename, size_t element_size,
     
     fclose(file);
     return list;
-}
-
-/*
-┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃                                               ┃
-┃            Mathematical Functions             ┃
-┃                                               ┃
-┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
- */
-
-/**
- * @brief Creates a new list with unique elements (preserves order).
- * @param list The source list.
- * @return A new list with unique elements, or NULL on failure.
- */
-LinkedList* list_unique(const LinkedList* list) {
-    if (!list || !list->compare_node_function) return NULL;
-    
-    LinkedList* unique = list_create(list->element_size);
-    if (!unique) return NULL;
-    
-    // Configure the unique list with same settings as the original
-    list_set_print_function(unique, list->print_node_function);
-    list_set_compare_function(unique, list->compare_node_function);
-    list_set_free_function(unique, list->free_node_function);
-    list_set_copy_function(unique, list->copy_node_function);
-    
-    Node* current = list->head->next;
-    while (current != list->tail) {
-        // Check if element already exists in unique list
-        if (list_index(unique, current->data) == -1) {
-            if (list_insert_at_tail(unique, current->data) != LIST_SUCCESS) {
-                list_destroy(unique);
-                return NULL;
-            }
-        }
-        current = current->next;
-    }
-    
-    return unique;
-}
-
-/**
- * @brief Creates a new list containing the intersection of two lists.
- * @param list1 First list.
- * @param list2 Second list.
- * @return A new list with common elements, or NULL on failure.
- */
-LinkedList* list_intersection(const LinkedList* list1, const LinkedList* list2) {
-    if (!list1 || !list2 || !list1->compare_node_function) return NULL;
-    if (list1->element_size != list2->element_size) return NULL;
-    
-    LinkedList* intersection = list_create(list1->element_size);
-    if (!intersection) return NULL;
-    
-    // Configure the intersection list with settings from first list
-    list_set_print_function(intersection, list1->print_node_function);
-    list_set_compare_function(intersection, list1->compare_node_function);
-    list_set_free_function(intersection, list1->free_node_function);
-    list_set_copy_function(intersection, list1->copy_node_function);
-    
-    Node* current = list1->head->next;
-    while (current != list1->tail) {
-        // If element exists in both lists and not already in result
-        if (list_index(list2, current->data) != -1 && 
-            list_index(intersection, current->data) == -1) {
-            if (list_insert_at_tail(intersection, current->data) != LIST_SUCCESS) {
-                list_destroy(intersection);
-                return NULL;
-            }
-        }
-        current = current->next;
-    }
-    
-    return intersection;
-}
-
-/**
- * @brief Creates a new list containing the union of two lists.
- * @param list1 First list.
- * @param list2 Second list.
- * @return A new list with all unique elements from both lists, or NULL on failure.
- */
-LinkedList* list_union(const LinkedList* list1, const LinkedList* list2) {
-    if (!list1 || !list2) return NULL;
-    if (list1->element_size != list2->element_size) return NULL;
-    
-    // Start with unique elements from first list
-    LinkedList* union_list = list_unique(list1);
-    if (!union_list) return NULL;
-    
-    // Add unique elements from second list
-    Node* current = list2->head->next;
-    while (current != list2->tail) {
-        if (list_index(union_list, current->data) == -1) {
-            if (list_insert_at_tail(union_list, current->data) != LIST_SUCCESS) {
-                list_destroy(union_list);
-                return NULL;
-            }
-        }
-        current = current->next;
-    }
-    
-    return union_list;
-}
-
-/**
- * @brief Rotates the list elements by a specified number of positions.
- * @param list The list to rotate.
- * @param positions Number of positions to rotate (positive = right, negative = left).
- * @return LIST_SUCCESS on success, error code otherwise.
- */
-ListResult list_rotate(LinkedList* list, int positions) {
-    if (!list || list->length <= 1) return LIST_SUCCESS;
-    
-    // Normalize positions to be within list length
-    int actual_positions = positions % (int)list->length;
-    if (actual_positions < 0) {
-        actual_positions += list->length;
-    }
-    
-    if (actual_positions == 0) return LIST_SUCCESS;
-    
-    // Find the split point
-    Node* split_point = list->head->next;
-    for (int i = 0; i < actual_positions; i++) {
-        split_point = split_point->next;
-    }
-    
-    // If split point is at the end, no rotation needed
-    if (split_point == list->tail) return LIST_SUCCESS;
-    
-    // Save the nodes we're moving
-    Node* first_part_start = list->head->next;
-    Node* first_part_end = split_point->prev;
-    Node* second_part_start = split_point;
-    Node* second_part_end = list->tail->prev;
-    
-    // Reconnect: dummy_head -> second_part -> first_part -> dummy_tail
-    list->head->next = second_part_start;
-    second_part_start->prev = list->head;
-    
-    second_part_end->next = first_part_start;
-    first_part_start->prev = second_part_end;
-    
-    first_part_end->next = list->tail;
-    list->tail->prev = first_part_end;
-    
-    return LIST_SUCCESS;
-}
-
-// Legacy Node function for adding values from two lists
-Node* add_lists(Node *list1, Node *list2) {
-    if (!list1 || !list2) return NULL;
-    
-    Node *result = NULL;
-    Node *tail = NULL;
-    int carry = 0;
-    
-    while (list1 || list2 || carry) {
-        int sum = carry;
-        if (list1) {
-            sum += *(int*)list1->data;
-            list1 = list1->next;
-        }
-        if (list2) {
-            sum += *(int*)list2->data;
-            list2 = list2->next;
-        }
-        
-        Node *new_node = (Node*)malloc(sizeof(Node));
-        if (!new_node) return NULL;
-        
-        new_node->data = malloc(sizeof(int));
-        if (!new_node->data) {
-            free(new_node);
-            return NULL;
-        }
-        
-        *(int*)new_node->data = sum % 10;
-        carry = sum / 10;
-        new_node->next = NULL;
-        new_node->prev = tail;
-        
-        if (!result) {
-            result = new_node;
-        } else {
-            tail->next = new_node;
-        }
-        tail = new_node;
-    }
-    
-    return result;
-}
-
-// Legacy Node function for merging two sorted lists
-Node* merge_sorted_lists(Node *list1, Node *list2) {
-    if (!list1) return list2;
-    if (!list2) return list1;
-    
-    Node *result;
-    if (*(int*)list1->data <= *(int*)list2->data) {
-        result = list1;
-        result->next = merge_sorted_lists(list1->next, list2);
-        if (result->next) result->next->prev = result;
-    } else {
-        result = list2;
-        result->next = merge_sorted_lists(list1, list2->next);
-        if (result->next) result->next->prev = result;
-    }
-    
-    return result;
 }
 
 /*
