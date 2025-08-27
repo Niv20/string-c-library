@@ -19,8 +19,10 @@ static ListResult handle_size_limit(LinkedList*);
 static Node* create_node_with_data(LinkedList*, void*);
 static ListResult insert_node_core(LinkedList*, void*, Node**);  // Core insertion helper
 static ListResult delete_node_core(LinkedList*, Node*);          // Core deletion helper
+static void copy_list_configuration(LinkedList*, const LinkedList*); // Helper to copy function pointers
 
 /*
+
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃                                               ┃
 ┃                Error Handling                 ┃
@@ -836,10 +838,7 @@ LinkedList* list_copy(const LinkedList* list) {
     if (!new_list) return NULL;
     
     // Configure the new list with same settings as the original
-    list_set_print_function(new_list, list->print_node_function);
-    list_set_compare_function(new_list, list->compare_node_function);
-    list_set_free_function(new_list, list->free_node_function);
-    list_set_copy_function(new_list, list->copy_node_function);
+    copy_list_configuration(new_list, list);
     
     // Copy all elements from original list
     ListResult extend_result = list_extend(new_list, list);
@@ -888,10 +887,7 @@ LinkedList* list_concat(const LinkedList* list1, const LinkedList* list2) {
     if (!concatenated) return NULL;
     
     // Configure the concatenated list with settings from first list
-    list_set_print_function(concatenated, list1->print_node_function);
-    list_set_compare_function(concatenated, list1->compare_node_function);
-    list_set_free_function(concatenated, list1->free_node_function);
-    list_set_copy_function(concatenated, list1->copy_node_function);
+    copy_list_configuration(concatenated, list1);
     
     // Copy all elements from first list
     if (list_extend(concatenated, list1) != LIST_SUCCESS) {
@@ -926,10 +922,7 @@ LinkedList* list_slice(const LinkedList* list, size_t start, size_t end) {
     if (!sliced) return NULL;
     
     // Configure the sliced list with same settings as the original
-    list_set_print_function(sliced, list->print_node_function);
-    list_set_compare_function(sliced, list->compare_node_function);
-    list_set_free_function(sliced, list->free_node_function);
-    list_set_copy_function(sliced, list->copy_node_function);
+    copy_list_configuration(sliced, list);
     
     Node* current = list->head->next;
     
@@ -1048,10 +1041,7 @@ LinkedList* list_filter(const LinkedList* list, FilterFunction filter_fn) {
     if (!filtered) return NULL;
     
     // Configure the filtered list with same settings as the original
-    list_set_print_function(filtered, list->print_node_function);
-    list_set_compare_function(filtered, list->compare_node_function);
-    list_set_free_function(filtered, list->free_node_function);
-    list_set_copy_function(filtered, list->copy_node_function);
+    copy_list_configuration(filtered, list);
     
     Node* current = list->head->next;
     while (current != list->tail) {
@@ -1167,10 +1157,7 @@ LinkedList* list_unique(const LinkedList* list) {
     if (!unique) return NULL;
     
     // Configure the unique list with same settings as the original
-    list_set_print_function(unique, list->print_node_function);
-    list_set_compare_function(unique, list->compare_node_function);
-    list_set_free_function(unique, list->free_node_function);
-    list_set_copy_function(unique, list->copy_node_function);
+    copy_list_configuration(unique, list);
     
     Node* current = list->head->next;
     while (current != list->tail) {
@@ -1201,10 +1188,7 @@ LinkedList* list_intersection(const LinkedList* list1, const LinkedList* list2) 
     if (!intersection) return NULL;
     
     // Configure the intersection list with settings from first list
-    list_set_print_function(intersection, list1->print_node_function);
-    list_set_compare_function(intersection, list1->compare_node_function);
-    list_set_free_function(intersection, list1->free_node_function);
-    list_set_copy_function(intersection, list1->copy_node_function);
+    copy_list_configuration(intersection, list1);
     
     Node* current = list1->head->next;
     while (current != list1->tail) {
