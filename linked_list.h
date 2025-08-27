@@ -169,8 +169,7 @@ ListResult list_print(const LinkedList* list);
 ListResult list_print_advanced(const LinkedList* list, bool show_index, const char* separator);
 
 // --- Search and Access Functions ---
-ListResult list_get(const LinkedList* list, size_t index, void* out_data);
-void* list_get_ptr(const LinkedList* list, size_t index);
+void* list_get(const LinkedList* list, size_t index);
 ListResult list_set(LinkedList* list, size_t index, void* data);
 int list_index(const LinkedList* list, void* data);
 int list_index_advanced(const LinkedList* list, void* data, int direction);

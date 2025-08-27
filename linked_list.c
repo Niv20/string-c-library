@@ -405,7 +405,7 @@ ListResult list_delete_at_index(LinkedList* list, size_t index) {
     
     if (!list) return LIST_ERROR_NULL_POINTER;
     if (list_is_empty(list)) return LIST_ERROR_INVALID_OPERATION;
-    if (index < 0 || index >= list->length) return LIST_ERROR_INDEX_OUT_OF_BOUNDS;
+    if (index >= list->length) return LIST_ERROR_INDEX_OUT_OF_BOUNDS;
     
     Node* current;
     
@@ -565,12 +565,12 @@ ListResult list_print_advanced(const LinkedList* list, bool show_index, const ch
     if (show_index)
         printf("List len: %zu\n", list->length);
 
-    int index = 0;
+    size_t index = 0;
     while(current_node != end_node) {
 
         // Print the index, if required
         if (show_index)
-            printf("  [%d]: ", index++);
+            printf("  [%zu]: ", index++);
 
         // Print the element data itself
         list->print_node_function(current_node->data);
@@ -622,6 +622,7 @@ static Node* find_node_by_index(const LinkedList* list, size_t index) {
     
     return current;
 }
+
 
 /**
  * @brief Gets a pointer to an element at a specific index (direct access without copying).
@@ -690,21 +691,22 @@ int list_index_advanced(const LinkedList* list, void* data, int direction) {
     if (direction == SEARCH_FROM_TAIL) {
         // Search from tail to head
         Node* current = list->tail->prev;
-        int index = list->length - 1;
+        size_t index = list->length - 1;
         while (current != list->head) {
             if (list->compare_node_function(current->data, data) == 0) {
-                return index;
+                return (int)index;
             }
             current = current->prev;
+            if (index == 0) break; // Prevent underflow
             index--;
         }
     } else {
         // Search from head to tail (default)
         Node* current = list->head->next;
-        int index = 0;
+        size_t index = 0;
         while (current != list->tail) {
             if (list->compare_node_function(current->data, data) == 0) {
-                return index;
+                return (int)index;
             }
             current = current->next;
             index++;
