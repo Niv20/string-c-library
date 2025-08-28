@@ -134,7 +134,7 @@ if (!person_list) { // person_list == NULL
 printf("Successfully created a list for Person objects.\n");
 ```
 
-> [!NOTE] > _For developers:_ This function sets up dummy head and tail nodes, to simplify the logic for all other list operations by ensuring that every "real" node is always between two other nodes.
+> [!NOTE] > **For developers:** This function sets up dummy head and tail nodes, to simplify the logic for all other list operations by ensuring that every "real" node is always between two other nodes.
 
 > [!IMPORTANT]
 > This function only creates the list. It is currently "empty" (except for the dummy nodes, of course). Later, we will learn how to add elements to it.
@@ -178,7 +178,7 @@ list_set_max_size(person_list, UNLIMITED, REJECT_NEW_WHEN_FULL);  // behavior ig
 
 ### `list_insert_at_head`
 
-This function adds a new element to the very beginning of the list. The new element becomes the item at index 0. This is a very fast O(1) operation.
+This function adds a new element to the very beginning of the list.
 
 **Receives:**
 

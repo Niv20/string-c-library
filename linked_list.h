@@ -4,7 +4,7 @@
  * @date 25 Aug 2025
  * @brief A generic doubly linked list library in C.
  *
- * This header file defines the public interface for a generic doubly linked list.
+ * This header file defines the public interface for a doubly linked list.
  * It is designed to be type-agnostic by using void pointers and manages memory
  * internally by copying data provided by the user. For complex data types that
  * contain pointers, custom copy and free functions should be provided.
@@ -14,28 +14,17 @@
 #define LINKED_LIST_H
 
 #include <stddef.h>
+#include <stdbool.h>
 
 #define UNLIMITED 0
 
-typedef enum { FALSE, TRUE } bool;
-
 typedef enum { 
-    REJECT_NEW_WHEN_FULL = FALSE, 
-    DELETE_OLD_WHEN_FULL = TRUE 
+    REJECT_NEW_WHEN_FULL = false, 
+    DELETE_OLD_WHEN_FULL = true 
 } OverflowBehavior;
-
-// Enum to specify whether to find the minimum or maximum element.
-typedef enum {
-    FIND_MIN,
-    FIND_MAX
-} ExtremeFindType;
-
 
 // Constants for advanced delete operations
 #define DELETE_ALL_OCCURRENCES -1
-#define SEARCH_FROM_HEAD 0
-#define SEARCH_FROM_TAIL 1
-
 
 // --- Error Codes ---
 
@@ -43,19 +32,25 @@ typedef enum {
  * @brief Enumeration of possible list operation results.
  */
 typedef enum {
-    LIST_SUCCESS = 0,           /**< Operation completed successfully */
-    LIST_ERROR_NULL_POINTER,    /**< NULL pointer provided */
-    LIST_ERROR_MEMORY_ALLOC,    /**< Memory allocation failed */
+    LIST_SUCCESS = 0,               /**< Operation completed successfully */
+    LIST_ERROR_NULL_POINTER,        /**< NULL pointer provided */
+    LIST_ERROR_MEMORY_ALLOC,        /**< Memory allocation failed */
     LIST_ERROR_INDEX_OUT_OF_BOUNDS, /**< Index is out of bounds */
     LIST_ERROR_ELEMENT_NOT_FOUND,   /**< Element not found in list */
-    LIST_ERROR_LIST_FULL,       /**< List has reached maximum capacity */
+    LIST_ERROR_LIST_FULL,           /**< List has reached maximum capacity */
     LIST_ERROR_OVERWRITE_DISABLED,  /**< Overwrite is disabled and list is full */
     LIST_ERROR_INVALID_OPERATION,   /**< Invalid operation for current state */
-    LIST_ERROR_NO_COMPARE_FUNCTION,  /**< Compare function required but not provided */
-    LIST_ERROR_NO_PRINT_FUNCTION,    /**< Print function required but not provided */
-    LIST_ERROR_NO_FREE_FUNCTION,     /**< Free function required but not provided */
-    LIST_ERROR_NO_COPY_FUNCTION      /**< Copy function required but not provided */
+    LIST_ERROR_NO_COMPARE_FUNCTION, /**< Compare function required but not provided */
+    LIST_ERROR_NO_PRINT_FUNCTION,   /**< Print function required but not provided */
+    LIST_ERROR_NO_FREE_FUNCTION,    /**< Free function required but not provided */
+    LIST_ERROR_NO_COPY_FUNCTION     /**< Copy function required but not provided */
 } ListResult;
+
+typedef enum {
+    START_FROM_HEAD,
+    START_FROM_TAIL 
+} Direction;
+
 
 // --- Type Definitions ---
 
@@ -172,7 +167,6 @@ void* list_get(const LinkedList* list, size_t index);
 ListResult list_set(LinkedList* list, size_t index, void* data);
 int list_index(const LinkedList* list, void* data);
 int list_index_advanced(const LinkedList* list, void* data, int direction);
-size_t list_count_occurrences(const LinkedList* list, void* data);
 
 // --- Sorting and Manipulation Functions ---
 ListResult list_sort(LinkedList* list, bool reverse);
@@ -190,9 +184,11 @@ LinkedList* list_filter(const LinkedList* list, FilterFunction filter_fn);
 LinkedList* list_map(const LinkedList* list, MapFunction map_fn, size_t new_element_size);
 
 // --- Mathematical Functions ---
-void* list_min(const LinkedList* list);
-void* list_max(const LinkedList* list);
+size_t list_count_if(const LinkedList* list, bool (*predicate)(const void *element, void *arg), void *arg);
+void* list_min_by(const LinkedList* list, int (*compare)(const void *a, const void *b));
+void* list_max_by(const LinkedList* list, int (*compare)(const void *a, const void *b));
 LinkedList* list_unique(const LinkedList* list);
+LinkedList* list_unique_advanced(const LinkedList* list, CompareFunction custom_compare, Direction order);
 LinkedList* list_intersection(const LinkedList* list1, const LinkedList* list2);
 LinkedList* list_union(const LinkedList* list1, const LinkedList* list2);
 
@@ -207,4 +203,4 @@ LinkedList* list_load_from_file(const char* filename, size_t element_size,
                                 PrintFunction print_fn, CompareFunction compare_fn,
                                 FreeFunction free_fn, CopyFunction copy_fn);
 
-#endif // LINKED_LIST_H
+#endif

@@ -434,10 +434,10 @@ ListResult list_delete_at_index(LinkedList* list, size_t index) {
  * @param list The list to remove from.
  * @param data The data to find and remove.
  * @param count Number of occurrences to remove (DELETE_ALL_OCCURRENCES for all).
- * @param direction SEARCH_FROM_HEAD or SEARCH_FROM_TAIL.
+ * @param order START_FROM_HEAD or START_FROM_TAIL.
  * @return LIST_SUCCESS if at least one element was removed, error code otherwise.
  */
-ListResult list_remove_advanced(LinkedList* list, void* data, int count, int direction) {
+ListResult list_remove_advanced(LinkedList* list, void* data, int count, Direction order) {
     
     if (!list || !data) return LIST_ERROR_NULL_POINTER;
     if (list_is_empty(list)) return LIST_ERROR_ELEMENT_NOT_FOUND;
@@ -448,7 +448,7 @@ ListResult list_remove_advanced(LinkedList* list, void* data, int count, int dir
     Node* end_sentinel;
     
     // Set up traversal direction
-    if (direction == SEARCH_FROM_TAIL) {
+    if (order == START_FROM_TAIL) {
         current = list->tail->prev;
         end_sentinel = list->head;
     } else {
@@ -459,7 +459,7 @@ ListResult list_remove_advanced(LinkedList* list, void* data, int count, int dir
     // Traverse and remove matching elements
     while (current != end_sentinel && (count == DELETE_ALL_OCCURRENCES || removed_count < count)) {
         
-        Node* next_node = (direction == SEARCH_FROM_TAIL) ? current->prev : current->next;
+        Node* next_node = (order == START_FROM_TAIL) ? current->prev : current->next;
         
         if (list->compare_node_function(current->data, data) == 0) {
             // Found a match - remove it using core deletion logic
@@ -547,7 +547,7 @@ bool list_is_empty(const LinkedList* list) {
  * @return LIST_SUCCESS on success, error code on failure.
  */
 ListResult list_print(const LinkedList* list) {
-    return list_print_advanced(list, TRUE, "\n");
+    return list_print_advanced(list, true, "\n");
 }
 
 /**
@@ -682,22 +682,22 @@ ListResult list_set(LinkedList* list, size_t index, void* data) {
  * @return The index if found, negative error code if error occurred.
  */
 int list_index(const LinkedList* list, void* data) {
-    return list_index_advanced(list, data, SEARCH_FROM_HEAD);
+    return list_index_advanced(list, data, START_FROM_HEAD);
 }
 
 /**
  * @brief Returns the index of the first/last occurrence of a value with direction control.
  * @param list The list to search in.
  * @param data The data to find.
- * @param direction SEARCH_FROM_HEAD (default) or SEARCH_FROM_TAIL.
+ * @param direction START_FROM_HEAD (default) or START_FROM_TAIL.
  * @return The index if found, negative error code if error occurred.
  */
-int list_index_advanced(const LinkedList* list, void* data, int direction) {
+int list_index_advanced(const LinkedList* list, void* data, Direction order) {
     if (!list) return -LIST_ERROR_NULL_POINTER;
     if (!data) return -LIST_ERROR_NULL_POINTER;
     if (!list->compare_node_function) return -LIST_ERROR_NO_COMPARE_FUNCTION;
-    
-    if (direction == SEARCH_FROM_TAIL) {
+
+    if (order == START_FROM_TAIL) {
         // Search from tail to head
         Node* current = list->tail->prev;
         size_t index = list->length - 1;
@@ -724,28 +724,6 @@ int list_index_advanced(const LinkedList* list, void* data, int direction) {
     return -LIST_ERROR_ELEMENT_NOT_FOUND; // Element not found
 }
 
-/**
- * @brief Counts the number of occurrences of a value (like Python's count).
- * @param list The list to count in.
- * @param data The data to count.
- * @return The number of occurrences.
- */
-size_t list_count_occurrences(const LinkedList* list, void* data) {
-    
-    if (!list || !data || !list->compare_node_function) return 0;
-    
-    size_t count = 0;
-    Node* current = list->head->next;
-    while (current != list->tail) {
-        if (list->compare_node_function(current->data, data) == 0) {
-            count++;
-        }
-        current = current->next;
-    }
-    return count;
-}
-
-
 /*
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃                                               ┃
@@ -764,7 +742,7 @@ size_t list_count_occurrences(const LinkedList* list, void* data) {
 // which doesn't allow passing custom context like the sort order or a specific compare function.
 // These static variables act as a context bridge to a wrapper function.
 static CompareFunction g_compare_function = NULL;
-static bool g_reverse_order = FALSE;
+static bool g_reverse_order = false;
 
 
 // Helper function for qsort comparison
@@ -782,7 +760,7 @@ static int qsort_compare_wrapper(const void* a, const void* b) {
 /**
  * @brief Sorts the list in place (like Python's sort).
  * @param list The list to sort.
- * @param reverse If TRUE, sorts in descending order.
+ * @param reverse If true, sorts in descending order.
  * @return LIST_SUCCESS on success, error code on failure.
  */
 ListResult list_sort(LinkedList* list, bool reverse_order) {
@@ -809,7 +787,7 @@ ListResult list_sort(LinkedList* list, bool reverse_order) {
     
     // Clean up the global context to prevent side effects in other parts of the program.
     g_compare_function = NULL;
-    g_reverse_order = FALSE;
+    g_reverse_order = false;
     free(array);
     
     return result;
@@ -1114,74 +1092,149 @@ LinkedList* list_map(const LinkedList* list, MapFunction map_fn, size_t new_elem
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
  */
 
-// INTERNAL HELPER FUNCTION for finding extreme elements
-static void* find_extreme_element(const LinkedList* list, ExtremeFindType type) {
-    if (!list || !list->compare_node_function || list_is_empty(list)) {
-        return NULL;
-    }
+/**
+ * @brief Counts how many elements in the list satisfy a given condition.
+ * @param list The list to iterate over.
+ * @param predicate A function pointer that returns true if an element satisfies the condition.
+ * @param arg An optional argument to pass to the predicate function.
+ * @return The number of elements that satisfy the condition.
+ */
+size_t list_count_if(const LinkedList* list, bool (*predicate)(const void *element, void *arg), void *arg) {
+    if (!list || !predicate) return 0;
     
-    Node* extreme_node = list->head->next;
-    Node* current = extreme_node->next;
-    
-    // Iterate and compare with the rest of the elements
+    size_t count = 0;
+    Node* current = list->head->next;
     while (current != list->tail) {
-        int comparison = list->compare_node_function(current->data, extreme_node->data);
-        
-        if ((type == FIND_MAX && comparison > 0) || (type == FIND_MIN && comparison < 0)) {
-            extreme_node = current;
+        if (predicate(current->data, arg)) {
+            count++;
         }
         current = current->next;
     }
+    return count;
+}
+
+/**
+ * @brief Finds the minimum element in the list based on a custom comparison function.
+ * @param list The list to search in.
+ * @param compare A function pointer to compare two elements. Should return < 0 if a < b, 0 if a == b, > 0 if a > b.
+ * @return A direct pointer to the minimum element's data, or NULL if the list is empty or compare function is not provided.
+ */
+void* list_min_by(const LinkedList* list, int (*compare)(const void *a, const void *b)) {
+    if (list_is_empty(list) || !compare) return NULL;
+
+    void* min_elem = list->head->next->data;
+    Node* current = list->head->next->next;
     
-    return extreme_node->data;
+    while (current != list->tail) {
+        if (compare(current->data, min_elem) < 0) {
+            min_elem = current->data;
+        }
+        current = current->next;
+    }
+    return min_elem;
 }
 
 /**
- * @brief Finds the minimum element in the list.
+ * @brief Finds the maximum element in the list based on a custom comparison function.
  * @param list The list to search in.
- * @return A direct pointer to the minimum element's data, or NULL if not found.
+ * @param compare A function pointer to compare two elements. Should return < 0 if a < b, 0 if a == b, > 0 if a > b.
+ * @return A direct pointer to the maximum element's data, or NULL if the list is empty or compare function is not provided.
  */
-void* list_min(const LinkedList* list) {
-    return find_extreme_element(list, FIND_MIN);
+void* list_max_by(const LinkedList* list, int (*compare)(const void *a, const void *b)) {
+    if (list_is_empty(list) || !compare) return NULL;
+
+    void* max_elem = list->head->next->data;
+    Node* current = list->head->next->next;
+
+    while (current != list->tail) {
+        if (compare(current->data, max_elem) > 0) {
+            max_elem = current->data;
+        }
+        current = current->next;
+    }
+    return max_elem;
 }
 
 /**
- * @brief Finds the maximum element in the list.
- * @param list The list to search in.
- * @return A direct pointer to the maximum element's data, or NULL if not found.
- */
-void* list_max(const LinkedList* list) {
-    return find_extreme_element(list, FIND_MAX);
-}
-
-/**
- * @brief Creates a new list with unique elements (preserves order).
+ * @brief Creates a new list with unique elements based on the default compare function, preserving the first occurrence.
  * @param list The source list.
  * @return A new list with unique elements, or NULL on failure.
  */
 LinkedList* list_unique(const LinkedList* list) {
-    
-    if (!list || !list->compare_node_function) return NULL;
-    
-    LinkedList* unique = list_create(list->element_size);
-    if (!unique) return NULL;
-    
-    // Configure the unique list with same settings as the original
-    copy_list_configuration(unique, list);
-    
-    Node* current = list->head->next;
-    while (current != list->tail) {
-        // Check if element already exists in unique list
-        if (list_index(unique, current->data) == -1) {
-            if (list_insert_at_tail(unique, current->data) != LIST_SUCCESS) {
-                list_destroy(unique);
-                return NULL;
+    if (!list) return NULL;
+    // Call the advanced function with the list's default comparator and preserving the first occurrence.
+    return list_unique_advanced(list, list->compare_node_function, START_FROM_HEAD);
+}
+
+/**
+ * @brief Creates a new list with unique elements based on a custom comparison function and preservation order.
+ * @param list The source list.
+ * @param custom_compare A function to determine uniqueness. If NULL, the list's default compare function is used.
+ * @param order START_FROM_HEAD to keep the first seen unique element, START_FROM_TAIL to keep the last.
+ * @return A new list with unique elements, or NULL on failure.
+ */
+LinkedList* list_unique_advanced(const LinkedList* list, CompareFunction custom_compare, Direction order) {
+    if (!list) return NULL;
+
+    // Use the provided custom_compare function, or fall back to the list's default.
+    CompareFunction compare_fn = custom_compare ? custom_compare : list->compare_node_function;
+    if (!compare_fn) return NULL; // Cannot determine uniqueness without a compare function.
+
+    LinkedList* unique_list = list_create(list->element_size);
+    if (!unique_list) return NULL;
+
+    copy_list_configuration(unique_list, list);
+
+    if (order == START_FROM_TAIL) {
+        // To preserve the last occurrence, we iterate the source list in reverse.
+        Node* current = list->tail->prev;
+        while (current != list->head) {
+            // Check if the element is already in our unique list.
+            bool found = false;
+            Node* unique_current = unique_list->head->next;
+            while (unique_current != unique_list->tail) {
+                if (compare_fn(current->data, unique_current->data) == 0) {
+                    found = true;
+                    break;
+                }
+                unique_current = unique_current->next;
             }
+
+            if (!found) {
+                // Since we are iterating backwards, we insert at the head to maintain the original relative order.
+                if (list_insert_at_head(unique_list, current->data) != LIST_SUCCESS) {
+                    list_destroy(unique_list);
+                    return NULL;
+                }
+            }
+            current = current->prev;
         }
-        current = current->next;
+    } else { // START_FROM_HEAD
+        // To preserve the first occurrence, we iterate the source list forwards.
+        Node* current = list->head->next;
+        while (current != list->tail) {
+            // Check if the element is already in our unique list.
+            bool found = false;
+            Node* unique_current = unique_list->head->next;
+            while (unique_current != unique_list->tail) {
+                if (compare_fn(current->data, unique_current->data) == 0) {
+                    found = true;
+                    break;
+                }
+                unique_current = unique_current->next;
+            }
+
+            if (!found) {
+                if (list_insert_at_tail(unique_list, current->data) != LIST_SUCCESS) {
+                    list_destroy(unique_list);
+                    return NULL;
+                }
+            }
+            current = current->next;
+        }
     }
-    
-    return unique;
+
+    return unique_list;
 }
 
 /**
@@ -1191,6 +1244,7 @@ LinkedList* list_unique(const LinkedList* list) {
  * @return A new list with common elements, or NULL on failure.
  */
 LinkedList* list_intersection(const LinkedList* list1, const LinkedList* list2) {
+    
     if (!list1 || !list2 || !list1->compare_node_function) return NULL;
     if (list1->element_size != list2->element_size) return NULL;
     
@@ -1202,6 +1256,7 @@ LinkedList* list_intersection(const LinkedList* list1, const LinkedList* list2) 
     
     Node* current = list1->head->next;
     while (current != list1->tail) {
+
         // If element exists in both lists and not already in result
         if (list_index(list2, current->data) != -1 && 
             list_index(intersection, current->data) == -1) {
@@ -1223,6 +1278,7 @@ LinkedList* list_intersection(const LinkedList* list1, const LinkedList* list2) 
  * @return A new list with all unique elements from both lists, or NULL on failure.
  */
 LinkedList* list_union(const LinkedList* list1, const LinkedList* list2) {
+    
     if (!list1 || !list2) return NULL;
     if (list1->element_size != list2->element_size) return NULL;
     
@@ -1244,8 +1300,6 @@ LinkedList* list_union(const LinkedList* list1, const LinkedList* list2) {
     
     return union_list;
 }
-
-
 
 /*
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
@@ -1348,7 +1402,7 @@ char* list_to_string(const LinkedList* list, const char* separator) {
     if (!result) return NULL;
     
     result[0] = '\0';
-    bool first = TRUE;
+    bool first = true;
     
     Node* current = list->head->next;
     while (current != list->tail) {
@@ -1374,7 +1428,7 @@ char* list_to_string(const LinkedList* list, const char* separator) {
             strcat(result, "[data]");
         }
         
-        first = FALSE;
+        first = false;
         current = current->next;
     }
     
