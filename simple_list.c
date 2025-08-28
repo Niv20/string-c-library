@@ -1,5 +1,7 @@
 גיבוי 
 
+static void list_set_all_functions(LinkedList*, PrintFunction, CompareFunction, FreeFunction, CopyFunction); // Helper to set all function pointers
+
 
 /*
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓

@@ -82,6 +82,25 @@ Person create_person(int id, const char* name, int age) {
 // Pretty section header
 static void banner(const char* title) { printf("\n========== %s ==========%s", title, "\n"); }
 
+// Helper functions for various demos
+int compare_name_len(const void* a, const void* b) {
+    const Person* A = (const Person*)a; 
+    const Person* B = (const Person*)b;
+    return (int)strlen(A->name) - (int)strlen(B->name);
+}
+
+void print_int(void* d) { 
+    printf("%d", *(int*)d); 
+}
+
+int cmp_int(const void* A, const void* B) { 
+    return (*(const int*)A - *(const int*)B); 
+}
+
+void free_int(void* d) { 
+    (void)d; 
+}
+
 void demonstrate_generic_functions() {
     banner("DEMONSTRATING GENERIC COUNT/MIN/MAX");
 
@@ -136,11 +155,7 @@ void demonstrate_generic_functions() {
     if (youngest) { printf("The youngest person is: "); print_person(youngest); printf("\n"); }
 
     printf("\n--- Using list_max_by ---\n");
-    // Reuse compare by name length locally
-    int compare_name_len(const void* a, const void* b) {
-        const Person* A = (const Person*)a; const Person* B = (const Person*)b;
-        return (int)strlen(A->name) - (int)strlen(B->name);
-    }
+    // Use the global compare_name_len function
     Person* longest_name_person = (Person*)list_max_by(people_list, compare_name_len);
     if (longest_name_person) { printf("The person with the longest name is: "); print_person(longest_name_person); printf("\n"); }
 
@@ -365,9 +380,6 @@ static void demo_array_and_io(void) {
     // Work with an int list to showcase list_to_string formatting
     LinkedList* ints = list_create(sizeof(int));
     // For basic ints we don't need custom functions, but printing requires a print function
-    void print_int(void* d){ printf("%d", *(int*)d); }
-    int cmp_int(const void* A, const void* B){ return (*(const int*)A - *(const int*)B); }
-    void free_int(void* d){ (void)d; }
     list_set_print_function(ints, print_int);
     list_set_compare_function(ints, cmp_int);
     list_set_free_function(ints, free_int);

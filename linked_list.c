@@ -20,7 +20,6 @@ static Node* create_node_with_data(LinkedList*, void*);
 static ListResult insert_node_core(LinkedList*, void*, Node**);  // Core insertion helper
 static ListResult delete_node_core(LinkedList*, Node*);          // Core deletion helper
 static void copy_list_configuration(LinkedList*, const LinkedList*); // Helper to copy function pointers
-static void list_set_all_functions(LinkedList*, PrintFunction, CompareFunction, FreeFunction, CopyFunction); // Helper to set all function pointers
 
 /*
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
@@ -1057,9 +1056,8 @@ LinkedList* list_map(const LinkedList* list, MapFunction map_fn, size_t new_elem
     LinkedList* mapped = list_create(new_element_size);
     if (!mapped) return NULL;
     
-    // Configure the mapped list
-    list_set_free_function(mapped, list->free_node_function);
-    list_set_copy_function(mapped, list->copy_node_function);
+    // Don't copy the original list's free/copy functions since the new list 
+    // may contain a different data type that requires different handling
     
     Node* current = list->head->next;
     while (current != list->tail) {
