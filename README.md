@@ -1,51 +1,75 @@
-# Generic Doubly Linked List Library in C
+# Generic Linked List Library in C
 
-This is a comprehensive, generic doubly linked list library written in C. It is designed to be type-agnostic by using void pointers for data storage. The library manages memory by copying data, ensuring that the list owns its elements. For complex data types (like structs with pointers), you can provide custom functions for printing, comparing, copying, and freeing data to handle them correctly.
+This is a comprehensive, generic linked list library written in C. It is designed to be type-agnostic by using void pointers for data storage.
 
 ## Setup for Examples
 
-To demonstrate the library's functionality, most examples will use a Person struct. We'll also define the necessary helper functions that the list will use to manage Person objects. This setup will be assumed for all subsequent examples.
+To demonstrate the library's functionality, most examples will use a Person struct. This setup will be assumed for all subsequent examples.
 
 ```c
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include "linked_list.h"
-
 // The structure we will store in the list
 typedef struct {
-    char* name;
-    int age;
+    int id;
+    char* name;
+    int age;
 } Person;
+```
 
-// Function to print a Person's details
+For this library to work, you need to define helper functions that the list will use to manage Person objects. These functions are essential for the library to understand how to work with your specific data type.### Essential Functions (Required)
+
+`void PrintFunction(void* data)` - This function assigns a custom printing function to the list. The `list_print` and `list_print_advanced` functions will use this function pointer to display each element in a user-defined format. Without this, the list doesn't know how to interpret and print your data structure. You must cast the void pointer back to your data type within the function.
+
+`int CompareFunction(const void* data1, const void* data2)` - This comparison function is required for any function that needs to know the relative order of elements, such as sorting, finding an element by value, or removing specific items. The function should return a negative, zero, or positive value, following the convention of `strcmp`. Both parameters need to be cast to your data type within the function.
+
+`void FreeFunction(void* data)` - This custom memory deallocation function is critical for preventing memory leaks when your data structure contains dynamically allocated memory (e.g., a pointer to a string). When an element is deleted, the list will call this function to free that internal memory before freeing the element itself. Cast the void pointer to your data type and free any internal allocations.
+
+In our implementation, these functions will look like this:
+
+```c
+// 1. Function to print a Person's details
 void print_person(void* data) {
-    if (!data) return;
+   
+    if (!data) return;
+
+    // Cast the void pointer back to Person pointer
     Person* p = (Person*)data;
-    printf("Name: %s, Age: %d", p->name, p->age);
+
+    printf("Id: %d, Name: %s, Age: %d\n", p->id, p->name, p->age);
 }
 
-// Function to compare two Persons by age
-// Returns:
-//   0 if ages are equal
-//  >0 if p1's age is greater than p2's
-//  <0 if p1's age is less than p2's
+// 2. Function to compare two Persons by age
 int compare_person_age(const void* data1, const void* data2) {
-    if (!data1 || !data2) return 0;
-    Person* p1 = (Person*)data1;
+   
+    if (!data1 || !data2) return 0;
+
+    // Cast the void pointers back to Person pointers
+    Person* p1 = (Person*)data1;
     Person* p2 = (Person*)data2;
+
     return p1->age - p2->age;
 }
 
-// Function to free the dynamically allocated name within a Person struct
+// 3. Function to free the dynamically allocated name within a Person struct
 void free_person(void* data) {
+
     if (!data) return;
+
+    // Cast the void pointers back to Person pointers
     Person* p = (Person*)data;
+
     free(p->name); // Free the allocated string
     // The struct itself is managed by the list, so we don't free 'p'
 }
+```
 
-// Function to perform a deep copy of a Person struct
+### Optional Functions
+
+`void CopyFunction(void* dest, const void* src)` - This function performs a "deep copy" of elements. When you insert data, the list makes a copy. By default, this is a `memcpy` (a shallow copy). If your struct contains pointers, a shallow copy would mean both the original and the list's copy point to the same memory, which is dangerous. A deep copy function allocates new memory for these pointers. לרוב זה מיותר, כי אם נבצע שינוי במקור אנחנו נרצה שזה ישתנה. אבל אם לא, אז תוכלו להגדיר את זה. זה לא חובה והספריה תעבוד גם בלי זה.
+
+### Implementation Example
+
+```c
+// 4. Function to perform a deep copy of a Person struct
 void copy_person(void* dest, const void* src) {
     if (!dest || !src) return;
     Person* dest_p = (Person*)dest;
@@ -60,15 +84,35 @@ void copy_person(void* dest, const void* src) {
 }
 ```
 
+If you want to filter or transform the elements in the list, you can define additional function pointers:
+
+`bool FilterFunction(const void* data)`
+
+`void MapFunction(void* dest, const void* src)`
+
+נניח בדוגמה שלנו
+נניח קוד שלוקח את כל האנשים שהם יותר מגיל 18
+נניח מעלה את הגיל של כולם בעוד שנה
+
+```c
+לכתוב קוד
+
+// 5.
+נניח קוד שלוקח את כל האנשים שהם יותר מגיל 18
+
+// 6.
+נניח מעלה את הגיל של כולם בעוד שנה
+```
+
 ## 1. Create List
 
 ### `list_create`
 
-This is the starting point for using the library. It allocates memory for a new, empty `LinkedList` structure and initializes it. This includes setting up dummy head and tail nodes, which greatly simplify the logic for all other list operations by ensuring that every "real" node is always between two other nodes.
+This is the starting point for using the library. It allocates memory for a new, empty `LinkedList` structure and initializes it.
 
 **Receives:**
 
-- `element_size`: The size in bytes of the data type you plan to store. Use the `sizeof` operator for this (e.g., `sizeof(int)`, `sizeof(Person)`).
+- `element_size`: The size in bytes of the data type you plan to store. Use the `sizeof` operator for this (e.g., `sizeof(Person)`).
 
 **Returns:**
 
@@ -81,153 +125,52 @@ This is the starting point for using the library. It allocates memory for a new,
 // Create a list to store Person structs
 LinkedList* person_list = list_create(sizeof(Person));
 
-if (!person_list) {
+// Check if the list was created successfully
+if (!person_list) { // person_list == NULL
     printf("Failed to create list.\n");
     return 1;
 }
+
 printf("Successfully created a list for Person objects.\n");
-// Remember to destroy the list when you're done to free memory
-list_destroy(person_list);
 ```
+
+> [!NOTE] > _For developers:_ This function sets up dummy head and tail nodes, to simplify the logic for all other list operations by ensuring that every "real" node is always between two other nodes.
+
+> [!IMPORTANT]
+> This function only creates the list. It is currently "empty" (except for the dummy nodes, of course). Later, we will learn how to add elements to it.
 
 ---
 
 ## 2. List Configuration
 
-### `list_set_print_function`
-
-This function assigns a custom printing function to the list. The `list_print` and `list_print_advanced` functions will then use this function pointer to display each element in a user-defined format. Without this, the list doesn't know how to interpret and print your data structure.
-
-**Receives:**
-
-- `list`: A pointer to the `LinkedList`.
-- `print_fn`: A function pointer of type `PrintFunction` that takes a `void*` to your data and prints it.
-
-**Returns:**
-
-- Nothing.
-
-**Example:**
+Before using the list, you need to configure it with the appropriate function pointers. The first three functions are essential for most operations, while the others are optional but provide additional functionality.
 
 ```c
-LinkedList* list = list_create(sizeof(Person));
-list_set_print_function(list, print_person); // Use our custom printer
+// Essential configuration (required for most operations)
+list_set_print_function(person_list, print_person);
+list_set_compare_function(person_list, compare_person_age);
+list_set_free_function(person_list, free_person);
 
-Person alice = {.name = strdup("Alice"), .age = 30};
-list_insert_at_tail(list, &alice);
-
-// This will now work and use print_person to display the data
-list_print(list); // Output: [0]: Name: Alice, Age: 30
-
-free(alice.name);
-list_destroy(list);
+// Optional configuration
+list_set_copy_function(person_list, copy_person);
 ```
 
-### `list_set_compare_function`
+Additionally, you can set a maximum size limit for your list using `list_set_max_size()`. This function is particularly useful when implementing caches or buffers that shouldn't grow indefinitely. You can specify the maximum number of elements allowed (or `UNLIMITED` for no limit), and choose the behavior when the list reaches capacity - either reject new insertions or automatically delete the oldest elements to make room.
 
-Assigns a custom comparison function. This is required for any function that needs to know the relative order of elements, such as sorting, finding an element by value, or removing specific items. The function should return a negative, zero, or positive value, following the convention of `strcmp`.
-
-**Receives:**
-
-- `list`: A pointer to the `LinkedList`.
-- `compare_fn`: A function pointer of type `CompareFunction`.
-
-**Returns:**
-
-- Nothing.
-
-**Example:**
+for example, you can set max 100 elements, auto-delete old when full:
 
 ```c
-LinkedList* list = list_create(sizeof(Person));
-// Set the compare function to compare people by their age
-list_set_compare_function(list, compare_person_age);
-
-printf("Compare function has been set. The list can now be sorted by age.\n");
-
-list_destroy(list);
+list_set_max_size(person_list, 100, DELETE_OLD_WHEN_FULL);
 ```
 
-### `list_set_free_function`
-
-Assigns a custom memory deallocation function. This is critical for preventing memory leaks when your data structure contains dynamically allocated memory (e.g., a pointer to a string). When an element is deleted, the list will call this function to free that internal memory before freeing the element itself.
-
-**Receives:**
-
-- `list`: A pointer to the `LinkedList`.
-- `free_fn`: A function pointer of type `FreeFunction`.
-
-**Returns:**
-
-- Nothing.
-
-**Example:**
+Or no size limit (the last parameter is ignored when using UNLIMITED):
 
 ```c
-LinkedList* list = list_create(sizeof(Person));
-// Our Person struct has a char* name that is malloc'd.
-// This tells the list how to free it properly upon deletion.
-list_set_free_function(list, free_person);
-
-printf("Free function has been set. Memory leaks will be prevented.\n");
-
-list_destroy(list);
+list_set_max_size(person_list, UNLIMITED, REJECT_NEW_WHEN_FULL);  // behavior ignored
 ```
 
-### `list_set_copy_function`
-
-Assigns a custom copy function to perform a "deep copy" of elements. When you insert data, the list makes a copy. By default, this is a `memcpy` (a shallow copy). If your struct contains pointers, a shallow copy would mean both the original and the list's copy point to the same memory, which is dangerous. A deep copy function allocates new memory for these pointers.
-
-**Receives:**
-
-- `list`: A pointer to the `LinkedList`.
-- `copy_fn`: A function pointer of type `CopyFunction`.
-
-**Returns:**
-
-- Nothing.
-
-**Example:**
-
-```c
-LinkedList* list = list_create(sizeof(Person));
-// This ensures that when a Person is added, a new copy of their name
-// string is created, owned exclusively by the list.
-list_set_copy_function(list, copy_person);
-
-printf("Copy function has been set. The list will now perform deep copies.\n");
-
-list_destroy(list);
-```
-
-### `list_set_max_size`
-
-This function sets a capacity limit on the list and defines its behavior when that limit is reached. This is useful for implementing caches or buffers that should not grow indefinitely.
-
-**Receives:**
-
-- `list`: A pointer to the `LinkedList`.
-- `max_size`: The maximum number of elements the list can hold.
-- `allow_overwrite`: A boolean. If `TRUE`, when the list is full, adding a new element will automatically remove the oldest one (FIFO behavior). If `FALSE`, any insertion attempt on a full list will fail.
-
-**Returns:**
-
-- `LIST_SUCCESS` on success, or an error code on failure.
-
-**Example:**
-
-```c
-LinkedList* list = list_create(sizeof(int));
-list_set_max_size(list, 3, TRUE); // Max 3 items, overwrite enabled
-
-int n1 = 10, n2 = 20, n3 = 30, n4 = 40;
-list_insert_at_tail(list, &n1); // List: [10]
-list_insert_at_tail(list, &n2); // List: [10, 20]
-list_insert_at_tail(list, &n3); // List: [10, 20, 30] (Full)
-list_insert_at_tail(list, &n4); // List: [20, 30, 40] (10 was overwritten)
-
-list_destroy(list);
-```
+> [!IMPORTANT]
+> When using `UNLIMITED`, the behavior parameter is ignored since there's no capacity limit to reach.
 
 ---
 

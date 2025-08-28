@@ -15,9 +15,14 @@
 
 #include <stddef.h>
 
-#define UNLIMITED 100
+#define UNLIMITED 0
 
 typedef enum { FALSE, TRUE } bool;
+
+typedef enum { 
+    REJECT_NEW_WHEN_FULL = FALSE, 
+    DELETE_OLD_WHEN_FULL = TRUE 
+} OverflowBehavior;
 
 // Enum to specify whether to find the minimum or maximum element.
 typedef enum {
@@ -117,8 +122,8 @@ typedef struct LinkedList {
     Node* tail;                /**< Pointer to the dummy tail node. */
     size_t length;             /**< The number of elements in the list. */
     size_t element_size;       /**< The size in bytes of the data type stored. */
-    size_t max_size;           /**< Maximum number of elements (0 = unlimited). */
-    bool allow_overwrite;      /**< Whether to overwrite oldest elements when full. */
+    size_t max_size;           /**< Maximum number of elements (UNLIMITED = no limit). */
+    OverflowBehavior allow_overwrite; /**< Behavior when list reaches max capacity. */
 
     // --- User-provided helper functions ---
     PrintFunction print_node_function;   /**< Function to print an element. */
@@ -141,7 +146,7 @@ void list_set_free_function(LinkedList* list, FreeFunction free_fn);
 void list_set_copy_function(LinkedList* list, CopyFunction copy_fn);
 
 // --- Size and Overwrite Management ---
-ListResult list_set_max_size(LinkedList* list, size_t max_size, bool allow_overwrite);
+ListResult list_set_max_size(LinkedList* list, size_t max_size, OverflowBehavior behavior);
 
 // --- Insertion Functions ---
 ListResult list_insert_at_head(LinkedList* list, void* data);

@@ -23,7 +23,6 @@ static void copy_list_configuration(LinkedList*, const LinkedList*); // Helper t
 static void list_set_all_functions(LinkedList*, PrintFunction, CompareFunction, FreeFunction, CopyFunction); // Helper to set all function pointers
 
 /*
-
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃                                               ┃
 ┃                Error Handling                 ┃
@@ -94,8 +93,8 @@ LinkedList* list_create(size_t element_size) {
     // Initialize all fields in the list with default values
     list->length = 0;
     list->element_size = element_size;
-    list->max_size = UNLIMITED;             // Unlimited by default
-    list->allow_overwrite = FALSE;          // No overwrite by default
+    list->max_size = UNLIMITED;                 // Unlimited by default
+    list->allow_overwrite = REJECT_NEW_WHEN_FULL; // Reject new when full by default
     list->print_node_function = NULL;      
     list->compare_node_function = NULL;    
     list->free_node_function = NULL;       
@@ -153,21 +152,19 @@ void list_set_copy_function(LinkedList* list, CopyFunction copy_fn) {
 }
 
 /**
- * @brief Sets the maximum size of the list and overwrite behavior.
+ * @brief Sets the maximum size of the list and overflow behavior.
  * @param list The list to configure.
- * @param max_size Maximum number of elements (0 = unlimited).
- * @param allow_overwrite Whether to overwrite oldest elements when full.
+ * @param max_size Maximum number of elements (UNLIMITED = no limit).
+ * @param behavior Behavior when list reaches max capacity (only relevant if max_size != UNLIMITED).
  * @return LIST_SUCCESS on success, error code on failure.
  */
-ListResult list_set_max_size(LinkedList* list, size_t max_size, bool allow_overwrite) {
+ListResult list_set_max_size(LinkedList* list, size_t max_size, OverflowBehavior behavior) {
     
     if (!list) return LIST_ERROR_NULL_POINTER;
 
-    if (max_size <= 0) return LIST_ERROR_INVALID_OPERATION;
-
     // Update the list's configuration first
     list->max_size = max_size;
-    list->allow_overwrite = allow_overwrite;
+    list->allow_overwrite = behavior;
 
     // Check if we need to remove excess elements due to new size limit
     return handle_size_limit(list);
@@ -176,11 +173,11 @@ ListResult list_set_max_size(LinkedList* list, size_t max_size, bool allow_overw
 // INTERNAL HELPER FUNCTION for handling size limits
 static ListResult handle_size_limit(LinkedList* list) {
 
-    // If current length is within limits - no action needed
-    if (list->length < list->max_size) return LIST_SUCCESS;
+    // If unlimited size or current length is within limits - no action needed
+    if (list->max_size == UNLIMITED || list->length < list->max_size) return LIST_SUCCESS;
 
     // If we reach this point, the list is full, but overwrite is not allowed
-    if (!list->allow_overwrite) return LIST_ERROR_LIST_FULL;
+    if (list->allow_overwrite == REJECT_NEW_WHEN_FULL) return LIST_ERROR_LIST_FULL;
 
     // Handle any case where we need to remove elements to stay within limit
     while (list->length >= list->max_size) {
