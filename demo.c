@@ -145,7 +145,7 @@ void comprehensive_linked_list_demo(void) {
     banner("1. LIST CREATION AND CONFIGURATION");
     printf("Creating a new linked list for Person structures...\n");
     
-    LinkedList* people_list = list_create(sizeof(Person));
+    LinkedList* people_list = create(sizeof(Person));
     if (!people_list) {
         printf("Error: Failed to create list!\n");
         return;
@@ -154,14 +154,14 @@ void comprehensive_linked_list_demo(void) {
     
     // Configure the list with helper functions
     printf("Configuring list with helper functions...\n");
-    list_set_print_function(people_list, print_person);
-    list_set_compare_function(people_list, compare_person_id);
-    list_set_free_function(people_list, free_person);
-    list_set_copy_function(people_list, copy_person);
+    set_print_function(people_list, print_person);
+    set_compare_function(people_list, compare_person_id);
+    set_free_function(people_list, free_person);
+    set_copy_function(people_list, copy_person);
     printf("✓ List configured with print, compare, free, and copy functions\n");
     
     printf("Initial list status: Empty=%s, Length=%zu\n", 
-           list_is_empty(people_list) ? "Yes" : "No", list_get_length(people_list));
+           is_empty(people_list) ? "Yes" : "No", get_length(people_list));
     
     // ===== 2. BASIC INSERTIONS =====
     banner("2. BASIC INSERTION OPERATIONS");
@@ -175,21 +175,21 @@ void comprehensive_linked_list_demo(void) {
     
     // Insert at tail
     printf("Inserting Alice at tail...\n");
-    list_insert_at_tail(people_list, &alice);
+    insert_tail_ptr(people_list, &alice);
     printf("Inserting Bob at tail...\n");
-    list_insert_at_tail(people_list, &bob);
+    insert_tail_ptr(people_list, &bob);
     
     // Insert at head
     printf("Inserting Charlie at head...\n");
-    list_insert_at_head(people_list, &charlie);
+    insert_head_ptr(people_list, &charlie);
     
     // Insert at specific index
     printf("Inserting Diana at index 2...\n");
-    list_insert_at_index(people_list, 2, &diana);
+    insert_index_ptr(people_list, 2, &diana);
     
     printf("List after insertions:\n");
-    list_print(people_list);
-    printf("Current length: %zu\n", list_get_length(people_list));
+    print(people_list);
+    printf("Current length: %zu\n", get_length(people_list));
     
     // ===== 2B. CONVENIENT VALUE-BASED INSERTIONS (NEW!) =====
     banner("2B. CONVENIENT VALUE-BASED INSERTIONS (NEW MACROS!)");
@@ -200,38 +200,38 @@ void comprehensive_linked_list_demo(void) {
     Person henry = create_person(1008, "Henry Ford", 83);
     
     // Using the NEW convenience macros - no need for & operator!
-    printf("Using new list_insert_at_tail_val macro (passing value directly)...\n");
-    list_insert_at_tail_val(people_list, grace);
+    printf("Using new insert_tail_val macro (passing value directly)...\n");
+    insert_tail_val(people_list, grace);
     
-    printf("Using new list_insert_at_head_val macro (passing value directly)...\n");
-    list_insert_at_head_val(people_list, henry);
+    printf("Using new insert_head_val macro (passing value directly)...\n");
+    insert_head_val(people_list, henry);
     
     printf("List after value-based insertions:\n");
-    list_print(people_list);
+    print(people_list);
     
     // Demonstrate with simple types too
     printf("\nDemonstrating with integers using value-based macros:\n");
-    LinkedList* numbers_list = list_create(sizeof(int));
-    list_set_print_function(numbers_list, print_int);
+    LinkedList* numbers_list = create(sizeof(int));
+    set_print_function(numbers_list, print_int);
     
     // Traditional way (still works)
     int num1 = 100;
-    list_insert_at_tail(numbers_list, &num1);
+    insert_tail_ptr(numbers_list, &num1);
     
     // New convenient way - pass values directly!
-    list_insert_at_tail_val(numbers_list, 200);
-    list_insert_at_head_val(numbers_list, 50);
-    list_insert_at_index_val(numbers_list, 1, 75);
+    insert_tail_val(numbers_list, 200);
+    insert_head_val(numbers_list, 50);
+    insert_index_val(numbers_list, 1, 75);
     
     printf("Numbers list using value-based insertions: ");
-    list_print_advanced(numbers_list, false, ", ");
+    print_advanced(numbers_list, false, ", ");
     
     // Clean up the numbers list
-    list_destroy(numbers_list);
+    destroy(numbers_list);
     
     printf("✓ Value-based insertion macros work perfectly!\n");
-    printf("Now you can write: list_insert_at_tail_val(list, your_struct)\n");
-    printf("Instead of:       list_insert_at_tail(list, &your_struct)\n");
+    printf("Now you can write: insert_tail_val(list, your_struct)\n");
+    printf("Instead of:       insert_tail_ptr(list, &your_struct)\n");
     
     // Clean up the additional people we created
     free(grace.name);
@@ -242,7 +242,7 @@ void comprehensive_linked_list_demo(void) {
     
     // Get element by index
     printf("Accessing element at index 1:\n");
-    Person* person_at_1 = (Person*)list_get(people_list, 1);
+    Person* person_at_1 = (Person*)get(people_list, 1);
     if (person_at_1) {
         printf("Person at index 1: ");
         print_person(person_at_1);
@@ -251,7 +251,7 @@ void comprehensive_linked_list_demo(void) {
     
     // Search for element
     printf("Searching for Bob by ID...\n");
-    int bob_index = list_index(people_list, &bob);
+    int bob_index = index_of(people_list, &bob);
     if (bob_index >= 0) {
         printf("Bob found at index: %d\n", bob_index);
     } else {
@@ -260,7 +260,7 @@ void comprehensive_linked_list_demo(void) {
     
     // Advanced search from tail
     printf("Searching from tail for Charlie...\n");
-    int charlie_index = list_index_advanced(people_list, &charlie, START_FROM_TAIL);
+    int charlie_index = index_of_advanced(people_list, &charlie, START_FROM_TAIL);
     printf("Charlie found at index: %d (searching from tail)\n", charlie_index);
     
     // ===== 4. MODIFICATION OPERATIONS =====
@@ -276,25 +276,25 @@ void comprehensive_linked_list_demo(void) {
     banner("5. SORTING OPERATIONS");
     
     printf("Sorting by age (ascending)...\n");
-    list_set_compare_function(people_list, compare_person_age);
-    list_sort(people_list, false);
+    set_compare_function(people_list, compare_person_age);
+    sort(people_list, false);
     printf("List sorted by age (ascending):\n");
-    list_print(people_list);
+    print(people_list);
     
     printf("Sorting by age (descending)...\n");
-    list_sort(people_list, true);
+    sort(people_list, true);
     printf("List sorted by age (descending):\n");
-    list_print(people_list);
+    print(people_list);
     
     // Restore ID comparison for other operations
-    list_set_compare_function(people_list, compare_person_id);
+    set_compare_function(people_list, compare_person_id);
     
     // ===== 6. MATHEMATICAL OPERATIONS =====
     banner("6. MATHEMATICAL OPERATIONS");
     
     // Find min and max by age
-    Person* youngest = (Person*)list_min_by(people_list, compare_person_age);
-    Person* oldest = (Person*)list_max_by(people_list, compare_person_age);
+    Person* youngest = (Person*)min_by(people_list, compare_person_age);
+    Person* oldest = (Person*)max_by(people_list, compare_person_age);
     
     if (youngest) {
         printf("Youngest person: ");
@@ -308,12 +308,12 @@ void comprehensive_linked_list_demo(void) {
     }
     
     // Count adults (age >= 18)
-    size_t adult_count = list_count_if(people_list, is_adult, NULL);
+    size_t adult_count = count_if(people_list, is_adult, NULL);
     printf("Number of adults (age >= 18): %zu\n", adult_count);
     
     // Count people named "Alice"
     char* alice_name = "Alice Johnson";
-    size_t alice_count = list_count_if(people_list, has_name, alice_name);
+    size_t alice_count = count_if(people_list, has_name, alice_name);
     printf("Number of people named '%s': %zu\n", alice_name, alice_count);
     
     // ===== 7. STRUCTURAL TRANSFORMATIONS =====
@@ -321,38 +321,38 @@ void comprehensive_linked_list_demo(void) {
     
     // Copy the list
     printf("Creating a copy of the list...\n");
-    LinkedList* copy_list = list_copy(people_list);
+    LinkedList* copy_list = copy(people_list);
     if (copy_list) {
-        printf("Copy created successfully. Length: %zu\n", list_get_length(copy_list));
+        printf("Copy created successfully. Length: %zu\n", get_length(copy_list));
     }
     
     // Reverse the original list
     printf("Reversing the original list...\n");
-    list_reverse(people_list);
+    reverse(people_list);
     printf("List after reversal:\n");
-    list_print(people_list);
+    print(people_list);
     
     // Rotate the list
     printf("Rotating list by 2 positions to the right...\n");
-    list_rotate(people_list, 2);
+    rotate(people_list, 2);
     printf("List after rotation:\n");
-    list_print(people_list);
+    print(people_list);
     
     // Filter adults only
     printf("Creating filtered list (adults only)...\n");
-    LinkedList* adults_only = list_filter(people_list, is_adult_filter);
+    LinkedList* adults_only = filter(people_list, is_adult_filter);
     if (adults_only) {
         printf("Adults-only list:\n");
-        list_print(adults_only);
+        print(adults_only);
     }
     
     // Map to ages
     printf("Creating mapped list (ages only)...\n");
-    LinkedList* ages_list = list_map(people_list, map_person_to_age, sizeof(int));
+    LinkedList* ages_list = map(people_list, map_person_to_age, sizeof(int));
     if (ages_list) {
-        list_set_print_function(ages_list, print_int);
+        set_print_function(ages_list, print_int);
         printf("Ages-only list:\n");
-        list_print(ages_list);
+        print(ages_list);
     }
     
     // ===== 8. SET OPERATIONS =====
@@ -360,72 +360,72 @@ void comprehensive_linked_list_demo(void) {
     
     // Create another list for set operations
     printf("Creating a second list for set operations...\n");
-    LinkedList* list2 = list_create(sizeof(Person));
-    list_set_print_function(list2, print_person);
-    list_set_compare_function(list2, compare_person_name);
-    list_set_free_function(list2, free_person);
-    list_set_copy_function(list2, copy_person);
+    LinkedList* list2 = create(sizeof(Person));
+    set_print_function(list2, print_person);
+    set_compare_function(list2, compare_person_name);
+    set_free_function(list2, free_person);
+    set_copy_function(list2, copy_person);
     
     Person eve = create_person(1005, "Eve Wilson", 26);
     Person frank = create_person(1006, "Alice Johnson", 28); // Duplicate name
-    list_insert_at_tail(list2, &eve);
-    list_insert_at_tail(list2, &frank);
+    insert_tail_ptr(list2, &eve);
+    insert_tail_ptr(list2, &frank);
     
     printf("Second list:\n");
-    list_print(list2);
+    print(list2);
     
     // Set compare function to name for set operations
-    list_set_compare_function(people_list, compare_person_name);
+    set_compare_function(people_list, compare_person_name);
     
     // Union
     printf("Creating union of both lists...\n");
-    LinkedList* union_list = list_union(people_list, list2);
+    LinkedList* union_list = union_lists(people_list, list2);
     if (union_list) {
         printf("Union list:\n");
-        list_print(union_list);
+        print(union_list);
     }
     
     // Intersection
     printf("Creating intersection of both lists...\n");
-    LinkedList* intersection_list = list_intersection(people_list, list2);
+    LinkedList* intersection_list = intersection(people_list, list2);
     if (intersection_list) {
         printf("Intersection list:\n");
-        list_print(intersection_list);
+        print(intersection_list);
     }
     
     // Unique elements
     printf("Creating unique elements list from first list...\n");
-    LinkedList* unique_list = list_unique(people_list);
+    LinkedList* unique_list = unique(people_list);
     if (unique_list) {
         printf("Unique elements list:\n");
-        list_print(unique_list);
+        print(unique_list);
     }
     
     // ===== 9. DELETION OPERATIONS =====
     banner("9. DELETION OPERATIONS");
     
     printf("Initial list before deletions:\n");
-    list_print(people_list);
+    print(people_list);
     
     // Delete from head
     printf("Deleting from head...\n");
-    ListResult result = list_delete_from_head(people_list);
-    printf("Delete result: %s\n", list_error_string(result));
+    ListResult result = delete_head(people_list);
+    printf("Delete result: %s\n", error_string(result));
     
     // Delete from tail
     printf("Deleting from tail...\n");
-    result = list_delete_from_tail(people_list);
-    printf("Delete result: %s\n", list_error_string(result));
+    result = delete_tail(people_list);
+    printf("Delete result: %s\n", error_string(result));
     
     // Delete at specific index
-    if (list_get_length(people_list) > 0) {
+    if (get_length(people_list) > 0) {
         printf("Deleting at index 0...\n");
-        result = list_delete_at_index(people_list, 0);
-        printf("Delete result: %s\n", list_error_string(result));
+        result = delete_index(people_list, 0);
+        printf("Delete result: %s\n", error_string(result));
     }
     
     printf("List after deletions:\n");
-    list_print(people_list);
+    print(people_list);
     
     // ===== 10. ARRAY CONVERSION =====
     banner("10. ARRAY CONVERSION OPERATIONS");
@@ -433,7 +433,7 @@ void comprehensive_linked_list_demo(void) {
     // Convert list to array
     printf("Converting list to array...\n");
     size_t array_size;
-    Person* person_array = (Person*)list_to_array(people_list, &array_size);
+    Person* person_array = (Person*)to_array(people_list, &array_size);
     if (person_array) {
         printf("Array created with %zu elements\n", array_size);
         if (array_size > 0) {
@@ -446,20 +446,20 @@ void comprehensive_linked_list_demo(void) {
     
     // Convert array to list (using integers for simplicity)
     printf("Creating integer list from array...\n");
-    LinkedList* int_list = list_create(sizeof(int));
-    list_set_print_function(int_list, print_int);
-    list_set_compare_function(int_list, compare_int);
+    LinkedList* int_list = create(sizeof(int));
+    set_print_function(int_list, print_int);
+    set_compare_function(int_list, compare_int);
     
     int numbers[] = {10, 20, 30, 40, 50};
-    array_to_list(int_list, numbers, 5);
+    from_array(int_list, numbers, 5);
     printf("Integer list created from array:\n");
-    list_print(int_list);
+    print(int_list);
     
     // ===== 11. STRING REPRESENTATION =====
     banner("11. STRING REPRESENTATION");
     
     printf("Converting integer list to string...\n");
-    char* list_string = list_to_string(int_list, ", ");
+    char* list_string = to_string(int_list, ", ");
     if (list_string) {
         printf("List as string: %s\n", list_string);
         free(list_string);
@@ -469,32 +469,32 @@ void comprehensive_linked_list_demo(void) {
     banner("12. FILE I/O OPERATIONS");
     
     printf("Saving integer list to file...\n");
-    result = list_save_to_file(int_list, "demo_numbers.bin");
-    printf("Save result: %s\n", list_error_string(result));
+    result = save_to_file(int_list, "demo_numbers.bin");
+    printf("Save result: %s\n", error_string(result));
     
     printf("Loading list from file...\n");
-    LinkedList* loaded_list = list_load_from_file("demo_numbers.bin", sizeof(int),
+    LinkedList* loaded_list = load_from_file("demo_numbers.bin", sizeof(int),
                                                   print_int, compare_int, NULL, NULL);
     if (loaded_list) {
         printf("List loaded from file:\n");
-        list_print(loaded_list);
+        print(loaded_list);
     }
     
     // ===== 13. SIZE LIMITS AND OVERFLOW BEHAVIOR =====
     banner("13. SIZE LIMITS AND OVERFLOW BEHAVIOR");
     
     printf("Testing size limits with FIFO behavior...\n");
-    LinkedList* limited_list = list_create(sizeof(int));
-    list_set_print_function(limited_list, print_int);
-    list_set_max_size(limited_list, 3, DELETE_OLD_WHEN_FULL);
+    LinkedList* limited_list = create(sizeof(int));
+    set_print_function(limited_list, print_int);
+    set_max_size(limited_list, 3, DELETE_OLD_WHEN_FULL);
     
     int values[] = {100, 200, 300, 400, 500};
     for (int i = 0; i < 5; i++) {
         printf("Inserting %d...\n", values[i]);
-        list_insert_at_tail(limited_list, &values[i]);
+        insert_tail_ptr(limited_list, &values[i]);
         printf("List (max 3): ");
-        list_print_advanced(limited_list, false, ", ");
-        printf("Length: %zu\n", list_get_length(limited_list));
+        print_advanced(limited_list, false, ", ");
+        printf("Length: %zu\n", get_length(limited_list));
     }
     
     // ===== 14. ADVANCED PRINT OPTIONS =====
@@ -502,11 +502,11 @@ void comprehensive_linked_list_demo(void) {
     
     printf("Printing with different separators:\n");
     printf("Comma separated: ");
-    list_print_advanced(int_list, false, ", ");
+    print_advanced(int_list, false, ", ");
     printf("Arrow separated: ");
-    list_print_advanced(int_list, false, " -> ");
+    print_advanced(int_list, false, " -> ");
     printf("With indices: ");
-    list_print_advanced(int_list, true, " | ");
+    print_advanced(int_list, true, " | ");
     
     // ===== 15. ERROR HANDLING DEMONSTRATION =====
     banner("15. ERROR HANDLING DEMONSTRATION");
@@ -514,19 +514,19 @@ void comprehensive_linked_list_demo(void) {
     printf("Demonstrating error handling...\n");
     
     // Try to access out of bounds
-    Person* invalid = (Person*)list_get(people_list, 999);
+    Person* invalid = (Person*)get(people_list, 999);
     printf("Accessing index 999: %s\n", invalid ? "Success" : "Failed (as expected)");
     
     // Try to delete from empty list
-    LinkedList* empty_list = list_create(sizeof(int));
-    result = list_delete_from_head(empty_list);
-    printf("Delete from empty list: %s\n", list_error_string(result));
+    LinkedList* empty_list = create(sizeof(int));
+    result = delete_head(empty_list);
+    printf("Delete from empty list: %s\n", error_string(result));
     
     // Show some error messages
     printf("Sample error messages:\n");
-    printf("  NULL pointer: %s\n", list_error_string(LIST_ERROR_NULL_POINTER));
-    printf("  Index out of bounds: %s\n", list_error_string(LIST_ERROR_INDEX_OUT_OF_BOUNDS));
-    printf("  Element not found: %s\n", list_error_string(LIST_ERROR_ELEMENT_NOT_FOUND));
+    printf("  NULL pointer: %s\n", error_string(LIST_ERROR_NULL_POINTER));
+    printf("  Index out of bounds: %s\n", error_string(LIST_ERROR_INDEX_OUT_OF_BOUNDS));
+    printf("  Element not found: %s\n", error_string(LIST_ERROR_ELEMENT_NOT_FOUND));
     
     // ===== CLEANUP =====
     banner("CLEANUP");
@@ -541,18 +541,18 @@ void comprehensive_linked_list_demo(void) {
     free(frank.name);
     
     // Destroy all lists
-    list_destroy(people_list);
-    if (copy_list) list_destroy(copy_list);
-    if (adults_only) list_destroy(adults_only);
-    if (ages_list) list_destroy(ages_list);
-    if (list2) list_destroy(list2);
-    if (union_list) list_destroy(union_list);
-    if (intersection_list) list_destroy(intersection_list);
-    if (unique_list) list_destroy(unique_list);
-    list_destroy(int_list);
-    if (loaded_list) list_destroy(loaded_list);
-    list_destroy(limited_list);
-    list_destroy(empty_list);
+    destroy(people_list);
+    if (copy_list) destroy(copy_list);
+    if (adults_only) destroy(adults_only);
+    if (ages_list) destroy(ages_list);
+    if (list2) destroy(list2);
+    if (union_list) destroy(union_list);
+    if (intersection_list) destroy(intersection_list);
+    if (unique_list) destroy(unique_list);
+    destroy(int_list);
+    if (loaded_list) destroy(loaded_list);
+    destroy(limited_list);
+    destroy(empty_list);
     
     printf("✓ All memory cleaned up successfully\n");
     

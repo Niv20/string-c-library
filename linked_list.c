@@ -34,7 +34,7 @@ static void copy_list_configuration(LinkedList*, const LinkedList*); // Helper t
  * @param result The error code to convert.
  * @return A string describing the error.
  */
-const char* list_error_string(ListResult result) {
+const char* error_string(ListResult result) {
     switch (result) {
         case LIST_SUCCESS: return "Success";
         case LIST_ERROR_NULL_POINTER: return "NULL pointer provided";
@@ -66,7 +66,7 @@ const char* list_error_string(ListResult result) {
  * @param element_size The size of each element in bytes.
  * @return A pointer to the newly created LinkedList, or NULL on failure.
  */
-LinkedList* list_create(size_t element_size) {
+LinkedList* create(size_t element_size) {
 
     // Allocate memory for the list structure
     LinkedList* list = (LinkedList*)malloc(sizeof(LinkedList));
@@ -115,7 +115,7 @@ LinkedList* list_create(size_t element_size) {
  * @param list The list to configure.
  * @param print_fn Function pointer for printing elements.
  */
-void list_set_print_function(LinkedList* list, PrintFunction print_fn) {
+void set_print_function(LinkedList* list, PrintFunction print_fn) {
     if (list)
         list->print_node_function = print_fn;
 }
@@ -125,7 +125,7 @@ void list_set_print_function(LinkedList* list, PrintFunction print_fn) {
  * @param list The list to configure.
  * @param compare_fn Function pointer for comparing elements.
  */
-void list_set_compare_function(LinkedList* list, CompareFunction compare_fn) {
+void set_compare_function(LinkedList* list, CompareFunction compare_fn) {
     if (list)
         list->compare_node_function = compare_fn;
 }
@@ -135,7 +135,7 @@ void list_set_compare_function(LinkedList* list, CompareFunction compare_fn) {
  * @param list The list to configure.
  * @param free_fn Function pointer for freeing complex elements.
  */
-void list_set_free_function(LinkedList* list, FreeFunction free_fn) {
+void set_free_function(LinkedList* list, FreeFunction free_fn) {
     if (list)
         list->free_node_function = free_fn;
 }
@@ -145,7 +145,7 @@ void list_set_free_function(LinkedList* list, FreeFunction free_fn) {
  * @param list The list to configure.
  * @param copy_fn Function pointer for deep copying complex elements.
  */
-void list_set_copy_function(LinkedList* list, CopyFunction copy_fn) {
+void set_copy_function(LinkedList* list, CopyFunction copy_fn) {
     if (list)
         list->copy_node_function = copy_fn;
 }
@@ -157,7 +157,7 @@ void list_set_copy_function(LinkedList* list, CopyFunction copy_fn) {
  * @param behavior Behavior when list reaches max capacity (only relevant if max_size != UNLIMITED).
  * @return LIST_SUCCESS on success, error code on failure.
  */
-ListResult list_set_max_size(LinkedList* list, size_t max_size, OverflowBehavior behavior) {
+ListResult set_max_size(LinkedList* list, size_t max_size, OverflowBehavior behavior) {
     
     if (!list) return LIST_ERROR_NULL_POINTER;
 
@@ -182,7 +182,7 @@ static ListResult handle_size_limit(LinkedList* list) {
     while (list->length >= list->max_size) {
 
         // Remove oldest element (from head) to make room for FIFO behavior
-        ListResult result = list_delete_from_head(list);
+        ListResult result = delete_head(list);
         if (result != LIST_SUCCESS) return result;
     }
     
@@ -249,7 +249,7 @@ static ListResult insert_node_core(LinkedList* list, void* data, Node** out_new_
  * @param data A pointer to the data to be inserted. The data is copied into the list.
  * @return LIST_SUCCESS on success, error code on failure.
  */
-ListResult list_insert_at_head(LinkedList* list, void* data) {
+ListResult insert_head_ptr(LinkedList* list, void* data) {
     
     Node* new_node;
     ListResult result = insert_node_core(list, data, &new_node);
@@ -272,7 +272,7 @@ ListResult list_insert_at_head(LinkedList* list, void* data) {
  * @param data A pointer to the data to be inserted. The data is copied into the list.
  * @return LIST_SUCCESS on success, error code on failure.
  */
-ListResult list_insert_at_tail(LinkedList* list, void* data) {
+ListResult insert_tail_ptr(LinkedList* list, void* data) {
     
     Node* new_node;
     ListResult result = insert_node_core(list, data, &new_node);
@@ -296,7 +296,7 @@ ListResult list_insert_at_tail(LinkedList* list, void* data) {
  * @param data The data to insert.
  * @return LIST_SUCCESS on success, error code on failure.
  */
-ListResult list_insert_at_index(LinkedList* list, size_t index, void* data) {
+ListResult insert_index_ptr(LinkedList* list, size_t index, void* data) {
 
     Node* new_node;
     ListResult result = insert_node_core(list, data, &new_node);
@@ -370,10 +370,10 @@ static ListResult delete_node_core(LinkedList* list, Node* node_to_delete) {
  * @param list The list to delete from.
  * @return LIST_SUCCESS on success, error code if the list is empty.
  */
-ListResult list_delete_from_head(LinkedList* list) {
+ListResult delete_head(LinkedList* list) {
 
     if (!list) return LIST_ERROR_NULL_POINTER;
-    if (list_is_empty(list)) return LIST_ERROR_INVALID_OPERATION;
+    if (is_empty(list)) return LIST_ERROR_INVALID_OPERATION;
 
     // Use core deletion logic
     return delete_node_core(list, list->head->next);
@@ -385,10 +385,10 @@ ListResult list_delete_from_head(LinkedList* list) {
  * @param list The list to delete from.
  * @return LIST_SUCCESS on success, error code if the list is empty.
  */
-ListResult list_delete_from_tail(LinkedList* list) {
+ListResult delete_tail(LinkedList* list) {
     
     if (!list) return LIST_ERROR_NULL_POINTER;
-    if (list_is_empty(list)) return LIST_ERROR_INVALID_OPERATION;
+    if (is_empty(list)) return LIST_ERROR_INVALID_OPERATION;
 
     // Use core deletion logic
     return delete_node_core(list, list->tail->prev);
@@ -400,10 +400,10 @@ ListResult list_delete_from_tail(LinkedList* list) {
  * @param index The index to delete at (0-based).
  * @return LIST_SUCCESS on success, error code on failure.
  */
-ListResult list_delete_at_index(LinkedList* list, size_t index) {
+ListResult delete_index(LinkedList* list, size_t index) {
     
     if (!list) return LIST_ERROR_NULL_POINTER;
-    if (list_is_empty(list)) return LIST_ERROR_INVALID_OPERATION;
+    if (is_empty(list)) return LIST_ERROR_INVALID_OPERATION;
     if (index >= list->length) return LIST_ERROR_INDEX_OUT_OF_BOUNDS;
     
     Node* current;
@@ -436,10 +436,10 @@ ListResult list_delete_at_index(LinkedList* list, size_t index) {
  * @param order START_FROM_HEAD or START_FROM_TAIL.
  * @return LIST_SUCCESS if at least one element was removed, error code otherwise.
  */
-ListResult list_remove_advanced(LinkedList* list, void* data, int count, Direction order) {
+ListResult remove_advanced(LinkedList* list, void* data, int count, Direction order) {
     
     if (!list || !data) return LIST_ERROR_NULL_POINTER;
-    if (list_is_empty(list)) return LIST_ERROR_ELEMENT_NOT_FOUND;
+    if (is_empty(list)) return LIST_ERROR_ELEMENT_NOT_FOUND;
     if (!list->compare_node_function) return LIST_ERROR_NO_COMPARE_FUNCTION;
     
     int removed_count = 0;
@@ -480,12 +480,12 @@ ListResult list_remove_advanced(LinkedList* list, void* data, int count, Directi
  * @param list The list to clear.
  * @return LIST_SUCCESS on success, error code on failure.
  */
-ListResult list_clear(LinkedList* list) {
+ListResult clear(LinkedList* list) {
     
     if (!list) return LIST_ERROR_NULL_POINTER;
     
-    while (!list_is_empty(list)) {
-        ListResult result = list_delete_from_head(list);
+    while (!is_empty(list)) {
+        ListResult result = delete_head(list);
         if (result != LIST_SUCCESS) {
             return result;
         }
@@ -499,12 +499,12 @@ ListResult list_clear(LinkedList* list) {
  * This includes all nodes and the data within them (using the free_function if provided).
  * @param list A pointer to the LinkedList to be destroyed.
  */
-void list_destroy(LinkedList* list) {
+void destroy(LinkedList* list) {
     
     if (!list) return;
 
     // Clear all real nodes - ignore errors during destruction
-    list_clear(list);
+    clear(list);
 
     // Free the dummy nodes
     free(list->head);
@@ -527,7 +527,7 @@ void list_destroy(LinkedList* list) {
  * @param list The list to query.
  * @return The number of elements.
  */
-size_t list_get_length(const LinkedList* list) {
+size_t get_length(const LinkedList* list) {
     return list ? list->length : 0;
 }
 
@@ -536,7 +536,7 @@ size_t list_get_length(const LinkedList* list) {
  * @param list The list to check.
  * @return TRUE if the list is empty, FALSE otherwise.
  */
-bool list_is_empty(const LinkedList* list) {
+bool is_empty(const LinkedList* list) {
     return !list || list->length == 0;
 }
 
@@ -545,8 +545,8 @@ bool list_is_empty(const LinkedList* list) {
  * @param list The list to print.
  * @return LIST_SUCCESS on success, error code on failure.
  */
-ListResult list_print(const LinkedList* list) {
-    return list_print_advanced(list, true, "\n");
+ListResult print(const LinkedList* list) {
+    return print_advanced(list, true, "\n");
 }
 
 /**
@@ -556,10 +556,10 @@ ListResult list_print(const LinkedList* list) {
  * @param separator String to print between elements.
  * @return LIST_SUCCESS on success, error code on failure.
  */
-ListResult list_print_advanced(const LinkedList* list, bool show_index, const char* separator) {
+ListResult print_advanced(const LinkedList* list, bool show_index, const char* separator) {
 
     if (!list) return LIST_ERROR_NULL_POINTER;
-    if (list_is_empty(list)) return LIST_ERROR_ELEMENT_NOT_FOUND;
+    if (is_empty(list)) return LIST_ERROR_ELEMENT_NOT_FOUND;
     if (!list->print_node_function) return LIST_ERROR_NO_PRINT_FUNCTION;
     
     if (!separator) separator = "\n"; // Default separator
@@ -637,7 +637,7 @@ static Node* find_node_by_index(const LinkedList* list, size_t index) {
  * @return Pointer to the data at the specified index, or NULL on failure.
  * @warning The returned pointer is valid only as long as the list structure remains unchanged.
  */
-void* list_get(const LinkedList* list, size_t index) {
+void* get(const LinkedList* list, size_t index) {
     
     if (!list || index >= list->length) return NULL;
     
@@ -652,7 +652,7 @@ void* list_get(const LinkedList* list, size_t index) {
  * @param data The data to set.
  * @return LIST_SUCCESS on success, error code on failure.
  */
-ListResult list_set(LinkedList* list, size_t index, void* data) {
+ListResult set(LinkedList* list, size_t index, void* data) {
     
     if (!list || !data) return LIST_ERROR_NULL_POINTER;
     if (index >= list->length) return LIST_ERROR_INDEX_OUT_OF_BOUNDS;
@@ -680,8 +680,8 @@ ListResult list_set(LinkedList* list, size_t index, void* data) {
  * @param data The data to find.
  * @return The index if found, negative error code if error occurred.
  */
-int list_index(const LinkedList* list, void* data) {
-    return list_index_advanced(list, data, START_FROM_HEAD);
+int index_of(const LinkedList* list, void* data) {
+    return index_of_advanced(list, data, START_FROM_HEAD);
 }
 
 /**
@@ -691,7 +691,7 @@ int list_index(const LinkedList* list, void* data) {
  * @param direction START_FROM_HEAD (default) or START_FROM_TAIL.
  * @return The index if found, negative error code if error occurred.
  */
-int list_index_advanced(const LinkedList* list, void* data, Direction order) {
+int index_of_advanced(const LinkedList* list, void* data, Direction order) {
     if (!list) return -LIST_ERROR_NULL_POINTER;
     if (!data) return -LIST_ERROR_NULL_POINTER;
     if (!list->compare_node_function) return -LIST_ERROR_NO_COMPARE_FUNCTION;
@@ -762,7 +762,7 @@ static int qsort_compare_wrapper(const void* a, const void* b) {
  * @param reverse If true, sorts in descending order.
  * @return LIST_SUCCESS on success, error code on failure.
  */
-ListResult list_sort(LinkedList* list, bool reverse_order) {
+ListResult sort(LinkedList* list, bool reverse_order) {
 
     if (!list) return LIST_ERROR_NULL_POINTER;
     if (!list->compare_node_function) return LIST_ERROR_NO_COMPARE_FUNCTION;
@@ -770,7 +770,7 @@ ListResult list_sort(LinkedList* list, bool reverse_order) {
     
     // Convert list to array for qsort
     size_t array_size;
-    void* array = list_to_array(list, &array_size);
+    void* array = to_array(list, &array_size);
     if (!array) return LIST_ERROR_MEMORY_ALLOC;
     
     // Set up the global context for the qsort_compare_wrapper function.
@@ -782,7 +782,7 @@ ListResult list_sort(LinkedList* list, bool reverse_order) {
     qsort(array, array_size, list->element_size, qsort_compare_wrapper);
     
     // Convert array back to list
-    ListResult result = array_to_list(list, array, array_size);
+    ListResult result = from_array(list, array, array_size);
     
     // Clean up the global context to prevent side effects in other parts of the program.
     g_compare_function = NULL;
@@ -816,20 +816,20 @@ static void copy_list_configuration(LinkedList* dest, const LinkedList* src) {
  * @param list The list to copy.
  * @return A new list that is a copy of the original, or NULL on failure.
  */
-LinkedList* list_copy(const LinkedList* list) {
+LinkedList* copy(const LinkedList* list) {
 
     if (!list) return NULL;
     
-    LinkedList* new_list = list_create(list->element_size);
+    LinkedList* new_list = create(list->element_size);
     if (!new_list) return NULL;
     
     // Configure the new list with same settings as the original
     copy_list_configuration(new_list, list);
     
     // Copy all elements from original list
-    ListResult extend_result = list_extend(new_list, list);
+    ListResult extend_result = extend(new_list, list);
     if (extend_result != LIST_SUCCESS) {
-        list_destroy(new_list);
+        destroy(new_list);
         return NULL;
     }
     
@@ -842,13 +842,13 @@ LinkedList* list_copy(const LinkedList* list) {
  * @param other The other list to extend with.
  * @return LIST_SUCCESS on success, error code on failure.
  */
-ListResult list_extend(LinkedList* list, const LinkedList* other) {
+ListResult extend(LinkedList* list, const LinkedList* other) {
     
     if (!list || !other) return LIST_ERROR_NULL_POINTER;
     
     Node* current = other->head->next;
     while (current != other->tail) {
-        ListResult result = list_insert_at_tail(list, current->data);
+        ListResult result = insert_tail_ptr(list, current->data);
         if (result != LIST_SUCCESS) {
             return result;
         }
@@ -865,25 +865,25 @@ ListResult list_extend(LinkedList* list, const LinkedList* other) {
  * @param list2 Second list.
  * @return A new concatenated list, or NULL on failure.
  */
-LinkedList* list_concat(const LinkedList* list1, const LinkedList* list2) {
+LinkedList* concat(const LinkedList* list1, const LinkedList* list2) {
     if (!list1 || !list2) return NULL;
     if (list1->element_size != list2->element_size) return NULL;
     
-    LinkedList* concatenated = list_create(list1->element_size);
+    LinkedList* concatenated = create(list1->element_size);
     if (!concatenated) return NULL;
     
     // Configure the concatenated list with settings from first list
     copy_list_configuration(concatenated, list1);
     
     // Copy all elements from first list
-    if (list_extend(concatenated, list1) != LIST_SUCCESS) {
-        list_destroy(concatenated);
+    if (extend(concatenated, list1) != LIST_SUCCESS) {
+        destroy(concatenated);
         return NULL;
     }
     
     // Copy all elements from second list
-    if (list_extend(concatenated, list2) != LIST_SUCCESS) {
-        list_destroy(concatenated);
+    if (extend(concatenated, list2) != LIST_SUCCESS) {
+        destroy(concatenated);
         return NULL;
     }
     
@@ -898,13 +898,13 @@ LinkedList* list_concat(const LinkedList* list1, const LinkedList* list2) {
  * @param end End index (exclusive).
  * @return A new sliced list, or NULL on failure.
  */
-LinkedList* list_slice(const LinkedList* list, size_t start, size_t end) {
+LinkedList* slice(const LinkedList* list, size_t start, size_t end) {
     
     if (!list || start >= end || start >= list->length) return NULL;
     
     if (end > list->length) end = list->length;
     
-    LinkedList* sliced = list_create(list->element_size);
+    LinkedList* sliced = create(list->element_size);
     if (!sliced) return NULL;
     
     // Configure the sliced list with same settings as the original
@@ -919,8 +919,8 @@ LinkedList* list_slice(const LinkedList* list, size_t start, size_t end) {
     
     // Copy elements from start to end
     for (size_t i = start; i < end && current != list->tail; i++) {
-        if (list_insert_at_tail(sliced, current->data) != LIST_SUCCESS) {
-            list_destroy(sliced);
+        if (insert_tail_ptr(sliced, current->data) != LIST_SUCCESS) {
+            destroy(sliced);
             return NULL;
         }
         current = current->next;
@@ -935,7 +935,7 @@ LinkedList* list_slice(const LinkedList* list, size_t start, size_t end) {
  * @param positions Number of positions to rotate (positive = right, negative = left).
  * @return LIST_SUCCESS on success, error code otherwise.
  */
-ListResult list_rotate(LinkedList* list, int positions) {
+ListResult rotate(LinkedList* list, int positions) {
     if (!list || list->length <= 1) return LIST_SUCCESS;
     
     // Normalize positions to be within list length
@@ -980,7 +980,7 @@ ListResult list_rotate(LinkedList* list, int positions) {
  * @param list The list to reverse.
  * @return LIST_SUCCESS on success, error code on failure.
  */
-ListResult list_reverse(LinkedList* list) {
+ListResult reverse(LinkedList* list) {
     
     if (!list) return LIST_ERROR_NULL_POINTER;
     if (list->length <= 1) return LIST_SUCCESS;
@@ -1019,11 +1019,11 @@ ListResult list_reverse(LinkedList* list) {
  * @param filter_fn Function to test each element.
  * @return A new filtered list, or NULL on failure.
  */
-LinkedList* list_filter(const LinkedList* list, FilterFunction filter_fn) {
+LinkedList* filter(const LinkedList* list, FilterFunction filter_fn) {
     
     if (!list || !filter_fn) return NULL;
     
-    LinkedList* filtered = list_create(list->element_size);
+    LinkedList* filtered = create(list->element_size);
     if (!filtered) return NULL;
     
     // Configure the filtered list with same settings as the original
@@ -1032,8 +1032,8 @@ LinkedList* list_filter(const LinkedList* list, FilterFunction filter_fn) {
     Node* current = list->head->next;
     while (current != list->tail) {
         if (filter_fn(current->data)) {
-            if (list_insert_at_tail(filtered, current->data) != LIST_SUCCESS) {
-                list_destroy(filtered);
+            if (insert_tail_ptr(filtered, current->data) != LIST_SUCCESS) {
+                destroy(filtered);
                 return NULL;
             }
         }
@@ -1050,10 +1050,10 @@ LinkedList* list_filter(const LinkedList* list, FilterFunction filter_fn) {
  * @param new_element_size Size of elements in the new list.
  * @return A new transformed list, or NULL on failure.
  */
-LinkedList* list_map(const LinkedList* list, MapFunction map_fn, size_t new_element_size) {
+LinkedList* map(const LinkedList* list, MapFunction map_fn, size_t new_element_size) {
     if (!list || !map_fn) return NULL;
     
-    LinkedList* mapped = list_create(new_element_size);
+    LinkedList* mapped = create(new_element_size);
     if (!mapped) return NULL;
     
     // Don't copy the original list's free/copy functions since the new list 
@@ -1063,15 +1063,15 @@ LinkedList* list_map(const LinkedList* list, MapFunction map_fn, size_t new_elem
     while (current != list->tail) {
         void* transformed = malloc(new_element_size);
         if (!transformed) {
-            list_destroy(mapped);
+            destroy(mapped);
             return NULL;
         }
         
         map_fn(transformed, current->data);
         
-        if (list_insert_at_tail(mapped, transformed) != LIST_SUCCESS) {
+        if (insert_tail_ptr(mapped, transformed) != LIST_SUCCESS) {
             free(transformed);
-            list_destroy(mapped);
+            destroy(mapped);
             return NULL;
         }
         
@@ -1097,7 +1097,7 @@ LinkedList* list_map(const LinkedList* list, MapFunction map_fn, size_t new_elem
  * @param arg An optional argument to pass to the predicate function.
  * @return The number of elements that satisfy the condition.
  */
-size_t list_count_if(const LinkedList* list, bool (*predicate)(const void *element, void *arg), void *arg) {
+size_t count_if(const LinkedList* list, bool (*predicate)(const void *element, void *arg), void *arg) {
     if (!list || !predicate) return 0;
     
     size_t count = 0;
@@ -1117,8 +1117,8 @@ size_t list_count_if(const LinkedList* list, bool (*predicate)(const void *eleme
  * @param compare A function pointer to compare two elements. Should return < 0 if a < b, 0 if a == b, > 0 if a > b.
  * @return A direct pointer to the minimum element's data, or NULL if the list is empty or compare function is not provided.
  */
-void* list_min_by(const LinkedList* list, int (*compare)(const void *a, const void *b)) {
-    if (list_is_empty(list) || !compare) return NULL;
+void* min_by(const LinkedList* list, int (*compare)(const void *a, const void *b)) {
+    if (is_empty(list) || !compare) return NULL;
 
     void* min_elem = list->head->next->data;
     Node* current = list->head->next->next;
@@ -1138,8 +1138,8 @@ void* list_min_by(const LinkedList* list, int (*compare)(const void *a, const vo
  * @param compare A function pointer to compare two elements. Should return < 0 if a < b, 0 if a == b, > 0 if a > b.
  * @return A direct pointer to the maximum element's data, or NULL if the list is empty or compare function is not provided.
  */
-void* list_max_by(const LinkedList* list, int (*compare)(const void *a, const void *b)) {
-    if (list_is_empty(list) || !compare) return NULL;
+void* max_by(const LinkedList* list, int (*compare)(const void *a, const void *b)) {
+    if (is_empty(list) || !compare) return NULL;
 
     void* max_elem = list->head->next->data;
     Node* current = list->head->next->next;
@@ -1158,10 +1158,10 @@ void* list_max_by(const LinkedList* list, int (*compare)(const void *a, const vo
  * @param list The source list.
  * @return A new list with unique elements, or NULL on failure.
  */
-LinkedList* list_unique(const LinkedList* list) {
+LinkedList* unique(const LinkedList* list) {
     if (!list) return NULL;
     // Call the advanced function with the list's default comparator and preserving the first occurrence.
-    return list_unique_advanced(list, list->compare_node_function, START_FROM_HEAD);
+    return unique_advanced(list, list->compare_node_function, START_FROM_HEAD);
 }
 
 /**
@@ -1171,14 +1171,14 @@ LinkedList* list_unique(const LinkedList* list) {
  * @param order START_FROM_HEAD to keep the first seen unique element, START_FROM_TAIL to keep the last.
  * @return A new list with unique elements, or NULL on failure.
  */
-LinkedList* list_unique_advanced(const LinkedList* list, CompareFunction custom_compare, Direction order) {
+LinkedList* unique_advanced(const LinkedList* list, CompareFunction custom_compare, Direction order) {
     if (!list) return NULL;
 
     // Use the provided custom_compare function, or fall back to the list's default.
     CompareFunction compare_fn = custom_compare ? custom_compare : list->compare_node_function;
     if (!compare_fn) return NULL; // Cannot determine uniqueness without a compare function.
 
-    LinkedList* unique_list = list_create(list->element_size);
+    LinkedList* unique_list = create(list->element_size);
     if (!unique_list) return NULL;
 
     copy_list_configuration(unique_list, list);
@@ -1200,8 +1200,8 @@ LinkedList* list_unique_advanced(const LinkedList* list, CompareFunction custom_
 
             if (!found) {
                 // Since we are iterating backwards, we insert at the head to maintain the original relative order.
-                if (list_insert_at_head(unique_list, current->data) != LIST_SUCCESS) {
-                    list_destroy(unique_list);
+                if (insert_head_ptr(unique_list, current->data) != LIST_SUCCESS) {
+                    destroy(unique_list);
                     return NULL;
                 }
             }
@@ -1223,8 +1223,8 @@ LinkedList* list_unique_advanced(const LinkedList* list, CompareFunction custom_
             }
 
             if (!found) {
-                if (list_insert_at_tail(unique_list, current->data) != LIST_SUCCESS) {
-                    list_destroy(unique_list);
+                if (insert_tail_ptr(unique_list, current->data) != LIST_SUCCESS) {
+                    destroy(unique_list);
                     return NULL;
                 }
             }
@@ -1241,12 +1241,12 @@ LinkedList* list_unique_advanced(const LinkedList* list, CompareFunction custom_
  * @param list2 Second list.
  * @return A new list with common elements, or NULL on failure.
  */
-LinkedList* list_intersection(const LinkedList* list1, const LinkedList* list2) {
+LinkedList* intersection(const LinkedList* list1, const LinkedList* list2) {
     
     if (!list1 || !list2 || !list1->compare_node_function) return NULL;
     if (list1->element_size != list2->element_size) return NULL;
     
-    LinkedList* intersection = list_create(list1->element_size);
+    LinkedList* intersection = create(list1->element_size);
     if (!intersection) return NULL;
     
     // Configure the intersection list with settings from first list
@@ -1256,10 +1256,10 @@ LinkedList* list_intersection(const LinkedList* list1, const LinkedList* list2) 
     while (current != list1->tail) {
 
         // If element exists in both lists and not already in result
-        if (list_index(list2, current->data) != -1 && 
-            list_index(intersection, current->data) == -1) {
-            if (list_insert_at_tail(intersection, current->data) != LIST_SUCCESS) {
-                list_destroy(intersection);
+        if (index_of(list2, current->data) != -1 && 
+            index_of(intersection, current->data) == -1) {
+            if (insert_tail_ptr(intersection, current->data) != LIST_SUCCESS) {
+                destroy(intersection);
                 return NULL;
             }
         }
@@ -1275,21 +1275,21 @@ LinkedList* list_intersection(const LinkedList* list1, const LinkedList* list2) 
  * @param list2 Second list.
  * @return A new list with all unique elements from both lists, or NULL on failure.
  */
-LinkedList* list_union(const LinkedList* list1, const LinkedList* list2) {
+LinkedList* union_lists(const LinkedList* list1, const LinkedList* list2) {
     
     if (!list1 || !list2) return NULL;
     if (list1->element_size != list2->element_size) return NULL;
     
     // Start with unique elements from first list
-    LinkedList* union_list = list_unique(list1);
+    LinkedList* union_list = unique(list1);
     if (!union_list) return NULL;
     
     // Add unique elements from second list
     Node* current = list2->head->next;
     while (current != list2->tail) {
-        if (list_index(union_list, current->data) == -1) {
-            if (list_insert_at_tail(union_list, current->data) != LIST_SUCCESS) {
-                list_destroy(union_list);
+        if (index_of(union_list, current->data) == -1) {
+            if (insert_tail_ptr(union_list, current->data) != LIST_SUCCESS) {
+                destroy(union_list);
                 return NULL;
             }
         }
@@ -1314,18 +1314,18 @@ LinkedList* list_union(const LinkedList* list1, const LinkedList* list2) {
  * @param n Number of elements in the array.
  * @return LIST_SUCCESS on success, error code on failure.
  */
-ListResult array_to_list(LinkedList* list, const void* arr, size_t n) {
+ListResult from_array(LinkedList* list, const void* arr, size_t n) {
     if (!list || !arr) return LIST_ERROR_NULL_POINTER;
     
     // Clear the list first
-    ListResult clear_result = list_clear(list);
+    ListResult clear_result = clear(list);
     if (clear_result != LIST_SUCCESS) return clear_result;
     
     // Add each element from the array
     const char* byte_arr = (const char*)arr;
     for (size_t i = 0; i < n; i++) {
         const void* element = byte_arr + (i * list->element_size);
-        ListResult result = list_insert_at_tail(list, (void*)element);
+        ListResult result = insert_tail_ptr(list, (void*)element);
         if (result != LIST_SUCCESS) return result;
     }
     
@@ -1339,7 +1339,7 @@ ListResult array_to_list(LinkedList* list, const void* arr, size_t n) {
  * @return Pointer to the newly allocated array, or NULL on failure.
  * @note The caller is responsible for freeing the returned array.
  */
-void* list_to_array(const LinkedList* list, size_t* out_size) {
+void* to_array(const LinkedList* list, size_t* out_size) {
     if (!list || !out_size) return NULL;
     
     *out_size = list->length;
@@ -1381,13 +1381,13 @@ void* list_to_array(const LinkedList* list, size_t* out_size) {
  * @return A newly allocated string, or NULL on failure.
  * @note The caller is responsible for freeing the returned string.
  */
-char* list_to_string(const LinkedList* list, const char* separator) {
+char* to_string(const LinkedList* list, const char* separator) {
     
     if (!list || !separator) return NULL;
     if (!list->print_node_function) return NULL;
 
     // Edge case: empty list
-    if (list_is_empty(list)) {
+    if (is_empty(list)) {
         char* empty = malloc(1);
         if (empty) empty[0] = '\0';
         return empty;
@@ -1439,7 +1439,7 @@ char* list_to_string(const LinkedList* list, const char* separator) {
  * @param filename Path to the output file.
  * @return LIST_SUCCESS on success, error code otherwise.
  */
-ListResult list_save_to_file(const LinkedList* list, const char* filename) {
+ListResult save_to_file(const LinkedList* list, const char* filename) {
     if (!list || !filename) return LIST_ERROR_NULL_POINTER;
     
     FILE* file = fopen(filename, "wb");
@@ -1470,7 +1470,7 @@ ListResult list_save_to_file(const LinkedList* list, const char* filename) {
  * @param copy_fn Copy function for the elements (optional).
  * @return A new list loaded from file, or NULL on failure.
  */
-LinkedList* list_load_from_file(const char* filename, size_t element_size,
+LinkedList* load_from_file(const char* filename, size_t element_size,
                                 PrintFunction print_fn, CompareFunction compare_fn,
                                 FreeFunction free_fn, CopyFunction copy_fn) {
     if (!filename) return NULL;
@@ -1493,17 +1493,17 @@ LinkedList* list_load_from_file(const char* filename, size_t element_size,
         return NULL;
     }
     
-    LinkedList* list = list_create(element_size);
+    LinkedList* list = create(element_size);
     if (!list) {
         fclose(file);
         return NULL;
     }
     
     // Set the function pointers if provided
-    if (print_fn) list_set_print_function(list, print_fn);
-    if (compare_fn) list_set_compare_function(list, compare_fn);
-    if (free_fn) list_set_free_function(list, free_fn);
-    if (copy_fn) list_set_copy_function(list, copy_fn);
+    if (print_fn) set_print_function(list, print_fn);
+    if (compare_fn) set_compare_function(list, compare_fn);
+    if (free_fn) set_free_function(list, free_fn);
+    if (copy_fn) set_copy_function(list, copy_fn);
     
     // Read elements
     for (size_t i = 0; i < saved_length; i++) {
@@ -1511,15 +1511,15 @@ LinkedList* list_load_from_file(const char* filename, size_t element_size,
         void* element = malloc(element_size);
         if (!element || fread(element, element_size, 1, file) != 1) {
             free(element);
-            list_destroy(list);
+            destroy(list);
             fclose(file);
             return NULL;
         }
 
         // Insert element into the list
-        if (list_insert_at_tail(list, element) != LIST_SUCCESS) {
+        if (insert_tail_ptr(list, element) != LIST_SUCCESS) {
             free(element);
-            list_destroy(list);
+            destroy(list);
             fclose(file);
             return NULL;
         }

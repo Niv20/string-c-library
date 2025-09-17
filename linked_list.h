@@ -129,77 +129,77 @@ typedef struct LinkedList {
 
 
 // --- Error Handling ---
-const char* list_error_string(ListResult result);
+const char* error_string(ListResult result);
 
 // --- Lifecycle Functions ---
-LinkedList* list_create(size_t element_size);
+LinkedList* create(size_t element_size);
 
 // --- Setters for LinkedList fields ---
-void list_set_print_function(LinkedList* list, PrintFunction print_fn);
-void list_set_compare_function(LinkedList* list, CompareFunction compare_fn);
-void list_set_free_function(LinkedList* list, FreeFunction free_fn);
-void list_set_copy_function(LinkedList* list, CopyFunction copy_fn);
+void set_print_function(LinkedList* list, PrintFunction print_fn);
+void set_compare_function(LinkedList* list, CompareFunction compare_fn);
+void set_free_function(LinkedList* list, FreeFunction free_fn);
+void set_copy_function(LinkedList* list, CopyFunction copy_fn);
 
 // --- Size and Overwrite Management ---
-ListResult list_set_max_size(LinkedList* list, size_t max_size, OverflowBehavior behavior);
+ListResult set_max_size(LinkedList* list, size_t max_size, OverflowBehavior behavior);
 
 // --- Insertion Functions ---
-ListResult list_insert_at_head(LinkedList* list, void* data);
-ListResult list_insert_at_tail(LinkedList* list, void* data);
-ListResult list_insert_at_index(LinkedList* list, size_t index, void* data);
+ListResult insert_head_ptr(LinkedList* list, void* data);
+ListResult insert_tail_ptr(LinkedList* list, void* data);
+ListResult insert_index_ptr(LinkedList* list, size_t index, void* data);
 
 // --- Deletion Functions ---
-ListResult list_delete_from_head(LinkedList* list);
-ListResult list_delete_from_tail(LinkedList* list);
-ListResult list_delete_at_index(LinkedList* list, size_t index);
-ListResult list_remove_advanced(LinkedList* list, void* data, int count, Direction direction);
-ListResult list_clear(LinkedList* list);
-void list_destroy(LinkedList* list);
+ListResult delete_head(LinkedList* list);
+ListResult delete_tail(LinkedList* list);
+ListResult delete_index(LinkedList* list, size_t index);
+ListResult remove_advanced(LinkedList* list, void* data, int count, Direction direction);
+ListResult clear(LinkedList* list);
+void destroy(LinkedList* list);
 
 // --- Utility Functions ---
-size_t list_get_length(const LinkedList* list);
-bool list_is_empty(const LinkedList* list);
-ListResult list_print(const LinkedList* list);
-ListResult list_print_advanced(const LinkedList* list, bool show_index, const char* separator);
+size_t get_length(const LinkedList* list);
+bool is_empty(const LinkedList* list);
+ListResult print(const LinkedList* list);
+ListResult print_advanced(const LinkedList* list, bool show_index, const char* separator);
 
 // --- Search and Access Functions ---
-void* list_get(const LinkedList* list, size_t index);
-ListResult list_set(LinkedList* list, size_t index, void* data);
-int list_index(const LinkedList* list, void* data);
-int list_index_advanced(const LinkedList* list, void* data, Direction direction);
+void* get(const LinkedList* list, size_t index);
+ListResult set(LinkedList* list, size_t index, void* data);
+int index_of(const LinkedList* list, void* data);
+int index_of_advanced(const LinkedList* list, void* data, Direction direction);
 
 // --- Sorting and Manipulation Functions ---
-ListResult list_sort(LinkedList* list, bool reverse);
+ListResult sort(LinkedList* list, bool reverse);
 
 // --- List Operations Functions ---
-LinkedList* list_copy(const LinkedList* list);
-ListResult list_extend(LinkedList* list, const LinkedList* other);
-LinkedList* list_concat(const LinkedList* list1, const LinkedList* list2);
-LinkedList* list_slice(const LinkedList* list, size_t start, size_t end);
-ListResult list_rotate(LinkedList* list, int positions);
-ListResult list_reverse(LinkedList* list);
-LinkedList* list_filter(const LinkedList* list, FilterFunction filter_fn);
+LinkedList* copy(const LinkedList* list);
+ListResult extend(LinkedList* list, const LinkedList* other);
+LinkedList* concat(const LinkedList* list1, const LinkedList* list2);
+LinkedList* slice(const LinkedList* list, size_t start, size_t end);
+ListResult rotate(LinkedList* list, int positions);
+ListResult reverse(LinkedList* list);
+LinkedList* filter(const LinkedList* list, FilterFunction filter_fn);
 
 // --- Transformation Functions ---
-LinkedList* list_map(const LinkedList* list, MapFunction map_fn, size_t new_element_size);
+LinkedList* map(const LinkedList* list, MapFunction map_fn, size_t new_element_size);
 
 // --- Mathematical Functions ---
-size_t list_count_if(const LinkedList* list, bool (*predicate)(const void *element, void *arg), void *arg);
-void* list_min_by(const LinkedList* list, int (*compare)(const void *a, const void *b));
-void* list_max_by(const LinkedList* list, int (*compare)(const void *a, const void *b));
-LinkedList* list_unique(const LinkedList* list);
-LinkedList* list_unique_advanced(const LinkedList* list, CompareFunction custom_compare, Direction order);
-LinkedList* list_intersection(const LinkedList* list1, const LinkedList* list2);
-LinkedList* list_union(const LinkedList* list1, const LinkedList* list2);
+size_t count_if(const LinkedList* list, bool (*predicate)(const void *element, void *arg), void *arg);
+void* min_by(const LinkedList* list, int (*compare)(const void *a, const void *b));
+void* max_by(const LinkedList* list, int (*compare)(const void *a, const void *b));
+LinkedList* unique(const LinkedList* list);
+LinkedList* unique_advanced(const LinkedList* list, CompareFunction custom_compare, Direction order);
+LinkedList* intersection(const LinkedList* list1, const LinkedList* list2);
+LinkedList* union_lists(const LinkedList* list1, const LinkedList* list2);
 
 // --- Array to List Conversion Functions ---
-ListResult array_to_list(LinkedList* list, const void* arr, size_t n);
-void* list_to_array(const LinkedList* list, size_t* out_size);
+ListResult from_array(LinkedList* list, const void* arr, size_t n);
+void* to_array(const LinkedList* list, size_t* out_size);
 
 // --- I/O and Format Functions ---
-char* list_to_string(const LinkedList* list, const char* separator);
-ListResult list_save_to_file(const LinkedList* list, const char* filename);
-LinkedList* list_load_from_file(const char* filename, size_t element_size,
+char* to_string(const LinkedList* list, const char* separator);
+ListResult save_to_file(const LinkedList* list, const char* filename);
+LinkedList* load_from_file(const char* filename, size_t element_size,
                                 PrintFunction print_fn, CompareFunction compare_fn,
                                 FreeFunction free_fn, CopyFunction copy_fn);
 
@@ -214,35 +214,35 @@ LinkedList* list_load_from_file(const char* filename, size_t element_size,
  * 
  * Usage examples:
  *   Person alice = create_person(1, "Alice", 25);
- *   list_insert_at_tail_val(people_list, alice);  // Pass value directly
+ *   insert_tail_val(people_list, alice);  // Pass value directly
  *   
  *   int number = 42;
- *   list_insert_at_head_val(numbers_list, number);  // Pass value directly
+ *   insert_head_val(numbers_list, number);  // Pass value directly
  *   
  *   // Or even with literals (though be careful with scope):
- *   list_insert_at_tail_val(numbers_list, 100);
+ *   insert_tail_val(numbers_list, 100);
  */
 
 #ifdef __GNUC__  // GCC and Clang support
-    #define list_insert_at_head_val(list, value) \
-        ({ __typeof__(value) _temp = (value); list_insert_at_head((list), &_temp); })
+    #define insert_head_val(list, value) \
+        ({ __typeof__(value) _temp = (value); insert_head_ptr((list), &_temp); })
 
-    #define list_insert_at_tail_val(list, value) \
-        ({ __typeof__(value) _temp = (value); list_insert_at_tail((list), &_temp); })
+    #define insert_tail_val(list, value) \
+        ({ __typeof__(value) _temp = (value); insert_tail_ptr((list), &_temp); })
 
-    #define list_insert_at_index_val(list, index, value) \
-        ({ __typeof__(value) _temp = (value); list_insert_at_index((list), (index), &_temp); })
+    #define insert_index_val(list, index, value) \
+        ({ __typeof__(value) _temp = (value); insert_index_ptr((list), (index), &_temp); })
 #else
     // Fallback for compilers that don't support __typeof__
     // These will require explicit casting or won't work with all types
-    #define list_insert_at_head_val(list, value) \
-        list_insert_at_head((list), &(value))
+    #define insert_head_val(list, value) \
+        insert_head_ptr((list), &(value))
 
-    #define list_insert_at_tail_val(list, value) \
-        list_insert_at_tail((list), &(value))
+    #define insert_tail_val(list, value) \
+        insert_tail_ptr((list), &(value))
 
-    #define list_insert_at_index_val(list, index, value) \
-        list_insert_at_index((list), (index), &(value))
+    #define insert_index_val(list, index, value) \
+        insert_index_ptr((list), (index), &(value))
 #endif
 
 #endif
