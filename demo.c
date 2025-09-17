@@ -173,7 +173,7 @@ void comprehensive_linked_list_demo(void) {
     Person charlie = create_person(1003, "Charlie Brown", 22);
     Person diana = create_person(1004, "Diana Prince", 30);
     
-    // Insert at tail (most common operation)
+    // Insert at tail
     printf("Inserting Alice at tail...\n");
     list_insert_at_tail(people_list, &alice);
     printf("Inserting Bob at tail...\n");
@@ -190,6 +190,52 @@ void comprehensive_linked_list_demo(void) {
     printf("List after insertions:\n");
     list_print(people_list);
     printf("Current length: %zu\n", list_get_length(people_list));
+    
+    // ===== 2B. CONVENIENT VALUE-BASED INSERTIONS (NEW!) =====
+    banner("2B. CONVENIENT VALUE-BASED INSERTIONS (NEW MACROS!)");
+    printf("Demonstrating the new convenience macros that allow passing values directly...\n");
+    
+    // Create more people to demonstrate the new value-based macros
+    Person grace = create_person(1007, "Grace Hopper", 85);
+    Person henry = create_person(1008, "Henry Ford", 83);
+    
+    // Using the NEW convenience macros - no need for & operator!
+    printf("Using new list_insert_at_tail_val macro (passing value directly)...\n");
+    list_insert_at_tail_val(people_list, grace);
+    
+    printf("Using new list_insert_at_head_val macro (passing value directly)...\n");
+    list_insert_at_head_val(people_list, henry);
+    
+    printf("List after value-based insertions:\n");
+    list_print(people_list);
+    
+    // Demonstrate with simple types too
+    printf("\nDemonstrating with integers using value-based macros:\n");
+    LinkedList* numbers_list = list_create(sizeof(int));
+    list_set_print_function(numbers_list, print_int);
+    
+    // Traditional way (still works)
+    int num1 = 100;
+    list_insert_at_tail(numbers_list, &num1);
+    
+    // New convenient way - pass values directly!
+    list_insert_at_tail_val(numbers_list, 200);
+    list_insert_at_head_val(numbers_list, 50);
+    list_insert_at_index_val(numbers_list, 1, 75);
+    
+    printf("Numbers list using value-based insertions: ");
+    list_print_advanced(numbers_list, false, ", ");
+    
+    // Clean up the numbers list
+    list_destroy(numbers_list);
+    
+    printf("✓ Value-based insertion macros work perfectly!\n");
+    printf("Now you can write: list_insert_at_tail_val(list, your_struct)\n");
+    printf("Instead of:       list_insert_at_tail(list, &your_struct)\n");
+    
+    // Clean up the additional people we created
+    free(grace.name);
+    free(henry.name);
     
     // ===== 3. SEARCH AND ACCESS OPERATIONS =====
     banner("3. SEARCH AND ACCESS OPERATIONS");

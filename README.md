@@ -2,6 +2,19 @@
 
 This is a comprehensive, generic linked list library written in C. It is designed to be type-agnostic by using void pointers for data storage.
 
+## ✨ What's New
+
+**🆕 Convenient Value-Based Insertion Macros!** 
+You can now pass values directly to insertion functions without using the `&` operator:
+
+```c
+Person alice = create_person(1001, "Alice Johnson", 28);
+list_insert_at_tail_val(people_list, alice);  // No & needed!
+
+int number = 42;
+list_insert_at_head_val(numbers_list, number);  // Much more intuitive!
+```
+
 ## Setup for Examples
 
 To demonstrate the library's functionality, we will use a Person struct. This setup will be assumed for all subsequent examples.
@@ -102,10 +115,10 @@ This function only creates the list. It is currently "empty" (except for the dum
 
 ## 2. List Configuration
 
-Before using the list, you need to configure it with the appropriate helper functions. The first three functions are essential for most operations, while the others are optional but provide additional functionality.
+Before using the list, you need to configure it with the appropriate [helper functions](#setup-for-examples).
 
 ```c
-// Essential configuration (required for most operations)
+// Essential configuration
 list_set_print_function(person_list, print_person);
 list_set_compare_function(person_list, compare_person_age);
 list_set_free_function(person_list, free_person);
@@ -119,10 +132,10 @@ for example, you can set max 100 elements, auto-delete old when full:
 list_set_max_size(person_list, 100, DELETE_OLD_WHEN_FULL);
 ```
 
-Or no size limit (the last parameter is ignored when using UNLIMITED):
+Or no size limit:
 
 ```c
-list_set_max_size(person_list, UNLIMITED, REJECT_NEW_WHEN_FULL);  // behavior ignored
+list_set_max_size(person_list, UNLIMITED, REJECT_NEW_WHEN_FULL);
 ```
 
 > [!IMPORTANT]
@@ -132,14 +145,48 @@ list_set_max_size(person_list, UNLIMITED, REJECT_NEW_WHEN_FULL);  // behavior ig
 
 ## 3. Insertion in Linked List
 
+The library provides two ways to insert elements: the traditional pointer-based functions and convenient value-based macros.
+
+### 🆕 Convenient Value-Based Insertion (NEW!)
+
+For a more intuitive API, you can use the new convenience macros that allow you to pass values directly without using the `&` operator:
+
+```c
+// Traditional way (still works)
+Person alice = create_person(1001, "Alice Johnson", 28);
+list_insert_at_tail(people_list, &alice);  // Notice the & operator
+
+// NEW convenient way - pass values directly!
+Person bob = create_person(1002, "Bob Smith", 35);
+list_insert_at_tail_val(people_list, bob);  // No & needed!
+
+// Works with any type
+int number = 42;
+list_insert_at_head_val(numbers_list, number);
+
+// Even with literals
+list_insert_at_tail_val(numbers_list, 100);
+list_insert_at_index_val(numbers_list, 1, 75);
+```
+
+**Available convenience macros:**
+- `list_insert_at_head_val(list, value)`
+- `list_insert_at_tail_val(list, value)`
+- `list_insert_at_index_val(list, index, value)`
+
+> [!NOTE]
+> These macros work with GCC and Clang compilers. For other compilers, they fall back to the traditional pointer-based approach.
+
+### Traditional Pointer-Based Insertion
+
 ### `list_insert_at_head`
 
-This function adds a new element to the very beginning of the list.
+This function adds a new element to the beginning of the list.
 
 **Receives:**
 
 - `list`: A pointer to the `LinkedList`.
-- `data`: A pointer to the data to be inserted. The library makes its own copy of this data.
+- `data`: A pointer to the data to be inserted.
 
 **Returns:**
 

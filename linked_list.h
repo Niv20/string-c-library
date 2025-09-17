@@ -203,4 +203,46 @@ LinkedList* list_load_from_file(const char* filename, size_t element_size,
                                 PrintFunction print_fn, CompareFunction compare_fn,
                                 FreeFunction free_fn, CopyFunction copy_fn);
 
+// --- Convenience Macros for Passing Values Directly ---
+
+/**
+ * @brief Convenience macros that allow passing values directly instead of pointers.
+ * 
+ * These macros create a temporary variable to hold the value and pass its address
+ * to the underlying pointer-based functions. This provides a more intuitive API
+ * while maintaining the existing implementation.
+ * 
+ * Usage examples:
+ *   Person alice = create_person(1, "Alice", 25);
+ *   list_insert_at_tail_val(people_list, alice);  // Pass value directly
+ *   
+ *   int number = 42;
+ *   list_insert_at_head_val(numbers_list, number);  // Pass value directly
+ *   
+ *   // Or even with literals (though be careful with scope):
+ *   list_insert_at_tail_val(numbers_list, 100);
+ */
+
+#ifdef __GNUC__  // GCC and Clang support
+    #define list_insert_at_head_val(list, value) \
+        ({ __typeof__(value) _temp = (value); list_insert_at_head((list), &_temp); })
+
+    #define list_insert_at_tail_val(list, value) \
+        ({ __typeof__(value) _temp = (value); list_insert_at_tail((list), &_temp); })
+
+    #define list_insert_at_index_val(list, index, value) \
+        ({ __typeof__(value) _temp = (value); list_insert_at_index((list), (index), &_temp); })
+#else
+    // Fallback for compilers that don't support __typeof__
+    // These will require explicit casting or won't work with all types
+    #define list_insert_at_head_val(list, value) \
+        list_insert_at_head((list), &(value))
+
+    #define list_insert_at_tail_val(list, value) \
+        list_insert_at_tail((list), &(value))
+
+    #define list_insert_at_index_val(list, index, value) \
+        list_insert_at_index((list), (index), &(value))
+#endif
+
 #endif
