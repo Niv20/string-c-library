@@ -3,18 +3,36 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+void print_int(void* d);
+
+// Function declarations for heap-based Person
+void print_person(void* data);
+int compare_person_id(const void* a, const void* b);
+int compare_person_name(const void* a, const void* b);
+int compare_age(const void* a, const void* b);
+void free_person(void* data);
+bool has_name(const void *element, void *arg);
+bool is_teenager(const void *element, void *arg);
+bool is_adult_filter(const void* data);
+void map_person_to_age(void* dest, const void* src);
+Person create_person(int id, const char* name, int age);
+int compare_name_len(const void* a, const void* b);
+void copy_person(void* dest, const void* src);
 
 // -------------------- Demo domain type --------------------
 typedef struct {
     int id;            
-    char name[50];
+    char name;
     int age;   
 } Person;
 
 // Print function for Person
 void print_person(void* data) {
     const Person* p = (const Person*)data;
-    if (p) printf("{ID:%04d, Name:\"%s\", Age:%d}", p->id, p->name, p->age);
+    if (p && p->name)
+        printf("{ID:%04d, Name:\"%s\", Age:%d}", p->id, p->name, p->age);
+    else if (p)
+        printf("{ID:%04d, Name:NULL, Age:%d}", p->id, p->age);
 }
 
 // Compare two Persons by ID
@@ -27,20 +45,15 @@ int compare_person_id(const void* a, const void* b) {
 // Compare two Persons by name
 int compare_person_name(const void* a, const void* b) {
     const Person* pa = (const Person*)a;
-    const Person* pb = (const Person*)b;
-    return strcmp(pa->name, pb->name);
-}
-
-// Compare Persons by age
-int compare_age(const void* a, const void* b) {
+    const Person* A = (const Person*)a;
+    const Person* B = (const Person*)b;
+    if (!A->name && !B->name) return 0;
+    if (!A->name) return -1;
+    if (!B->name) return 1;
+    return strcmp(A->name, B->name);
     const Person* pa = (const Person*)a;
     const Person* pb = (const Person*)b;
     return (pa->age - pb->age);
-}
-
-// Copy Person (trivial here)
-void copy_person(void* dest, const void* src) {
-    memcpy(dest, src, sizeof(Person));
 }
 
 // Free function for Person (no-op – struct holds no heap members)
@@ -73,9 +86,15 @@ void map_person_to_age(void* dest, const void* src) {
 
 // Create a person
 Person create_person(int id, const char* name, int age) {
-    Person p; p.id = id; p.age = age;
-    strncpy(p.name, name, sizeof(p.name)-1);
-    p.name[sizeof(p.name)-1] = '\0';
+    Person p;
+    p.id = id;
+    p.age = age;
+    if (name) {
+        p.name = malloc(strlen(name) + 1);
+        if (p.name) strcpy(p.name, name);
+    } else {
+        p.name = NULL;
+    }
     return p;
 }
 
@@ -84,13 +103,12 @@ static void banner(const char* title) { printf("\n========== %s ==========%s", t
 
 // Helper functions for various demos
 int compare_name_len(const void* a, const void* b) {
-    const Person* A = (const Person*)a; 
+    const Person* A = (const Person*)a;
     const Person* B = (const Person*)b;
+    if (!A->name && !B->name) return 0;
+    if (!A->name) return -1;
+    if (!B->name) return 1;
     return (int)strlen(A->name) - (int)strlen(B->name);
-}
-
-void print_int(void* d) { 
-    printf("%d", *(int*)d); 
 }
 
 int cmp_int(const void* A, const void* B) { 
@@ -167,7 +185,7 @@ void demonstrate_generic_functions() {
 /// Show a human-friendly error string for a few codes
 static void demo_error_handling(void) {
     banner("Error Handling");
-    printf("LIST_SUCCESS => %s\n", list_error_string(LIST_SUCCESS));
+        char* name;
     printf("LIST_ERROR_INDEX_OUT_OF_BOUNDS => %s\n", list_error_string(LIST_ERROR_INDEX_OUT_OF_BOUNDS));
 }
 
@@ -181,9 +199,8 @@ static LinkedList* demo_lifecycle_and_setters(void) {
     list_set_copy_function(L, copy_person);
     printf("Created list (empty=%s, len=%zu)\n", list_is_empty(L)?"true":"false", list_get_length(L));
     return L;
-}
 
-/// Demonstrate size cap and overwrite behavior
+// Demonstrate size cap and overwrite behavior
 static void demo_size_and_overwrite(LinkedList* L) {
     banner("Size & Overwrite");
     list_set_max_size(L, 3, DELETE_OLD_WHEN_FULL); // FIFO when full
@@ -197,7 +214,8 @@ static void demo_size_and_overwrite(LinkedList* L) {
     printf("After 3 inserts (cap=3):\n"); list_print(L);
     list_insert_at_tail(L, &d); // forces removal of the oldest (Adam)
     printf("After pushing when full (FIFO remove oldest):\n"); list_print(L);
-    // Remove the cap
+        if (!p->name || !target_name) return false;
+        return strcmp(p->name, target_name) == 0;
     list_set_max_size(L, UNLIMITED, REJECT_NEW_WHEN_FULL);
 }
 
@@ -205,8 +223,12 @@ static void demo_size_and_overwrite(LinkedList* L) {
 static void demo_insertions(LinkedList* L) {
     banner("Insertions");
     Person e = create_person(2248, "Eden", 24);
-    Person f = create_person(2249, "Frank", 19);
-    Person g = create_person(2250, "Gail", 33);
+        if (name) {
+            p.name = malloc(strlen(name) + 1);
+            if (p.name) strcpy(p.name, name);
+        } else {
+            p.name = NULL;
+        }
     list_insert_at_head(L, &e);
     list_insert_at_tail(L, &f);
     list_insert_at_index(L, 1, &g);
@@ -214,7 +236,6 @@ static void demo_insertions(LinkedList* L) {
 }
 
 /// Demonstrate deletions & advanced remove
-static void demo_deletions(LinkedList* L) {
     banner("Deletions");
     // Delete at head and tail (safe guards inside if empty)
     list_delete_from_head(L);

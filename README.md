@@ -24,7 +24,7 @@ For this library to work, you need to define 3 **helper functions** in your own 
 3. `void FreeFunction(void* data)` – This function frees all dynamically allocated memory **inside** your struct, such as strings or arrays allocated with malloc (The library itself frees the memory of the struct itself).
 
 > [!NOTE]
-> Pay attention that the parameters for these functions are of type `void*`, so you need to cast the pointer back to your data type within the function.
+> The parameters for these functions are of type `void*`, so you need to cast the pointer back to your data type within the function.
 
 Continuing with our example, these functions would look like this:
 
@@ -60,8 +60,11 @@ void free_person(void* data) {
 }
 ```
 
+> [!NOTE]
+> If your struct does **not** contain any dynamically allocated fields (such as pointers to memory allocated with `malloc`), you do **not** need to implement a free function at all.
+
 ## 1. Create List
-הגעתי לכאן
+
 ### `list_create`
 
 This is the starting point for using the library. It allocates memory for a new, empty `LinkedList` structure and initializes it.
@@ -82,7 +85,7 @@ This is the starting point for using the library. It allocates memory for a new,
 LinkedList* person_list = list_create(sizeof(Person));
 
 // Check if the list was created successfully
-if (!person_list) { // person_list == NULL
+if (!person_list) {
     printf("Failed to create list.\n");
     return 1;
 }
@@ -93,23 +96,19 @@ printf("Successfully created a list for Person objects.\n");
 > [!NOTE] 
 > This function sets up dummy head and tail nodes, to simplify the logic for all other list operations by ensuring that every "real" node is always between two other nodes.
 
-> [!IMPORTANT] 
-> This function only creates the list. It is currently "empty" (except for the dummy nodes, of course). Later, we will learn how to add elements to it.
+This function only creates the list. It is currently "empty" (except for the dummy nodes, of course). Later, we will learn how to [add elements to it](#3-insertion-in-linked-list).
 
 ---
 
 ## 2. List Configuration
 
-Before using the list, you need to configure it with the appropriate function pointers. The first three functions are essential for most operations, while the others are optional but provide additional functionality.
+Before using the list, you need to configure it with the appropriate helper functions. The first three functions are essential for most operations, while the others are optional but provide additional functionality.
 
 ```c
 // Essential configuration (required for most operations)
 list_set_print_function(person_list, print_person);
 list_set_compare_function(person_list, compare_person_age);
 list_set_free_function(person_list, free_person);
-
-// Optional configuration
-list_set_copy_function(person_list, copy_person);
 ```
 
 Additionally, you can set a maximum size limit for your list using `list_set_max_size()`. This function is particularly useful when implementing caches or buffers that shouldn't grow indefinitely. You can specify the maximum number of elements allowed (or `UNLIMITED` for no limit), and choose the behavior when the list reaches capacity - either reject new insertions or automatically delete the oldest elements to make room.
