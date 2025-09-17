@@ -17,7 +17,6 @@ void print_int(void* data);
 int compare_person_id(const void* a, const void* b);
 int compare_person_name(const void* a, const void* b);
 int compare_person_age(const void* a, const void* b);
-int compare_int(const void* a, const void* b);
 void free_person(void* data);
 void copy_person(void* dest, const void* src);
 Person create_person(int id, const char* name, int age);
@@ -64,10 +63,6 @@ int compare_person_age(const void* a, const void* b) {
     return (p1->age - p2->age);
 }
 
-int compare_int(const void* a, const void* b) {
-    return (*(const int*)a - *(const int*)b);
-}
-
 void free_person(void* data) {
     Person* p = (Person*)data;
     if (p && p->name) {
@@ -75,8 +70,6 @@ void free_person(void* data) {
         p->name = NULL;
     }
 }
-
-
 
 void copy_person(void* dest, const void* src) {
     if (!dest || !src) return;
@@ -143,7 +136,9 @@ void person_linked_list_demo(void) {
     printf("This demo showcases all features using Person structures with dynamic memory.\n");
     printf("Demonstrates proper memory management for complex data types.\n\n");
     
-    // 1 // 
+    ///////
+    // 1 //
+    /////// 
     banner("1. Create List");
     printf("Creating a new linked list for Person structures...\n");
 
@@ -154,7 +149,9 @@ void person_linked_list_demo(void) {
     }
     printf("✓ List created successfully\n");
     
-    // 2 // 
+    ///////
+    // 2 //
+    ///////
     banner("2. List Configuration");
     printf("Configuring list with helper functions...\n");
     set_print_function(people_list, print_person);
@@ -166,8 +163,9 @@ void person_linked_list_demo(void) {
     printf("Initial list status: Empty=%s, Length=%zu\n", 
            is_empty(people_list) ? "Yes" : "No", get_length(people_list));
     
-
+    ///////
     // 3 //
+    ///////
     banner("Insertion in Linked List");
 
     printf("Creating people...\n");
@@ -175,86 +173,64 @@ void person_linked_list_demo(void) {
     Person bob = create_person(1002, "Bob Smith", 35);
     Person charlie = create_person(1003, "Charlie Brown", 22);
     Person diana = create_person(1004, "Diana Prince", 30);
-    
-    // Insert at tail
-    printf("Inserting Alice at tail...\n");
-    insert_tail_value(people_list, alice);
-    printf("Inserting Bob at tail...\n");
-    insert_tail_value(people_list, bob);
-    
-    // Insert at head
-    printf("Inserting Charlie at head...\n");
-    insert_head_value(people_list, charlie);
-    
-    // Insert at specific index
-    printf("Inserting Diana at index 2...\n");
-    insert_index_value(people_list, 2, diana);
-    
-    printf("List after insertions:\n");
-    print(people_list);
-    printf("Current length: %zu\n", get_length(people_list));
-    
-    printf("Two ways to insert elements:\n");
-    printf("• insert_*_value: Pass data by value, library copies it into its own memory\n");
-    printf("• insert_*_ptr: Pass pointer to data, library copies the pointed data\n");
-    
-    // Let's also demonstrate insert_*_value for comparison
-    printf("\nDemonstrating insert_*_value (library handles allocation):\n");
     Person emily = create_person(1005, "Emily Davis", 26);
-    printf("Inserting Emily using insert_head_value...\n");
-    insert_head_value(people_list, emily);
-    
     Person frank = create_person(1006, "Frank Wilson", 31);
-    printf("Inserting Frank using insert_tail_value...\n");
-    insert_tail_value(people_list, frank);
     
-    printf("List after val-based insertions:\n");
+    printf("Demonstrating all 6 insertion combinations:\n\n");
+    
+    // VALUE MODE examples (pass by value)
+    printf("=== VALUE MODE (pass struct by value) ===\n");
+    
+    printf("1. insert_tail_value(list, alice) - Alice to tail by value\n");
+    insert_tail_value(people_list, alice);
     print(people_list);
+    
+    printf("2. insert_head_value(list, bob) - Bob to head by value\n");
+    insert_head_value(people_list, bob);
+    print(people_list);
+    
+    printf("3. insert_index_value(list, 1, charlie) - Charlie at index 1 by value\n");
+    insert_index_value(people_list, 1, charlie);
+    print(people_list);
+    
+    printf("\n=== POINTER MODE (pass struct by pointer) ===\n");
+    
+    printf("4. insert_tail_ptr(list, &diana) - Diana to tail by pointer\n");
+    insert_tail_ptr(people_list, &diana);
+    print(people_list);
+    
+    printf("5. insert_head_ptr(list, &emily) - Emily to head by pointer\n");
+    insert_head_ptr(people_list, &emily);
+    print(people_list);
+    
+    printf("6. insert_index_ptr(list, 2, &frank) - Frank at index 2 by pointer\n");
+    insert_index_ptr(people_list, 2, &frank);
+    print(people_list);
+    
+    printf("\nAll 6 insertion methods demonstrated!\n");
     printf("Current length: %zu\n", get_length(people_list));
     
-    // Let's create a simple integer list to show val-based insertion with primitives
-    printf("\n--- Example with simple integers (perfect for insert_*_value) ---\n");
-    LinkedList* numbers = create_list(sizeof(int));
-    set_print_function(numbers, print_int);
+    printf("\n=== BOUNDARY TESTING ===\n");
+    Person test1 = create_person(9001, "Test1", 25);
+    Person test2 = create_person(9002, "Test2", 30);
+    Person test3 = create_person(9003, "Test3", 35);
     
-    printf("Inserting integers using insert_*_value:\n");
-    insert_tail_value(numbers, 10);
-    insert_tail_value(numbers, 20);
-    insert_head_value(numbers, 5);
-    insert_index_value(numbers, 2, 15);
+    printf("Testing boundary conditions:\n");
+    printf("List length before boundary tests: %zu\n", get_length(people_list));
     
-    printf("Numbers list: ");
-    print_advanced(numbers, false, ", ");
+    printf("insert_index_value(list, 0, test1) - index 0 (should go to head)\n");
+    insert_index_value(people_list, 0, test1);
+    print(people_list);
     
-    // Let's also show simple structs without dynamic memory
-    typedef struct {
-        int x, y;
-        double distance;
-    } Point;
+    printf("insert_index_ptr(list, 0, &test2) - index 0 (should go to head)\n");
+    insert_index_ptr(people_list, 0, &test2);
+    print(people_list);
     
-    LinkedList* points = create_list(sizeof(Point));
+    printf("insert_index_value(list, 999, test3) - beyond bounds (should go to tail)\n");
+    insert_index_value(people_list, 999, test3);
+    print(people_list);
     
-    printf("\n--- Example with simple structs (no dynamic memory) ---\n");
-    Point p1 = {0, 0, 0.0};
-    Point p2 = {3, 4, 5.0};
-    Point p3 = {1, 1, 1.414};
-    
-    printf("Inserting Points using insert_*_value (no dynamic memory, perfectly safe):\n");
-    insert_tail_value(points, p1);
-    insert_tail_value(points, p2);
-    insert_head_value(points, p3);
-    
-    printf("Points in list: %zu\n", get_length(points));
-    
-    // Clean up these demo lists
-    destroy(numbers);
-    destroy(points);
-    
-    // Clean up the original variables
-    free(alice.name);
-    free(bob.name);
-    free(charlie.name);
-    free(diana.name);
+    printf("Final length after boundary tests: %zu\n", get_length(people_list));
     
     // ===== Search and Access Functions =====
     banner("Search and Access Functions");
@@ -296,6 +272,12 @@ void person_linked_list_demo(void) {
     printf("List sorted by age (descending):\n");
     print(people_list);
     
+    printf("Sorting by name (alphabetical)...\n");
+    set_compare_function(people_list, compare_person_name);
+    sort(people_list, false);
+    printf("List sorted by name (alphabetical):\n");
+    print(people_list);
+    
     // Restore ID comparison for other operations
     set_compare_function(people_list, compare_person_id);
     
@@ -314,6 +296,21 @@ void person_linked_list_demo(void) {
     if (oldest) {
         printf("Oldest person: ");
         print_person(oldest);
+        printf("\n");
+    }
+    
+    // Find min and max by name (alphabetical)
+    Person* first_alphabetical = (Person*)min_by(people_list, compare_person_name);
+    Person* last_alphabetical = (Person*)max_by(people_list, compare_person_name);
+    
+    if (first_alphabetical) {
+        printf("First alphabetically: ");
+        print_person(first_alphabetical);
+        printf("\n");
+    }
+    if (last_alphabetical) {
+        printf("Last alphabetically: ");
+        print_person(last_alphabetical);
         printf("\n");
     }
     

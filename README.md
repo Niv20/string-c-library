@@ -134,51 +134,19 @@ set_max_size(person_list, UNLIMITED, REJECT_NEW_WHEN_FULL);
 
 The library provides two distinct approaches for inserting elements:
 
-### 🔹 Pointer-Based Insertion (`insert_*_ptr`)
+You can insert structs into the list in two ways:
 
-When you allocate memory in the heap and want the library to store the pointer directly:
+- **Pass the struct itself by value** – the list will make an internal copy of the value. In this case, the struct needs to be allocated on the stack, and the library handles copying it into its own internal storage. You don't need to manage heap allocation when using this approach.
 
-```c
-// You allocate the Person in heap
-Person* alice = malloc(sizeof(Person));
-alice->id = 1001;
-alice->name = malloc(strlen("Alice Johnson") + 1);
-strcpy(alice->name, "Alice Johnson");
-alice->age = 28;
-
-// Library stores the pointer
-insert_tail_ptr(people_list, alice);
-// alice is now "owned" by the list
-```
-
-### 🔹 Value-Based Insertion (`insert_*_val`)
-
-When you have a value (on stack or elsewhere) and want the library to handle the allocation:
-
-```c
-// You create the Person on stack or as a temporary
-Person bob = create_person(1002, "Bob Smith", 35);
-
-// Library allocates memory and copies the value
-insert_tail_val(people_list, bob);
-// bob can be safely freed/go out of scope
-```
-
-### Insertion Functions
+- **Allocate memory for the struct and pass a pointer** – the list will store a copy of the data pointed to by the pointer. In this case, you are responsible for allocating the struct on the heap (using `malloc` or similar), and the library will copy the contents into its own internal storage. You must also ensure that the memory is properly freed when the list is destroyed or when elements are removed.
 
 Both approaches support the same insertion positions:
 
-#### Head Insertion
-- `insert_head_ptr(list, ptr)` - Insert at the beginning (pointer-based)
-- `insert_head_val(list, value)` - Insert at the beginning (value-based)
-
-#### Tail Insertion  
-- `insert_tail_ptr(list, ptr)` - Insert at the end (pointer-based)
-- `insert_tail_val(list, value)` - Insert at the end (value-based)
-
-#### Index Insertion
-- `insert_index_ptr(list, index, ptr)` - Insert at specific position (pointer-based)
-- `insert_index_val(list, index, value)` - Insert at specific position (value-based)
+| Insertion Type   | Value-Based Function                   | Pointer-Based Function                |
+|------------------|----------------------------------------|--------------------------------------|
+| **Head**         | `insert_head_val(list, value)`         | `insert_head_ptr(list, ptr)`          |
+| **Tail**         | `insert_tail_val(list, value)`         | `insert_tail_ptr(list, ptr)`          |
+| **Index**        | `insert_index_val(list, index, value)` | `insert_index_ptr(list, index, ptr)`  |
 
 ### Examples with Simple Types
 

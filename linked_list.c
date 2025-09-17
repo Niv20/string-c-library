@@ -311,6 +311,16 @@ ListResult insert_tail_value_internal(LinkedList* list, void* data) {
  */
 ListResult insert_index_value_internal(LinkedList* list, size_t index, void* data) {
 
+    // Handle boundary conditions
+    if (index == 0) {
+        // Insert at head for index 0
+        return insert_head_value_internal(list, data);
+    }
+    if (index >= list->length) {
+        // Insert at tail for indices beyond list length
+        return insert_tail_value_internal(list, data);
+    }
+
     Node* new_node;
     ListResult result = insert_node_core_generic(list, data, LIST_MODE_VALUE, &new_node);
     if (result != LIST_SUCCESS) return result;
@@ -398,6 +408,17 @@ ListResult insert_tail_ptr(LinkedList* list, void* data_ptr) {
  * @warning The caller must ensure the pointed-to data remains valid for the list's lifetime.
  */
 ListResult insert_index_ptr(LinkedList* list, size_t index, void* data_ptr) {
+    
+    // Handle boundary conditions
+    if (index == 0) {
+        // Insert at head for index 0
+        return insert_head_ptr(list, data_ptr);
+    }
+    if (index >= list->length) {
+        // Insert at tail for indices beyond list length
+        return insert_tail_ptr(list, data_ptr);
+    }
+    
     Node* new_node;
     ListResult result = insert_node_core_generic(list, data_ptr, LIST_MODE_VALUE, &new_node);
     if (result != LIST_SUCCESS) return result;
