@@ -4,7 +4,7 @@ This is a comprehensive, generic linked list library written in C. It is designe
 
 ## Setup for Examples
 
-To demonstrate the library's functionality, most examples will use a Person struct. This setup will be assumed for all subsequent examples.
+To demonstrate the library's functionality, we will use a Person struct. This setup will be assumed for all subsequent examples.
 
 ```c
 // The structure we will store in the list
@@ -15,21 +15,22 @@ typedef struct {
 } Person;
 ```
 
-For this library to work, you need to define helper functions that the list will use to manage Person objects. These functions are essential for the library to understand how to work with your specific data type.### Essential Functions (Required)
+For this library to work, you need to define 3 **helper functions** in your own code, that the list will use to manage your objects. These functions are essential for the library to understand how to work with your specific data type.
 
-`void PrintFunction(void* data)` - This function assigns a custom printing function to the list. The `list_print` and `list_print_advanced` functions will use this function pointer to display each element in a user-defined format. Without this, the list doesn't know how to interpret and print your data structure. You must cast the void pointer back to your data type within the function.
+1. `void PrintFunction(void* data)` - This function assigns a custom printing function to the list.Without this, the list doesn't know how to interpret and print your data structure.
 
-`int CompareFunction(const void* data1, const void* data2)` - This comparison function is required for any function that needs to know the relative order of elements, such as sorting, finding an element by value, or removing specific items. The function should return a negative, zero, or positive value, following the convention of `strcmp`. Both parameters need to be cast to your data type within the function.
+2. `int CompareFunction(const void* data1, const void* data2)` – This function is used to compare two elements in your data structure. It return a negative value if the first element (`data1`) is less than the second (`data2`), zero if they are equal, and a positive value if the first is greater than the second.
 
-`void FreeFunction(void* data)` - This custom memory deallocation function is critical for preventing memory leaks when your data structure contains dynamically allocated memory (e.g., a pointer to a string). When an element is deleted, the list will call this function to free that internal memory before freeing the element itself. Cast the void pointer to your data type and free any internal allocations.
+3. `void FreeFunction(void* data)` – This function frees all dynamically allocated memory **inside** your struct, such as strings or arrays allocated with malloc (The library itself frees the memory of the struct itself).
 
-In our implementation, these functions will look like this:
+> [!NOTE]
+> Pay attention that the parameters for these functions are of type `void*`, so you need to cast the pointer back to your data type within the function.
+
+Continuing with our example, these functions would look like this:
 
 ```c
 // 1. Function to print a Person's details
 void print_person(void* data) {
-   
-    if (!data) return;
 
     // Cast the void pointer back to Person pointer
     Person* p = (Person*)data;
@@ -39,8 +40,6 @@ void print_person(void* data) {
 
 // 2. Function to compare two Persons by age
 int compare_person_age(const void* data1, const void* data2) {
-   
-    if (!data1 || !data2) return 0;
 
     // Cast the void pointers back to Person pointers
     Person* p1 = (Person*)data1;
@@ -52,60 +51,17 @@ int compare_person_age(const void* data1, const void* data2) {
 // 3. Function to free the dynamically allocated name within a Person struct
 void free_person(void* data) {
 
-    if (!data) return;
-
     // Cast the void pointers back to Person pointers
     Person* p = (Person*)data;
 
     free(p->name); // Free the allocated string
+
     // The struct itself is managed by the list, so we don't free 'p'
 }
 ```
 
-### Optional Functions
-
-`void CopyFunction(void* dest, const void* src)` - This function performs a "deep copy" of elements. When you insert data, the list makes a copy. By default, this is a `memcpy` (a shallow copy). If your struct contains pointers, a shallow copy would mean both the original and the list's copy point to the same memory, which is dangerous. A deep copy function allocates new memory for these pointers. לרוב זה מיותר, כי אם נבצע שינוי במקור אנחנו נרצה שזה ישתנה. אבל אם לא, אז תוכלו להגדיר את זה. זה לא חובה והספריה תעבוד גם בלי זה.
-
-### Implementation Example
-
-```c
-// 4. Function to perform a deep copy of a Person struct
-void copy_person(void* dest, const void* src) {
-    if (!dest || !src) return;
-    Person* dest_p = (Person*)dest;
-    const Person* src_p = (const Person*)src;
-
-    // Allocate new memory for the name and copy it
-    dest_p->name = malloc(strlen(src_p->name) + 1);
-    if (dest_p->name) {
-        strcpy(dest_p->name, src_p->name);
-    }
-    dest_p->age = src_p->age;
-}
-```
-
-If you want to filter or transform the elements in the list, you can define additional function pointers:
-
-`bool FilterFunction(const void* data)`
-
-`void MapFunction(void* dest, const void* src)`
-
-נניח בדוגמה שלנו
-נניח קוד שלוקח את כל האנשים שהם יותר מגיל 18
-נניח מעלה את הגיל של כולם בעוד שנה
-
-```c
-לכתוב קוד
-
-// 5.
-נניח קוד שלוקח את כל האנשים שהם יותר מגיל 18
-
-// 6.
-נניח מעלה את הגיל של כולם בעוד שנה
-```
-
 ## 1. Create List
-
+הגעתי לכאן
 ### `list_create`
 
 This is the starting point for using the library. It allocates memory for a new, empty `LinkedList` structure and initializes it.
@@ -134,9 +90,10 @@ if (!person_list) { // person_list == NULL
 printf("Successfully created a list for Person objects.\n");
 ```
 
-> [!NOTE] > **For developers:** This function sets up dummy head and tail nodes, to simplify the logic for all other list operations by ensuring that every "real" node is always between two other nodes.
+> [!NOTE] 
+> This function sets up dummy head and tail nodes, to simplify the logic for all other list operations by ensuring that every "real" node is always between two other nodes.
 
-> [!IMPORTANT]
+> [!IMPORTANT] 
 > This function only creates the list. It is currently "empty" (except for the dummy nodes, of course). Later, we will learn how to add elements to it.
 
 ---
