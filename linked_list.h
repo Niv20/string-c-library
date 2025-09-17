@@ -93,6 +93,15 @@ typedef void (*CopyFunction)(void* dest, const void* src);
 typedef bool (*FilterFunction)(const void* data);
 
 /**
+ * @brief Specifies how the list manages data memory.
+ * Internal use only for insertion functions.
+ */
+typedef enum {
+    LIST_MODE_VALUE,    /**< Copy data into list-managed memory. */
+    LIST_MODE_POINTER   /**< Store user-provided pointers directly. */
+} ListMemoryMode;
+
+/**
  * @brief A function pointer type for transforming elements.
  * @param dest A void pointer to the destination for the transformed data.
  * @param src A const void pointer to the source data to transform.
@@ -145,9 +154,15 @@ void set_copy_function(LinkedList* list, CopyFunction copy_fn);
 ListResult set_max_size(LinkedList* list, size_t max_size, OverflowBehavior behavior);
 
 // --- Insertion Functions ---
-ListResult insert_head_ptr(LinkedList* list, void* data);
-ListResult insert_tail_ptr(LinkedList* list, void* data);
-ListResult insert_index_ptr(LinkedList* list, size_t index, void* data);
+// Internal functions (used by macros) - copy data into list-managed memory
+ListResult insert_head_value_internal(LinkedList* list, void* data);
+ListResult insert_tail_value_internal(LinkedList* list, void* data);
+ListResult insert_index_value_internal(LinkedList* list, size_t index, void* data);
+
+// Pointer mode functions - also copy data into list-managed memory
+ListResult insert_head_ptr(LinkedList* list, void* data_ptr);
+ListResult insert_tail_ptr(LinkedList* list, void* data_ptr);
+ListResult insert_index_ptr(LinkedList* list, size_t index, void* data_ptr);
 
 // --- Deletion Functions ---
 ListResult delete_head(LinkedList* list);
@@ -215,35 +230,35 @@ LinkedList* load_from_file(const char* filename, size_t element_size,
  * 
  * Usage examples:
  *   Person alice = create_person(1, "Alice", 25);
- *   insert_tail_val(people_list, alice);  // Pass value directly
+ *   insert_tail_value(people_list, alice);  // Pass value directly
  *   
  *   int number = 42;
- *   insert_head_val(numbers_list, number);  // Pass value directly
+ *   insert_head_value(numbers_list, number);  // Pass value directly
  *   
  *   // Or even with literals (though be careful with scope):
- *   insert_tail_val(numbers_list, 100);
+ *   insert_tail_value(numbers_list, 100);
  */
 
 #ifdef __GNUC__  // GCC and Clang support
-    #define insert_head_val(list, value) \
-        ({ __typeof__(value) _temp = (value); insert_head_ptr((list), &_temp); })
+    #define insert_head_value(list, value) \
+        ({ __typeof__(value) _temp = (value); insert_head_value_internal((list), &_temp); })
 
-    #define insert_tail_val(list, value) \
-        ({ __typeof__(value) _temp = (value); insert_tail_ptr((list), &_temp); })
+    #define insert_tail_value(list, value) \
+        ({ __typeof__(value) _temp = (value); insert_tail_value_internal((list), &_temp); })
 
-    #define insert_index_val(list, index, value) \
-        ({ __typeof__(value) _temp = (value); insert_index_ptr((list), (index), &_temp); })
+    #define insert_index_value(list, index, value) \
+        ({ __typeof__(value) _temp = (value); insert_index_value_internal((list), (index), &_temp); })
 #else
     // Fallback for compilers that don't support __typeof__
     // These will require explicit casting or won't work with all types
-    #define insert_head_val(list, value) \
-        insert_head_ptr((list), &(value))
+    #define insert_head_value(list, value) \
+        insert_head_value_internal((list), &(value))
 
-    #define insert_tail_val(list, value) \
-        insert_tail_ptr((list), &(value))
+    #define insert_tail_value(list, value) \
+        insert_tail_value_internal((list), &(value))
 
-    #define insert_index_val(list, index, value) \
-        insert_index_ptr((list), (index), &(value))
+    #define insert_index_value(list, index, value) \
+        insert_index_value_internal((list), (index), &(value))
 #endif
 
 #endif

@@ -178,50 +178,50 @@ void person_linked_list_demo(void) {
     
     // Insert at tail
     printf("Inserting Alice at tail...\n");
-    insert_tail_ptr(people_list, &alice);
+    insert_tail_value(people_list, alice);
     printf("Inserting Bob at tail...\n");
-    insert_tail_ptr(people_list, &bob);
+    insert_tail_value(people_list, bob);
     
     // Insert at head
     printf("Inserting Charlie at head...\n");
-    insert_head_ptr(people_list, &charlie);
+    insert_head_value(people_list, charlie);
     
     // Insert at specific index
     printf("Inserting Diana at index 2...\n");
-    insert_index_ptr(people_list, 2, &diana);
+    insert_index_value(people_list, 2, diana);
     
     printf("List after insertions:\n");
     print(people_list);
     printf("Current length: %zu\n", get_length(people_list));
     
     printf("Two ways to insert elements:\n");
-    printf("• insert_*_ptr: You allocate in heap, library stores the pointer\n");
-    printf("• insert_*_val: You pass by value, library handles allocation\n");
+    printf("• insert_*_value: Pass data by value, library copies it into its own memory\n");
+    printf("• insert_*_ptr: Pass pointer to data, library copies the pointed data\n");
     
-    // Let's also demonstrate insert_*_val for comparison
-    printf("\nDemonstrating insert_*_val (library handles allocation):\n");
+    // Let's also demonstrate insert_*_value for comparison
+    printf("\nDemonstrating insert_*_value (library handles allocation):\n");
     Person emily = create_person(1005, "Emily Davis", 26);
-    printf("Inserting Emily using insert_head_val...\n");
-    insert_head_val(people_list, emily);
+    printf("Inserting Emily using insert_head_value...\n");
+    insert_head_value(people_list, emily);
     
     Person frank = create_person(1006, "Frank Wilson", 31);
-    printf("Inserting Frank using insert_tail_val...\n");
-    insert_tail_val(people_list, frank);
+    printf("Inserting Frank using insert_tail_value...\n");
+    insert_tail_value(people_list, frank);
     
     printf("List after val-based insertions:\n");
     print(people_list);
     printf("Current length: %zu\n", get_length(people_list));
     
     // Let's create a simple integer list to show val-based insertion with primitives
-    printf("\n--- Example with simple integers (perfect for insert_*_val) ---\n");
+    printf("\n--- Example with simple integers (perfect for insert_*_value) ---\n");
     LinkedList* numbers = create_list(sizeof(int));
     set_print_function(numbers, print_int);
     
-    printf("Inserting integers using insert_*_val:\n");
-    insert_tail_val(numbers, 10);
-    insert_tail_val(numbers, 20);
-    insert_head_val(numbers, 5);
-    insert_index_val(numbers, 2, 15);
+    printf("Inserting integers using insert_*_value:\n");
+    insert_tail_value(numbers, 10);
+    insert_tail_value(numbers, 20);
+    insert_head_value(numbers, 5);
+    insert_index_value(numbers, 2, 15);
     
     printf("Numbers list: ");
     print_advanced(numbers, false, ", ");
@@ -239,10 +239,10 @@ void person_linked_list_demo(void) {
     Point p2 = {3, 4, 5.0};
     Point p3 = {1, 1, 1.414};
     
-    printf("Inserting Points using insert_*_val (no dynamic memory, perfectly safe):\n");
-    insert_tail_val(points, p1);
-    insert_tail_val(points, p2);
-    insert_head_val(points, p3);
+    printf("Inserting Points using insert_*_value (no dynamic memory, perfectly safe):\n");
+    insert_tail_value(points, p1);
+    insert_tail_value(points, p2);
+    insert_head_value(points, p3);
     
     printf("Points in list: %zu\n", get_length(points));
     

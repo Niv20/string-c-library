@@ -16,8 +16,10 @@
 
 // Function only for internal use
 static ListResult handle_size_limit(LinkedList*);
-static Node* create_node_with_data(LinkedList*, void*);
-static ListResult insert_node_core(LinkedList*, void*, Node**);  // Core insertion helper
+static Node* create_node_value(LinkedList*, void*);
+static Node* create_node_pointer(LinkedList*, void*);
+static ListResult insert_node_core_value(LinkedList*, void*, Node**);  // Core insertion helper for value mode
+static ListResult insert_node_core_pointer(LinkedList*, void*, Node**);  // Core insertion helper for pointer mode
 static ListResult delete_node_core(LinkedList*, Node*);          // Core deletion helper
 static void copy_list_configuration(LinkedList*, const LinkedList*); // Helper to copy function pointers
 
@@ -156,6 +158,7 @@ void set_copy_function(LinkedList* list, CopyFunction copy_fn) {
  * @brief Sets the maximum size of the list and overflow behavior.
  * @param list The list to configure.
  * @param max_size Maximum number of elements (UNLIMITED = no limit).
+ */
 ListResult set_max_size(LinkedList* list, size_t max_size, OverflowBehavior behavior) {
     
     if (!list) return LIST_ERROR_NULL_POINTER;
@@ -202,25 +205,30 @@ static ListResult handle_size_limit(LinkedList* list) {
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
  */
 
-// INTERNAL HELPER FUNCTION for creating a new node with data
-static Node* create_node_with_data(LinkedList* list, void* data) {
+// INTERNAL HELPER FUNCTION for creating a new node (unified for both modes)
+static Node* create_node_generic(LinkedList* list, void* data, ListMemoryMode mode) {
     
     // Create a new node
     Node* new_node = (Node*)malloc(sizeof(Node));
     if (!new_node) return NULL;
 
-    // Allocate memory for the data
-    new_node->data = malloc(list->element_size);
-    if (!new_node->data) {
-        free(new_node);
-        return NULL;
-    }
-    
-    // Copy the data using appropriate method
-    if (list->copy_node_function) {
-        list->copy_node_function(new_node->data, data);
+    if (mode == LIST_MODE_VALUE) {
+        // Value mode: Allocate memory and copy data
+        new_node->data = malloc(list->element_size);
+        if (!new_node->data) {
+            free(new_node);
+            return NULL;
+        }
+        
+        // Copy the data using appropriate method
+        if (list->copy_node_function) {
+            list->copy_node_function(new_node->data, data);
+        } else {
+            memcpy(new_node->data, data, list->element_size);
+        }
     } else {
-        memcpy(new_node->data, data, list->element_size);
+        // Pointer mode: Store the pointer directly (no allocation or copying)
+        new_node->data = data;
     }
     
     // Initialize pointers
@@ -230,8 +238,8 @@ static Node* create_node_with_data(LinkedList* list, void* data) {
     return new_node;
 }
 
-// INTERNAL CORE HELPER FUNCTION for insertion logic
-static ListResult insert_node_core(LinkedList* list, void* data, Node** out_new_node) {
+// INTERNAL CORE HELPER FUNCTION for insertion logic (unified for both modes)
+static ListResult insert_node_core_generic(LinkedList* list, void* data, ListMemoryMode mode, Node** out_new_node) {
     
     // Input validation
     if (!list || !data) return LIST_ERROR_NULL_POINTER;
@@ -240,8 +248,8 @@ static ListResult insert_node_core(LinkedList* list, void* data, Node** out_new_
     // ListResult size_check = handle_size_limit(list);
     // if (size_check != LIST_SUCCESS) return size_check;
 
-    // Create new node with data
-    Node* new_node = create_node_with_data(list, data);
+    // Create new node using generic function
+    Node* new_node = create_node_generic(list, data, mode);
     if (!new_node) return LIST_ERROR_MEMORY_ALLOC;
     
     *out_new_node = new_node;
@@ -249,15 +257,15 @@ static ListResult insert_node_core(LinkedList* list, void* data, Node** out_new_
 }
 
 /**
- * @brief Inserts a new element at the head of the list.
+ * @brief Inserts a new element at the head of the list (value mode - copies data).
  * @param list The list to insert into.
- * @param data A pointer to the data to be inserted. The data is copied into the list.
+ * @param data A pointer to the data to be copied into the list.
  * @return LIST_SUCCESS on success, error code on failure.
  */
-ListResult insert_head_ptr(LinkedList* list, void* data) {
+ListResult insert_head_value_internal(LinkedList* list, void* data) {
     
     Node* new_node;
-    ListResult result = insert_node_core(list, data, &new_node);
+    ListResult result = insert_node_core_generic(list, data, LIST_MODE_VALUE, &new_node);
     if (result != LIST_SUCCESS) return result;
 
     // Link the new node at the head
@@ -272,15 +280,15 @@ ListResult insert_head_ptr(LinkedList* list, void* data) {
 }
 
 /**
- * @brief Inserts a new element at the tail of the list.
+ * @brief Inserts a new element at the tail of the list (value mode - copies data).
  * @param list The list to insert into.
- * @param data A pointer to the data to be inserted. The data is copied into the list.
+ * @param data A pointer to the data to be copied into the list.
  * @return LIST_SUCCESS on success, error code on failure.
  */
-ListResult insert_tail_ptr(LinkedList* list, void* data) {
+ListResult insert_tail_value_internal(LinkedList* list, void* data) {
     
     Node* new_node;
-    ListResult result = insert_node_core(list, data, &new_node);
+    ListResult result = insert_node_core_generic(list, data, LIST_MODE_VALUE, &new_node);
     if (result != LIST_SUCCESS) return result;
 
     // Link the new node at the tail
@@ -295,16 +303,103 @@ ListResult insert_tail_ptr(LinkedList* list, void* data) {
 }
 
 /**
- * @brief Inserts an element at a specific index (like Python's insert).
+ * @brief Inserts an element at a specific index (value mode - copies data).
  * @param list The list to insert into.
  * @param index The index to insert at (0-based).
- * @param data The data to insert.
+ * @param data The data to copy into the list.
  * @return LIST_SUCCESS on success, error code on failure.
  */
-ListResult insert_index_ptr(LinkedList* list, size_t index, void* data) {
+ListResult insert_index_value_internal(LinkedList* list, size_t index, void* data) {
 
     Node* new_node;
-    ListResult result = insert_node_core(list, data, &new_node);
+    ListResult result = insert_node_core_generic(list, data, LIST_MODE_VALUE, &new_node);
+    if (result != LIST_SUCCESS) return result;
+    
+    Node* current;
+
+    // Choose direction based on which half the index is in
+    if (index <= list->length / 2) {
+        // Index is in first half - traverse forward from head
+        current = list->head->next;
+        for (size_t i = 0; i < index; i++) {
+            current = current->next;
+        }
+    } else {
+        // Index is in second half - traverse backward from tail
+        current = list->tail->prev;
+        for (size_t i = list->length - 1; i > index; i--) {
+            current = current->prev;
+        }
+    }
+    
+    // Insert before current
+    new_node->next = current;
+    new_node->prev = current->prev;
+    current->prev->next = new_node;
+    current->prev = new_node;
+    
+    list->length++;
+    return LIST_SUCCESS;
+}
+
+/**
+ * @brief Inserts a new element at the head of the list (pointer mode - copies pointed data).
+ * @param list The list to insert into.
+ * @param data_ptr A pointer to data to be copied into the list.
+ * @return LIST_SUCCESS on success, error code on failure.
+ */
+ListResult insert_head_ptr(LinkedList* list, void* data_ptr) {
+    
+    Node* new_node;
+    ListResult result = insert_node_core_generic(list, data_ptr, LIST_MODE_VALUE, &new_node);
+    if (result != LIST_SUCCESS) return result;
+
+    // Link the new node at the head
+    Node* old_first = list->head->next;
+    list->head->next = new_node;
+    new_node->prev = list->head;
+    new_node->next = old_first;
+    old_first->prev = new_node;
+    
+    list->length++;
+    return LIST_SUCCESS;
+}
+
+/**
+ * @brief Inserts a new element at the tail of the list (pointer mode - stores pointer directly).
+ * @param list The list to insert into.
+ * @param data_ptr A pointer to existing data. The pointer itself is stored, not copied.
+ * @return LIST_SUCCESS on success, error code on failure.
+ * @warning The caller must ensure the pointed-to data remains valid for the list's lifetime.
+ */
+ListResult insert_tail_ptr(LinkedList* list, void* data_ptr) {
+    
+    Node* new_node;
+    ListResult result = insert_node_core_generic(list, data_ptr, LIST_MODE_VALUE, &new_node);
+    if (result != LIST_SUCCESS) return result;
+
+    // Link the new node at the tail
+    Node* old_last = list->tail->prev;
+    list->tail->prev = new_node;
+    new_node->next = list->tail;
+    new_node->prev = old_last;
+    old_last->next = new_node;
+    
+    list->length++;
+    return LIST_SUCCESS;
+}
+
+/**
+ * @brief Inserts an element at a specific index (pointer mode - stores pointer directly).
+ * @param list The list to insert into.
+ * @param index The index to insert at (0-based).
+ * @param data_ptr A pointer to existing data. The pointer itself is stored, not copied.
+ * @return LIST_SUCCESS on success, error code on failure.
+ * @warning The caller must ensure the pointed-to data remains valid for the list's lifetime.
+ */
+ListResult insert_index_ptr(LinkedList* list, size_t index, void* data_ptr) {
+    Node* new_node;
+    ListResult result = insert_node_core_generic(list, data_ptr, LIST_MODE_VALUE, &new_node);
     if (result != LIST_SUCCESS) return result;
     
     Node* current;
@@ -356,13 +451,13 @@ static ListResult delete_node_core(LinkedList* list, Node* node_to_delete) {
     prev_node->next = next_node;
     next_node->prev = prev_node;
     
-    // Free the data using free function if provided
+    // Free the data - the library always allocates memory for data
     if (list->free_node_function) {
         list->free_node_function(node_to_delete->data);
     } else {
         free(node_to_delete->data);
     }
-
+    
     // Free the node itself
     free(node_to_delete);
     
@@ -839,7 +934,7 @@ ListResult extend(LinkedList* list, const LinkedList* other) {
     
     Node* current = other->head->next;
     while (current != other->tail) {
-        ListResult result = insert_tail_ptr(list, current->data);
+        ListResult result = insert_tail_value(list, current->data);
         if (result != LIST_SUCCESS) {
             return result;
         }
@@ -910,7 +1005,7 @@ LinkedList* slice(const LinkedList* list, size_t start, size_t end) {
     
     // Copy elements from start to end
     for (size_t i = start; i < end && current != list->tail; i++) {
-        if (insert_tail_ptr(sliced, current->data) != LIST_SUCCESS) {
+        if (insert_tail_value(sliced, current->data) != LIST_SUCCESS) {
             destroy(sliced);
             return NULL;
         }
@@ -1023,7 +1118,7 @@ LinkedList* filter(const LinkedList* list, FilterFunction filter_fn) {
     Node* current = list->head->next;
     while (current != list->tail) {
         if (filter_fn(current->data)) {
-            if (insert_tail_ptr(filtered, current->data) != LIST_SUCCESS) {
+            if (insert_tail_value(filtered, current->data) != LIST_SUCCESS) {
                 destroy(filtered);
                 return NULL;
             }
@@ -1060,7 +1155,7 @@ LinkedList* map(const LinkedList* list, MapFunction map_fn, size_t new_element_s
         
         map_fn(transformed, current->data);
         
-        if (insert_tail_ptr(mapped, transformed) != LIST_SUCCESS) {
+        if (insert_tail_value(mapped, transformed) != LIST_SUCCESS) {
             free(transformed);
             destroy(mapped);
             return NULL;
@@ -1191,7 +1286,7 @@ LinkedList* unique_advanced(const LinkedList* list, CompareFunction custom_compa
 
             if (!found) {
                 // Since we are iterating backwards, we insert at the head to maintain the original relative order.
-                if (insert_head_ptr(unique_list, current->data) != LIST_SUCCESS) {
+                if (insert_head_value(unique_list, current->data) != LIST_SUCCESS) {
                     destroy(unique_list);
                     return NULL;
                 }
@@ -1214,7 +1309,7 @@ LinkedList* unique_advanced(const LinkedList* list, CompareFunction custom_compa
             }
 
             if (!found) {
-                if (insert_tail_ptr(unique_list, current->data) != LIST_SUCCESS) {
+                if (insert_tail_value(unique_list, current->data) != LIST_SUCCESS) {
                     destroy(unique_list);
                     return NULL;
                 }
@@ -1249,7 +1344,7 @@ LinkedList* intersection(const LinkedList* list1, const LinkedList* list2) {
         // If element exists in both lists and not already in result
         if (index_of(list2, current->data) != -1 && 
             index_of(intersection, current->data) == -1) {
-            if (insert_tail_ptr(intersection, current->data) != LIST_SUCCESS) {
+            if (insert_tail_value(intersection, current->data) != LIST_SUCCESS) {
                 destroy(intersection);
                 return NULL;
             }
@@ -1279,7 +1374,7 @@ LinkedList* union_lists(const LinkedList* list1, const LinkedList* list2) {
     Node* current = list2->head->next;
     while (current != list2->tail) {
         if (index_of(union_list, current->data) == -1) {
-            if (insert_tail_ptr(union_list, current->data) != LIST_SUCCESS) {
+            if (insert_tail_value(union_list, current->data) != LIST_SUCCESS) {
                 destroy(union_list);
                 return NULL;
             }
@@ -1316,7 +1411,7 @@ ListResult from_array(LinkedList* list, const void* arr, size_t n) {
     const char* byte_arr = (const char*)arr;
     for (size_t i = 0; i < n; i++) {
         const void* element = byte_arr + (i * list->element_size);
-        ListResult result = insert_tail_ptr(list, (void*)element);
+        ListResult result = insert_tail_value(list, (void*)element);
         if (result != LIST_SUCCESS) return result;
     }
     
@@ -1508,7 +1603,7 @@ LinkedList* load_from_file(const char* filename, size_t element_size,
         }
 
         // Insert element into the list
-        if (insert_tail_ptr(list, element) != LIST_SUCCESS) {
+        if (insert_tail_value(list, element) != LIST_SUCCESS) {
             free(element);
             destroy(list);
             fclose(file);
