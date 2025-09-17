@@ -29,7 +29,7 @@ ListResult delete_head(LinkedList* list);
 /*
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃                                               ┃
-┃                Error Handling                 ┃
+┃              0. Error Handling                ┃
 ┃                                               ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
  */
@@ -200,7 +200,7 @@ static ListResult handle_size_limit(LinkedList* list) {
 /*
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃                                               ┃
-┃           Insertion in Linked List            ┃
+┃         3. Insertion in Linked List           ┃
 ┃                                               ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
  */
@@ -410,7 +410,7 @@ ListResult insert_tail_ptr(LinkedList* list, void* data_ptr) {
 ListResult insert_index_ptr(LinkedList* list, size_t index, void* data_ptr) {
     
     // Handle boundary conditions
-    if (index == 0) {
+    if (index <= 0) {
         // Insert at head for index 0
         return insert_head_ptr(list, data_ptr);
     }
@@ -453,7 +453,7 @@ ListResult insert_index_ptr(LinkedList* list, size_t index, void* data_ptr) {
 /*
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃                                               ┃
-┃              Deletion Functions               ┃
+┃            4. Deletion Functions              ┃
 ┃                                               ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
  */
@@ -638,7 +638,7 @@ void destroy(LinkedList* list) {
 /*
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃                                               ┃
-┃               Utility Functions               ┃
+┃             5. Utility Functions              ┃
 ┃                                               ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
  */
@@ -720,7 +720,7 @@ ListResult print_advanced(const LinkedList* list, bool show_index, const char* s
 /*
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃                                               ┃
-┃         Search and Access Functions           ┃
+┃        6. Search and Access Functions         ┃
 ┃                                               ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
  */
@@ -847,7 +847,7 @@ int index_of_advanced(const LinkedList* list, void* data, Direction order) {
 /*
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃                                               ┃
-┃               Sorting Functions               ┃
+┃             7. Sorting Functions              ┃
 ┃                                               ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
  */
@@ -902,7 +902,7 @@ ListResult sort(LinkedList* list, bool reverse_order) {
 /*
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃                                               ┃
-┃          Structural Transformations           ┃
+┃         8. Structural Transformations         ┃
 ┃                                               ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
  */
@@ -955,7 +955,9 @@ ListResult extend(LinkedList* list, const LinkedList* other) {
     
     Node* current = other->head->next;
     while (current != other->tail) {
-        ListResult result = insert_tail_value(list, current->data);
+    // current->data already points to an element of size element_size,
+    // so we must call the internal function directly to avoid macro creating a void* temp (size mismatch)
+    ListResult result = insert_tail_value_internal(list, current->data);
         if (result != LIST_SUCCESS) {
             return result;
         }
@@ -1026,7 +1028,7 @@ LinkedList* slice(const LinkedList* list, size_t start, size_t end) {
     
     // Copy elements from start to end
     for (size_t i = start; i < end && current != list->tail; i++) {
-        if (insert_tail_value(sliced, current->data) != LIST_SUCCESS) {
+    if (insert_tail_value_internal(sliced, current->data) != LIST_SUCCESS) {
             destroy(sliced);
             return NULL;
         }
@@ -1139,7 +1141,7 @@ LinkedList* filter(const LinkedList* list, FilterFunction filter_fn) {
     Node* current = list->head->next;
     while (current != list->tail) {
         if (filter_fn(current->data)) {
-            if (insert_tail_value(filtered, current->data) != LIST_SUCCESS) {
+            if (insert_tail_value_internal(filtered, current->data) != LIST_SUCCESS) {
                 destroy(filtered);
                 return NULL;
             }
@@ -1176,7 +1178,7 @@ LinkedList* map(const LinkedList* list, MapFunction map_fn, size_t new_element_s
         
         map_fn(transformed, current->data);
         
-        if (insert_tail_value(mapped, transformed) != LIST_SUCCESS) {
+    if (insert_tail_value_internal(mapped, transformed) != LIST_SUCCESS) {
             free(transformed);
             destroy(mapped);
             return NULL;
@@ -1192,7 +1194,7 @@ LinkedList* map(const LinkedList* list, MapFunction map_fn, size_t new_element_s
 /*
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃                                               ┃
-┃            Mathematical Functions             ┃
+┃           9. Mathematical Functions           ┃
 ┃                                               ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
  */
@@ -1307,7 +1309,7 @@ LinkedList* unique_advanced(const LinkedList* list, CompareFunction custom_compa
 
             if (!found) {
                 // Since we are iterating backwards, we insert at the head to maintain the original relative order.
-                if (insert_head_value(unique_list, current->data) != LIST_SUCCESS) {
+                if (insert_head_value_internal(unique_list, current->data) != LIST_SUCCESS) {
                     destroy(unique_list);
                     return NULL;
                 }
@@ -1330,7 +1332,7 @@ LinkedList* unique_advanced(const LinkedList* list, CompareFunction custom_compa
             }
 
             if (!found) {
-                if (insert_tail_value(unique_list, current->data) != LIST_SUCCESS) {
+                if (insert_tail_value_internal(unique_list, current->data) != LIST_SUCCESS) {
                     destroy(unique_list);
                     return NULL;
                 }
@@ -1365,7 +1367,7 @@ LinkedList* intersection(const LinkedList* list1, const LinkedList* list2) {
         // If element exists in both lists and not already in result
         if (index_of(list2, current->data) != -1 && 
             index_of(intersection, current->data) == -1) {
-            if (insert_tail_value(intersection, current->data) != LIST_SUCCESS) {
+            if (insert_tail_value_internal(intersection, current->data) != LIST_SUCCESS) {
                 destroy(intersection);
                 return NULL;
             }
@@ -1395,7 +1397,7 @@ LinkedList* union_lists(const LinkedList* list1, const LinkedList* list2) {
     Node* current = list2->head->next;
     while (current != list2->tail) {
         if (index_of(union_list, current->data) == -1) {
-            if (insert_tail_value(union_list, current->data) != LIST_SUCCESS) {
+            if (insert_tail_value_internal(union_list, current->data) != LIST_SUCCESS) {
                 destroy(union_list);
                 return NULL;
             }
@@ -1409,7 +1411,7 @@ LinkedList* union_lists(const LinkedList* list1, const LinkedList* list2) {
 /*
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃                                               ┃
-┃                List <--> Array                ┃
+┃              10. List <--> Array              ┃
 ┃                                               ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
  */
@@ -1432,7 +1434,7 @@ ListResult from_array(LinkedList* list, const void* arr, size_t n) {
     const char* byte_arr = (const char*)arr;
     for (size_t i = 0; i < n; i++) {
         const void* element = byte_arr + (i * list->element_size);
-        ListResult result = insert_tail_value(list, (void*)element);
+    ListResult result = insert_tail_value_internal(list, (void*)element);
         if (result != LIST_SUCCESS) return result;
     }
     
@@ -1476,7 +1478,7 @@ void* to_array(const LinkedList* list, size_t* out_size) {
 /*
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃                                               ┃
-┃            List <--> String (file)            ┃
+┃          11. List <--> String (file)          ┃
 ┃                                               ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
  */
@@ -1624,7 +1626,7 @@ LinkedList* load_from_file(const char* filename, size_t element_size,
         }
 
         // Insert element into the list
-        if (insert_tail_value(list, element) != LIST_SUCCESS) {
+    if (insert_tail_value_internal(list, element) != LIST_SUCCESS) {
             free(element);
             destroy(list);
             fclose(file);

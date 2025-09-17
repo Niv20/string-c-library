@@ -20,11 +20,16 @@ int compare_person_age(const void* a, const void* b);
 void free_person(void* data);
 void copy_person(void* dest, const void* src);
 Person create_person(int id, const char* name, int age);
-bool is_adult(const void* element, void* arg);
-bool is_adult_filter(const void* data);
+// Predicate for count_if (signature requires (element, arg))
+bool is_adult_predicate(const void* element, void* arg);
+// Simple filter function (signature requires only data)
+bool is_adult(const void* data);
+// (legacy) name-based filter previously used; keep for demonstration optionally
+bool is_adult_filter(const void* data); // TODO: remove when replacing with is_adult usage
 bool has_name(const void* element, void* arg);
 void map_person_to_age(void* dest, const void* src);
 void banner(const char* title);
+void increment_age(void* dest, const void* src); // Map function to increment age (deep copy)
 
 // Implementation of helper functions
 void print_person(void* data) {
@@ -102,10 +107,15 @@ Person create_person(int id, const char* name, int age) {
     return p;
 }
 
-bool is_adult(const void* element, void* arg) {
+bool is_adult_predicate(const void* element, void* arg) {
     (void)arg; // Unused parameter
     const Person* p = (const Person*)element;
     return p->age >= 18;
+}
+
+bool is_adult(const void* data) {
+    const Person* p = (const Person*)data;
+    return p->age > 18; // strictly older than 18 per docs example
 }
 
 bool is_adult_filter(const void* data) {
@@ -125,12 +135,21 @@ void map_person_to_age(void* dest, const void* src) {
     *(int*)dest = p->age;
 }
 
+void increment_age(void* dest, const void* src) {
+    const Person* src_p = (const Person*)src;
+    Person* dest_p = (Person*)dest;
+    dest_p->id = src_p->id;
+    dest_p->name = src_p->name ? strdup(src_p->name) : NULL; // Deep copy name (safe if NULL)
+    dest_p->age = src_p->age + 1;
+}
+
 void banner(const char* title) {
     printf("\n========== %s ==========\n", title);
 }
 
 // Main demo function for Person structures
 void person_linked_list_demo(void) {
+    LinkedList* older_people = NULL; // Will hold mapped list of older people for later cleanup
     
     banner("PERSON LINKED LIST DEMO");
     printf("This demo showcases all features using Person structures with dynamic memory.\n");
@@ -166,7 +185,7 @@ void person_linked_list_demo(void) {
     ///////
     // 3 //
     ///////
-    banner("Insertion in Linked List");
+    banner("3. Insertion in Linked List");
 
     printf("Creating people...\n");
     Person alice = create_person(1001, "Alice Johnson", 28);
@@ -232,8 +251,52 @@ void person_linked_list_demo(void) {
     
     printf("Final length after boundary tests: %zu\n", get_length(people_list));
     
-    // ===== Search and Access Functions =====
-    banner("Search and Access Functions");
+    ///////
+    // 4 //
+    ///////
+    banner("4. Deletion Functions");
+    
+    printf("Initial list before deletions:\n");
+    print(people_list);
+    
+    // Delete from head
+    printf("Deleting from head...\n");
+    ListResult result = delete_head(people_list);
+    printf("Delete result: %s\n", error_string(result));
+    
+    // Delete from tail
+    printf("Deleting from tail...\n");
+    result = delete_tail(people_list);
+    printf("Delete result: %s\n", error_string(result));
+    
+    // Delete at specific index
+    if (get_length(people_list) > 0) {
+        printf("Deleting at index 0...\n");
+        result = delete_index(people_list, 0);
+        printf("Delete result: %s\n", error_string(result));
+    }
+    
+    printf("List after deletions:\n");
+    print(people_list);
+    
+    ///////
+    // 5 //
+    ///////
+    banner("5. Utility Functions");
+    
+    printf("List length: %zu\n", get_length(people_list));
+    printf("Is empty: %s\n", is_empty(people_list) ? "Yes" : "No");
+    
+    printf("Printing with different formats:\n");
+    printf("With indices:\n");
+    print(people_list);
+    printf("Comma separated: ");
+    print_advanced(people_list, false, ", ");
+    
+    ///////
+    // 6 //
+    ///////
+    banner("6. Search and Access Functions");
     
     // Get element by index
     printf("Accessing element at index 1:\n");
@@ -258,8 +321,10 @@ void person_linked_list_demo(void) {
     int charlie_index = index_of_advanced(people_list, &charlie, START_FROM_TAIL);
     printf("Charlie found at index: %d (searching from tail)\n", charlie_index);
     
-    // ===== Sorting Functions =====
-    banner("Sorting Functions");
+    ///////
+    // 7 //
+    ///////
+    banner("7. Sorting Functions");
     
     printf("Sorting by age (ascending)...\n");
     set_compare_function(people_list, compare_person_age);
@@ -281,8 +346,75 @@ void person_linked_list_demo(void) {
     // Restore ID comparison for other operations
     set_compare_function(people_list, compare_person_id);
     
-    // ===== 6. MATHEMATICAL OPERATIONS =====
-    banner("Mathematical Functions");
+    ///////
+    // 8 //
+    ///////
+    banner("8. Structural Transformations");
+    
+    // Debug: Print list before copy
+    printf("List before copy:\n");
+    print(people_list);
+    
+    // Copy the list
+    printf("Creating a copy of the list...\n");
+    LinkedList* copy_list = copy(people_list);
+    if (copy_list) {
+        printf("Copy created successfully. Length: %zu\n", get_length(copy_list));
+    }
+    
+    // Debug: Print both lists after copy
+    printf("Original list after copy:\n");
+    print(people_list);
+    printf("Copy list after copy:\n");
+    print(copy_list);
+    
+    // Reverse the original list
+    printf("Reversing the original list...\n");
+    reverse(people_list);
+    printf("List after reversal:\n");
+    print(people_list);
+    
+    // Rotate the list
+    printf("Rotating list by 2 positions to the right...\n");
+    rotate(people_list, 2);
+    printf("List after rotation:\n");
+    print(people_list);
+    
+    // Filter adults only (age > 18) using new is_adult (FilterFunction signature)
+    printf("Creating filtered list (adults only, age>18)...\n");
+    LinkedList* adults_only = filter(people_list, is_adult);
+    if (adults_only) {
+        printf("Adults-only list (age>18):\n");
+        print(adults_only);
+    }
+    
+    // Map to ages
+    printf("Creating mapped list (ages only)...\n");
+    LinkedList* ages_list = map(people_list, map_person_to_age, sizeof(int));
+    if (ages_list) {
+        set_print_function(ages_list, print_int);
+        printf("Ages-only list: ");
+        print_advanced(ages_list, false, ", ");
+        destroy(ages_list);
+    }
+
+    // Map to older people (age + 1) demonstrating deep copy of name
+    printf("Creating mapped list (older people, age+1)...\n");
+    older_people = map(people_list, increment_age, sizeof(Person));
+    if (older_people) {
+        // Configure for printing & memory management
+        set_print_function(older_people, print_person);
+        set_compare_function(older_people, compare_person_id);
+        set_free_function(older_people, free_person);
+        set_copy_function(older_people, copy_person);
+        printf("Older people list (age+1):\n");
+        print(older_people);
+    }
+    
+    ///////
+    // 9 //
+    ///////
+    banner("9. Mathematical Functions");
     
     // Find min and max by age
     Person* youngest = (Person*)min_by(people_list, compare_person_age);
@@ -315,122 +447,13 @@ void person_linked_list_demo(void) {
     }
     
     // Count adults (age >= 18)
-    size_t adult_count = count_if(people_list, is_adult, NULL);
+    size_t adult_count = count_if(people_list, is_adult_predicate, NULL);
     printf("Number of adults (age >= 18): %zu\n", adult_count);
     
     // Count people named "Alice"
     char* alice_name = "Alice Johnson";
     size_t alice_count = count_if(people_list, has_name, alice_name);
     printf("Number of people named '%s': %zu\n", alice_name, alice_count);
-    
-    // ===== 7. STRUCTURAL TRANSFORMATIONS =====
-    banner("Structural Transformations");
-    
-    // Debug: Print list before copy
-    printf("List before copy:\n");
-    print(people_list);
-    
-    // Copy the list
-    printf("Creating a copy of the list...\n");
-    LinkedList* copy_list = copy(people_list);
-    if (copy_list) {
-        printf("Copy created successfully. Length: %zu\n", get_length(copy_list));
-    }
-    
-    // Debug: Print both lists after copy
-    printf("Original list after copy:\n");
-    print(people_list);
-    printf("Copy list after copy:\n");
-    print(copy_list);
-    
-    // Reverse the original list
-    printf("Reversing the original list...\n");
-    reverse(people_list);
-    printf("List after reversal:\n");
-    print(people_list);
-    
-    // Rotate the list
-    printf("Rotating list by 2 positions to the right...\n");
-    rotate(people_list, 2);
-    printf("List after rotation:\n");
-    print(people_list);
-    
-    // Filter adults only
-    printf("Creating filtered list (adults only)...\n");
-    LinkedList* adults_only = filter(people_list, is_adult_filter);
-    if (adults_only) {
-        printf("Adults-only list:\n");
-        print(adults_only);
-    }
-    
-    // Map to ages
-    printf("Creating mapped list (ages only)...\n");
-    LinkedList* ages_list = map(people_list, map_person_to_age, sizeof(int));
-    if (ages_list) {
-        set_print_function(ages_list, print_int);
-        printf("Ages-only list: ");
-        print_advanced(ages_list, false, ", ");
-        destroy(ages_list);
-    }
-    
-    // ===== Deletion Functions =====
-    banner("Deletion Functions");
-    
-    printf("Initial list before deletions:\n");
-    print(people_list);
-    
-    // Delete from head
-    printf("Deleting from head...\n");
-    ListResult result = delete_head(people_list);
-    printf("Delete result: %s\n", error_string(result));
-    
-    // Delete from tail
-    printf("Deleting from tail...\n");
-    result = delete_tail(people_list);
-    printf("Delete result: %s\n", error_string(result));
-    
-    // Delete at specific index
-    if (get_length(people_list) > 0) {
-        printf("Deleting at index 0...\n");
-        result = delete_index(people_list, 0);
-        printf("Delete result: %s\n", error_string(result));
-    }
-    
-    printf("List after deletions:\n");
-    print(people_list);
-    
-    // ===== Utility Functions =====
-    banner("Utility Functions");
-    
-    printf("List length: %zu\n", get_length(people_list));
-    printf("Is empty: %s\n", is_empty(people_list) ? "Yes" : "No");
-    
-    printf("Printing with different formats:\n");
-    printf("With indices:\n");
-    print(people_list);
-    printf("Comma separated: ");
-    print_advanced(people_list, false, ", ");
-    
-    // ===== Error Handling =====
-    banner("Error Handling");
-    
-    printf("Demonstrating error handling...\n");
-    
-    // Try to access out of bounds
-    Person* invalid = (Person*)get(people_list, 999);
-    printf("Accessing index 999: %s\n", invalid ? "Success" : "Failed (as expected)");
-    
-    // Try to delete from empty list
-    LinkedList* empty_list = create_list(sizeof(Person));
-    result = delete_head(empty_list);
-    printf("Delete from empty list: %s\n", error_string(result));
-    destroy(empty_list);
-    
-    // Show some error messages
-    printf("Sample error messages:\n");
-    printf("  NULL pointer: %s\n", error_string(LIST_ERROR_NULL_POINTER));
-    printf("  Index out of bounds: %s\n", error_string(LIST_ERROR_INDEX_OUT_OF_BOUNDS));
-    printf("  Element not found: %s\n", error_string(LIST_ERROR_ELEMENT_NOT_FOUND));
     
     // ===== CLEANUP =====
     banner("CLEANUP");
@@ -439,6 +462,8 @@ void person_linked_list_demo(void) {
     // Destroy all lists (automatic cleanup of Person structures via free_function)
     destroy(people_list);
     if (copy_list) destroy(copy_list);
+    if (adults_only) destroy(adults_only);
+    if (older_people) destroy(older_people);
     
     printf("✓ All memory cleaned up successfully\n");
     
@@ -467,5 +492,3 @@ int main(void) {
     
     return 0;
 }
-
-
