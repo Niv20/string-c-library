@@ -144,16 +144,14 @@ void increment_age(void* dest, const void* src) {
 }
 
 void banner(const char* title) {
-    printf("\n========== %s ==========\n", title);
+    printf("\n\n========== %s ==========\n", title);
 }
 
 // Main demo function for Person structures
-void person_linked_list_demo(void) {
-    LinkedList* older_people = NULL; // Will hold mapped list of older people for later cleanup
-    
-    banner("PERSON LINKED LIST DEMO");
-    printf("This demo showcases all features using Person structures with dynamic memory.\n");
-    printf("Demonstrates proper memory management for complex data types.\n\n");
+void main() {
+
+    printf("Generic Linked List Library - Person Demo\n");
+    printf("==========================================\n");
     
     ///////
     // 1 //
@@ -400,7 +398,7 @@ void person_linked_list_demo(void) {
 
     // Map to older people (age + 1) demonstrating deep copy of name
     printf("Creating mapped list (older people, age+1)...\n");
-    older_people = map(people_list, increment_age, sizeof(Person));
+    LinkedList* older_people = map(people_list, increment_age, sizeof(Person));
     if (older_people) {
         // Configure for printing & memory management
         set_print_function(older_people, print_person);
@@ -540,16 +538,6 @@ void person_linked_list_demo(void) {
     printf("• Comprehensive error handling\n");
     printf("• Automatic memory cleanup\n");
     printf("\nDemonstrates flexibility of the library with different usage patterns!\n");
-}
 
-// Main function
-int main(void) {
-    printf("Generic Linked List Library - Person Demo\n");
-    printf("==========================================\n");
-    printf("This demo showcases advanced features using Person structures\n");
-    printf("with proper dynamic memory management.\n");
-    
-    person_linked_list_demo();
-    
     return 0;
 }

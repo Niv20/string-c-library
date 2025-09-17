@@ -7,12 +7,6 @@
 /demo_asan
 /demo_release
 
-# Output logs
-run_ok.txt
-demo_output.txt
-demo_full_output.txt
-demo_release_output.txt
-
 # Mac metadata
 .DS_Store
 
