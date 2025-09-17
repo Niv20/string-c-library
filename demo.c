@@ -455,6 +455,64 @@ void person_linked_list_demo(void) {
     size_t alice_count = count_if(people_list, has_name, alice_name);
     printf("Number of people named '%s': %zu\n", alice_name, alice_count);
     
+    ////////
+    // 10 //
+    ////////
+    banner("10. List <-> Array Conversion");
+    printf("Demonstrating from_array() and to_array() with integers...\n");
+
+    LinkedList* numbers_list = create_list(sizeof(int));
+    if (numbers_list) {
+        set_print_function(numbers_list, print_int);
+        int nums[] = {10, 20, 30, 40, 50};
+        printf("Filling numbers_list from C array {10,20,30,40,50}...\n");
+        ListResult fr = from_array(numbers_list, nums, 5);
+        printf("from_array result: %s\n", error_string(fr));
+        printf("numbers_list contents: ");
+        print_advanced(numbers_list, false, ", ");
+
+        size_t out_n = 0;
+        int* back_arr = (int*)to_array(numbers_list, &out_n);
+        if (back_arr) {
+            printf("Converted back to C array (%zu elements): ", out_n);
+            for (size_t i = 0; i < out_n; ++i) {
+                printf("%d%s", back_arr[i], (i + 1 < out_n) ? ", " : "\n");
+            }
+            free(back_arr);
+        }
+    }
+
+    ////////
+    // 11 //
+    ////////
+    banner("11. List <-> String & File I/O");
+    printf("Using to_string() on numbers_list (separator=|)...\n");
+    char* numbers_str = NULL;
+    if (numbers_list) {
+        numbers_str = to_string(numbers_list, " | ");
+        if (numbers_str) {
+            printf("numbers_list as string: %s\n", numbers_str);
+        } else {
+            printf("to_string failed (maybe empty list or no print function).\n");
+        }
+    }
+
+    printf("Saving numbers_list to text file 'numbers.txt'...\n");
+    LinkedList* loaded_numbers = NULL;
+    if (numbers_list) {
+    ListResult save_r = save_to_file(numbers_list, "numbers.txt", FILE_FORMAT_TEXT, "\n");
+    printf("save_to_file (TEXT) result: %s\n", error_string(save_r));
+        printf("Reloading from 'numbers.txt' (text)...\n");
+    loaded_numbers = load_from_file("numbers.txt", sizeof(int), FILE_FORMAT_TEXT, "\n", print_int, NULL, NULL, NULL);
+        if (loaded_numbers) {
+            printf("Loaded list (text): ");
+            print_advanced(loaded_numbers, false, ", ");
+        } else {
+            printf("Failed to load numbers.txt\n");
+        }
+    }
+    printf("(Keeping numbers.txt so you can open it)\n");
+
     // ===== CLEANUP =====
     banner("CLEANUP");
     printf("Cleaning up all allocated memory...\n");
@@ -464,6 +522,9 @@ void person_linked_list_demo(void) {
     if (copy_list) destroy(copy_list);
     if (adults_only) destroy(adults_only);
     if (older_people) destroy(older_people);
+    if (numbers_list) destroy(numbers_list);
+    if (loaded_numbers) destroy(loaded_numbers);
+    if (numbers_str) free(numbers_str);
     
     printf("✓ All memory cleaned up successfully\n");
     

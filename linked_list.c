@@ -16,10 +16,6 @@
 
 // Function only for internal use
 static ListResult handle_size_limit(LinkedList*);
-static Node* create_node_value(LinkedList*, void*);
-static Node* create_node_pointer(LinkedList*, void*);
-static ListResult insert_node_core_value(LinkedList*, void*, Node**);  // Core insertion helper for value mode
-static ListResult insert_node_core_pointer(LinkedList*, void*, Node**);  // Core insertion helper for pointer mode
 static ListResult delete_node_core(LinkedList*, Node*);          // Core deletion helper
 static void copy_list_configuration(LinkedList*, const LinkedList*); // Helper to copy function pointers
 
@@ -1484,11 +1480,16 @@ void* to_array(const LinkedList* list, size_t* out_size) {
  */
 
 /**
- * @brief Converts the list to a string representation.
- * @param list The list to convert.
- * @param separator String to separate elements.
- * @return A newly allocated string, or NULL on failure.
- * @note The caller is responsible for freeing the returned string.
+ * Converts the list into a single C string (null-terminated).
+ * Simple, human-readable representation intended for logging / quick export.
+ * IMPORTANT LIMITATIONS:
+ *   1. Only primitive element sizes (int / double / char) are rendered with real values.
+ *      Any other element size becomes the literal token "[data]" (no round‑trip guaranteed).
+ *   2. This is NOT meant for lossless serialization. Use save_to_file() with FILE_FORMAT_* for that.
+ *   3. We allocate an estimated buffer (length * 50 chars per element) which is usually
+ *      enough for typical numeric sizes. If you store very large textual numbers you may
+ *      want to re‑implement with dynamic growth (realloc).
+ * Memory ownership: caller must free the returned pointer.
  */
 char* to_string(const LinkedList* list, const char* separator) {
     
@@ -1542,100 +1543,185 @@ char* to_string(const LinkedList* list, const char* separator) {
     return result;
 }
 
-/**
- * @brief Saves the list to a file.
- * @param list The list to save.
- * @param filename Path to the output file.
- * @return LIST_SUCCESS on success, error code otherwise.
- */
-ListResult save_to_file(const LinkedList* list, const char* filename) {
+// save_to_file: unified binary/text persistence.
+//   format == FILE_FORMAT_BINARY -> layout: [size_t length][size_t element_size][raw bytes...]
+//   format == FILE_FORMAT_TEXT   -> primitives printed plainly, others hex (whitespace mode) or skipped (custom separator mode).
+//   separator: for TEXT mode only; placed between tokens (default "\n"). Trailing newline ensured if not present.
+ListResult save_to_file(const LinkedList* list, const char* filename, FileFormat format, const char* separator) {
     if (!list || !filename) return LIST_ERROR_NULL_POINTER;
-    
-    FILE* file = fopen(filename, "wb");
+    if (format == FILE_FORMAT_BINARY) {
+        FILE* file = fopen(filename, "wb");
+        if (!file) return LIST_ERROR_INVALID_OPERATION;
+        fwrite(&list->length, sizeof(size_t), 1, file);
+        fwrite(&list->element_size, sizeof(size_t), 1, file);
+        Node* cur = list->head->next;
+        while (cur != list->tail) { fwrite(cur->data, list->element_size, 1, file); cur = cur->next; }
+        fclose(file);
+        return LIST_SUCCESS;
+    }
+
+    // TEXT format
+    FILE* file = fopen(filename, "w");
     if (!file) return LIST_ERROR_INVALID_OPERATION;
-    
-    // Write header information
-    fwrite(&list->length, sizeof(size_t), 1, file);
-    fwrite(&list->element_size, sizeof(size_t), 1, file);
-    
-    // Write elements
+    if (!separator) separator = "\n"; // default line-per-element
+
     Node* current = list->head->next;
     while (current != list->tail) {
-        fwrite(current->data, list->element_size, 1, file);
+        // Support a few primitive element sizes. For other sizes fallback to hex dump length element_size.
+        if (list->element_size == sizeof(int)) {
+            fprintf(file, "%d", *(int*)current->data);
+        } else if (list->element_size == sizeof(double)) {
+            fprintf(file, "%.*g", 15, *(double*)current->data);
+        } else if (list->element_size == sizeof(char)) {
+            fprintf(file, "%c", *(char*)current->data);
+        } else {
+            // Generic: print as bytes in hex (compact)
+            unsigned char* bytes = (unsigned char*)current->data;
+            for (size_t i = 0; i < list->element_size; ++i) {
+                fprintf(file, "%02X", bytes[i]);
+                if (i + 1 < list->element_size) fputc(' ', file);
+            }
+        }
         current = current->next;
+        if (current != list->tail) {
+            // If separator contains a newline we just print it wholly; else we add separator then maybe newline later.
+            fputs(separator, file);
+        }
     }
-    
+    // Ensure file ends with newline for POSIX friendliness if separator lacked one
+    size_t sep_len = strlen(separator);
+    if (sep_len == 0 || separator[sep_len-1] != '\n') {
+        fputc('\n', file);
+    }
     fclose(file);
     return LIST_SUCCESS;
 }
 
-/**
- * @brief Loads a list from a file.
- * @param filename Path to the input file.
- * @param element_size Size of each element.
- * @param print_fn Print function for the elements.
- * @param compare_fn Compare function for the elements.
- * @param free_fn Free function for the elements (optional).
- * @param copy_fn Copy function for the elements (optional).
- * @return A new list loaded from file, or NULL on failure.
- */
-LinkedList* load_from_file(const char* filename, size_t element_size,
-                                PrintFunction print_fn, CompareFunction compare_fn,
-                                FreeFunction free_fn, CopyFunction copy_fn) {
+// load_from_file: unified binary/text loader.
+//   Binary: reads header then raw bytes.
+//   Text: whitespace or custom separator parsing as described in header doc.
+LinkedList* load_from_file(const char* filename, size_t element_size, FileFormat format,
+                           const char* separator,
+                           PrintFunction print_fn, CompareFunction compare_fn,
+                           FreeFunction free_fn, CopyFunction copy_fn) {
     if (!filename) return NULL;
-    
-    FILE* file = fopen(filename, "rb");
+    if (format == FILE_FORMAT_BINARY) {
+        FILE* bfile = fopen(filename, "rb");
+        if (!bfile) return NULL;
+        size_t saved_length=0, saved_element_size=0;
+        if (fread(&saved_length, sizeof(size_t), 1, bfile) != 1 ||
+            fread(&saved_element_size, sizeof(size_t), 1, bfile) != 1) { fclose(bfile); return NULL; }
+        if (saved_element_size != element_size) { fclose(bfile); return NULL; }
+        LinkedList* blist = create_list(element_size);
+        if (!blist) { fclose(bfile); return NULL; }
+        if (print_fn) set_print_function(blist, print_fn);
+        if (compare_fn) set_compare_function(blist, compare_fn);
+        if (free_fn) set_free_function(blist, free_fn);
+        if (copy_fn) set_copy_function(blist, copy_fn);
+        for (size_t i=0;i<saved_length;i++) {
+            void* elem = malloc(element_size);
+            if (!elem || fread(elem, element_size, 1, bfile) != 1) { free(elem); destroy(blist); fclose(bfile); return NULL; }
+            if (insert_tail_value_internal(blist, elem) != LIST_SUCCESS) { free(elem); destroy(blist); fclose(bfile); return NULL; }
+            free(elem);
+        }
+        fclose(bfile);
+        return blist;
+    }
+
+    FILE* file = fopen(filename, "r");
     if (!file) return NULL;
-    
-    size_t saved_length, saved_element_size;
-    
-    // Read header
-    if (fread(&saved_length, sizeof(size_t), 1, file) != 1 ||
-        fread(&saved_element_size, sizeof(size_t), 1, file) != 1) {
-        fclose(file);
-        return NULL;
-    }
-    
-    // Verify element size matches
-    if (saved_element_size != element_size) {
-        fclose(file);
-        return NULL;
-    }
-    
+
     LinkedList* list = create_list(element_size);
-    if (!list) {
-        fclose(file);
-        return NULL;
-    }
-    
-    // Set the function pointers if provided
+    if (!list) { fclose(file); return NULL; }
     if (print_fn) set_print_function(list, print_fn);
     if (compare_fn) set_compare_function(list, compare_fn);
     if (free_fn) set_free_function(list, free_fn);
     if (copy_fn) set_copy_function(list, copy_fn);
-    
-    // Read elements
-    for (size_t i = 0; i < saved_length; i++) {
 
-        void* element = malloc(element_size);
-        if (!element || fread(element, element_size, 1, file) != 1) {
-            free(element);
-            destroy(list);
-            fclose(file);
-            return NULL;
-        }
+    // Determine actual separator behavior: if NULL fallback to whitespace tokenization (original behavior)
+    if (format == FILE_FORMAT_TEXT) {
+        if (!separator || separator[0] == '\0') {
+            // Legacy whitespace/newline parsing.
+            if (element_size == sizeof(int)) { // Parse each whitespace-delimited token as int
+                int value; while (fscanf(file, "%d", &value) == 1) {
+                    if (insert_tail_value_internal(list, &value) != LIST_SUCCESS) { destroy(list); fclose(file); return NULL; }
+                }
+            } else if (element_size == sizeof(double)) { // Parse double tokens
+                double dval; while (fscanf(file, "%lf", &dval) == 1) {
+                    if (insert_tail_value_internal(list, &dval) != LIST_SUCCESS) { destroy(list); fclose(file); return NULL; }
+                }
+            } else if (element_size == sizeof(char)) { // Read each non-newline char as element
+                int c; while ((c = fgetc(file)) != EOF) {
+                    if (c == '\n' || c == '\r') continue; char ch = (char)c;
+                    if (insert_tail_value_internal(list, &ch) != LIST_SUCCESS) { destroy(list); fclose(file); return NULL; }
+                }
+            } else {
+                unsigned char* buffer = (unsigned char*)malloc(element_size); // Temp buffer for hex bytes
+                if (!buffer) { destroy(list); fclose(file); return NULL; }
+                char line[4096];
+                while (fgets(line, sizeof(line), file)) {
+                    size_t count = 0; char* tok = strtok(line, " \t\r\n");
+                    while (tok && count < element_size) {
+                        unsigned int byteVal; if (sscanf(tok, "%02X", &byteVal) != 1) { break; }
+                        buffer[count++] = (unsigned char)byteVal; tok = strtok(NULL, " \t\r\n");
+                    }
+                    if (count == element_size) {
+                        if (insert_tail_value_internal(list, buffer) != LIST_SUCCESS) { free(buffer); destroy(list); fclose(file); return NULL; }
+                    }
+                }
+                free(buffer);
+            }
+        } else {
+            // Custom separator parsing: read entire file, split by exact separator string.
+            // Load whole file into memory (teaching simplification; not for huge files)
+            fseek(file, 0, SEEK_END); long fsize = ftell(file); if (fsize < 0) { destroy(list); fclose(file); return NULL; }
+            rewind(file);
+            char* content = (char*)malloc(fsize + 1);
+            if (!content) { destroy(list); fclose(file); return NULL; }
+            size_t read_bytes = fread(content, 1, fsize, file); content[read_bytes] = '\0';
 
-        // Insert element into the list
-    if (insert_tail_value_internal(list, element) != LIST_SUCCESS) {
-            free(element);
-            destroy(list);
-            fclose(file);
-            return NULL;
+            size_t sep_len = strlen(separator); // We'll split by this exact substring
+            char* start = content; char* pos;
+            while ((pos = strstr(start, separator)) != NULL) {
+                *pos = '\0';
+                if (*start != '\0') { // Non-empty token
+                    if (element_size == sizeof(int)) {
+                        int v; if (sscanf(start, "%d", &v) == 1) {
+                            if (insert_tail_value_internal(list, &v) != LIST_SUCCESS) { free(content); destroy(list); fclose(file); return NULL; }
+                        }
+                    } else if (element_size == sizeof(double)) {
+                        double dv; if (sscanf(start, "%lf", &dv) == 1) {
+                            if (insert_tail_value_internal(list, &dv) != LIST_SUCCESS) { free(content); destroy(list); fclose(file); return NULL; }
+                        }
+                    } else if (element_size == sizeof(char)) {
+                        if (start[0] != '\0') {
+                            char ch = start[0];
+                            if (insert_tail_value_internal(list, &ch) != LIST_SUCCESS) { free(content); destroy(list); fclose(file); return NULL; }
+                        }
+                    } else {
+                        // Unsupported complex type for custom separator parsing; user should fall back to binary/hex whitespace mode.
+                    }
+                }
+                start = pos + sep_len;
+            }
+            // Last token
+            if (*start != '\0') { // Final token after last separator
+                if (element_size == sizeof(int)) {
+                    int v; if (sscanf(start, "%d", &v) == 1) {
+                        if (insert_tail_value_internal(list, &v) != LIST_SUCCESS) { free(content); destroy(list); fclose(file); return NULL; }
+                    }
+                } else if (element_size == sizeof(double)) {
+                    double dv; if (sscanf(start, "%lf", &dv) == 1) {
+                        if (insert_tail_value_internal(list, &dv) != LIST_SUCCESS) { free(content); destroy(list); fclose(file); return NULL; }
+                    }
+                } else if (element_size == sizeof(char)) {
+                    char ch = start[0]; if (insert_tail_value_internal(list, &ch) != LIST_SUCCESS) { free(content); destroy(list); fclose(file); return NULL; }
+                }
+            }
+            free(content);
         }
-        
-        free(element);
     }
-    
+
     fclose(file);
     return list;
 }

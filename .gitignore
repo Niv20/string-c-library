@@ -23,3 +23,7 @@ demo
 *.bin
 *.exe
 *.out
+
+# Generic text outputs (keep canonical numbers.txt)
+*.txt
+!README.md

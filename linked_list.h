@@ -16,6 +16,14 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+// Portable-ish deprecation macro (compiler hint). Not critical if unsupported.
+#if defined(__GNUC__) || defined(__clang__)
+#define LL_DEPRECATED(msg) __attribute__((deprecated(msg)))
+#elif defined(_MSC_VER)
+#define LL_DEPRECATED(msg) __declspec(deprecated(msg))
+#else
+#define LL_DEPRECATED(msg)
+#endif
 #define UNLIMITED 0
 
 typedef enum { 
@@ -213,11 +221,31 @@ ListResult from_array(LinkedList* list, const void* arr, size_t n);
 void* to_array(const LinkedList* list, size_t* out_size);
 
 // --- I/O and Format Functions ---
+// to_string: quick, human-readable join of primitive values (int/double/char) using 'separator'.
+//   Not a lossless serializer: complex element sizes become the literal token "[data]".
+//   Caller must free the returned char*.
 char* to_string(const LinkedList* list, const char* separator);
-ListResult save_to_file(const LinkedList* list, const char* filename);
-LinkedList* load_from_file(const char* filename, size_t element_size,
-                                PrintFunction print_fn, CompareFunction compare_fn,
-                                FreeFunction free_fn, CopyFunction copy_fn);
+
+// File formats for persistence
+typedef enum {
+    FILE_FORMAT_BINARY = 0,  // Existing binary format
+    FILE_FORMAT_TEXT   = 1   // Human-readable text (one element per line)
+} FileFormat;
+
+// save_to_file / load_from_file (unified API):
+//   format == FILE_FORMAT_BINARY -> binary layout: [size_t length][size_t element_size][raw bytes...]
+//   format == FILE_FORMAT_TEXT   -> human readable tokens.
+// TEXT MODE RULES:
+//   * Primitive element sizes (int/double/char) -> printed plainly.
+//   * Other sizes -> hex dump (space separated bytes) when using whitespace tokenization.
+//   * 'separator' (default "\n") placed BETWEEN elements. If NULL/empty during load -> whitespace mode.
+//   * Custom separator load currently supports only primitive types (no hex parsing there).
+// Portability: binary not endian/size_t portable (demo/educational). For production add magic header + fixed widths.
+ListResult save_to_file(const LinkedList* list, const char* filename, FileFormat format, const char* separator);
+LinkedList* load_from_file(const char* filename, size_t element_size, FileFormat format,
+                           const char* separator,
+                           PrintFunction print_fn, CompareFunction compare_fn,
+                           FreeFunction free_fn, CopyFunction copy_fn);
 
 // --- Convenience Macros for Passing Values Directly ---
 

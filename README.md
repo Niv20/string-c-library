@@ -1090,9 +1090,9 @@ LinkedList* num_list = create_list(sizeof(int));
 destroy(num_list);
 ```
 
-### `list_to_array`
+### `to_array`
 
-This function converts the entire linked list into a new, dynamically allocated C array. This is useful when you need to interface with other libraries or functions that expect a contiguous array.
+Converts the entire linked list into a newly allocated contiguous C array. Useful for interoperability with APIs that expect raw arrays.
 
 **Receives:**
 
@@ -1111,7 +1111,7 @@ This function converts the entire linked list into a new, dynamically allocated 
 LinkedList* num_list = create_list(sizeof(int));
 // ... num_list contains [10, 20, 30, 40] ...
 size_t array_size;
-int* new_array = (int*)list_to_array(num_list, &array_size);
+int* new_array = (int*)to_array(num_list, &array_size);
 if (new_array) {
     printf("Array has %zu elements. First element: %d\n", array_size, new_array[0]);
     free(new_array); // Don't forget to free!
@@ -1123,9 +1123,9 @@ destroy(num_list);
 
 ## 11. List \<--\> String / File
 
-### `list_to_string`
+### `to_string`
 
-Converts the list into a single string representation, with elements separated by a custom separator. This is mainly for simple data types like `int`, `char`, `double`.
+Converts the list into a single heap‑allocated string with a custom separator. Intended for primitive element sizes (int / double / char). Other element sizes become the token `[data]` (לא סיריאליזציה הפיכה מלאה).
 
 **Receives:**
 
@@ -1142,7 +1142,7 @@ Converts the list into a single string representation, with elements separated b
 LinkedList* list = create_list(sizeof(int));
 int nums[] = {10, 20, 30};
 // array_to_list(list, nums, 3);
-char* str = list_to_string(list, ", ");
+char* str = to_string(list, ", ");
 if (str) {
     printf("List as string: %s\n", str); // Output: 10, 20, 30
     free(str);
@@ -1150,22 +1150,102 @@ if (str) {
 destroy(list);
 ```
 
-### `save_to_file`
+### `save_to_file` (Unified: Binary / Text)
 
-This function serializes the list's data and saves it to a binary file. This allows for persistent storage. It saves the length and element size, followed by the raw data of each element.
+שומר את הרשימה לקובץ בפורמט הנבחר.
 
-**Receives:**
+Signature:
+```c
+ListResult save_to_file(const LinkedList* list,
+                        const char* filename,
+                        FileFormat format,
+                        const char* separator); // TEXT only (NULL => "\n")
+```
 
-- `list`: The list to save.
-- `filename`: The path to the output file.
+Parameters:
+- `format`: `FILE_FORMAT_BINARY` או `FILE_FORMAT_TEXT`.
+- `separator`: בטקסט – בין איברים (ברירת מחדל "\n"). אם לא מסתיים ב־'\n' הספרייה מוסיפה אחד בסוף הקובץ לנוחות.
 
-**Returns:**
+Binary layout (פשוט / דמו):
+```
+[size_t length][size_t element_size][raw bytes...]
+```
+Text mode rules:
+- `int` / `double` / `char` → כתיבה כערך קריא.
+- גודל אחר → Hex dump (במצב טעינת רווחים). אם אתה משתמש במפצל מותאם אישית (separator מותאם) — כרגע רק טיפוסים פרימיטיביים נתמכים.
 
-- `LIST_SUCCESS` on success.
+Example (text save):
+```c
+LinkedList* numbers = create_list(sizeof(int));
+for (int i = 1; i <= 5; ++i) insert_tail_value(numbers, i);
+ListResult r = save_to_file(numbers, "numbers.txt", FILE_FORMAT_TEXT, "\n");
+printf("save_to_file (TEXT): %s\n", error_string(r));
+```
 
-**Example:**
+### `load_from_file`
+
+טוען רשימה חדשה מקובץ (Binary או Text).
+
+Signature:
+```c
+LinkedList* load_from_file(const char* filename,
+                           size_t element_size,
+                           FileFormat format,
+                           const char* separator, // TEXT: NULL/"" => whitespace tokens
+                           PrintFunction print_fn,
+                           CompareFunction compare_fn,
+                           FreeFunction free_fn,
+                           CopyFunction copy_fn);
+```
+
+Text parsing modes:
+1. `separator == NULL || separator[0] == '\0'` → מפרק לפי רווחים/שורות. תומך גם ב‑hex לטיפוסים לא פרימיטיביים.
+2. `separator` מותאם (למשל ",") → תומך כרגע רק ב‑int/double/char (בלי hex במצב זה).
+
+Example (text load):
+```c
+LinkedList* loaded = load_from_file("numbers.txt", sizeof(int),
+                                    FILE_FORMAT_TEXT, "\n",
+                                    print_int, NULL, NULL, NULL);
+if (loaded) {
+    print(loaded);
+    destroy(loaded);
+}
+```
+
+Binary example (same API, different flag):
+```c
+save_to_file(numbers, "numbers.bin", FILE_FORMAT_BINARY, NULL);
+LinkedList* again = load_from_file("numbers.bin", sizeof(int), FILE_FORMAT_BINARY,
+                                   NULL, print_int, NULL, NULL, NULL);
+```
+
+### Custom separator (Comma) Example
+
+שמירה וטעינה כשכל הערכים נמצאים בשורה אחת ומופרדים בפסיקים:
 
 ```c
-LinkedList* num_list = create_list(sizeof(int));
-// ... n
+LinkedList* ids = create_list(sizeof(int));
+for (int i = 100; i <= 105; ++i) insert_tail_value(ids, i);
+
+// Write as: 100,101,102,103,104,105 (שורה אחת + '\n' בסוף אם המפריד לא מכיל אותו)
+save_to_file(ids, "ids.csv", FILE_FORMAT_TEXT, ",");
+destroy(ids);
+
+// Load back using the SAME separator string
+LinkedList* loaded_ids = load_from_file("ids.csv", sizeof(int), FILE_FORMAT_TEXT, ",",
+                                        print_int, NULL, NULL, NULL);
+if (loaded_ids) {
+    printf("Loaded (comma-separated):\n");
+    print(loaded_ids);
+    destroy(loaded_ids);
+}
 ```
+
+הערות:
+- אם תשנה מפריד בין כתיבה לקריאה תקבל פירוק שגוי.
+- במצב מפריד מותאם (לא רווחים) אין כרגע תמיכה ב‑hex עבור טיפוסים מורכבים – רק int/double/char.
+
+Notes / Future ideas:
+- פורמט בינארי אינו נייטרלי לארכיטקטורה (endianness / size_t).
+- לשיפור: Magic header + גרסת פורמט, המרת endian קבועה, checksum.
