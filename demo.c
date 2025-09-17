@@ -145,7 +145,7 @@ void comprehensive_linked_list_demo(void) {
     banner("1. LIST CREATION AND CONFIGURATION");
     printf("Creating a new linked list for Person structures...\n");
     
-    LinkedList* people_list = create(sizeof(Person));
+    LinkedList* people_list = create_list(sizeof(Person));
     if (!people_list) {
         printf("Error: Failed to create list!\n");
         return;
@@ -211,7 +211,7 @@ void comprehensive_linked_list_demo(void) {
     
     // Demonstrate with simple types too
     printf("\nDemonstrating with integers using value-based macros:\n");
-    LinkedList* numbers_list = create(sizeof(int));
+    LinkedList* numbers_list = create_list(sizeof(int));
     set_print_function(numbers_list, print_int);
     
     // Traditional way (still works)
@@ -360,7 +360,7 @@ void comprehensive_linked_list_demo(void) {
     
     // Create another list for set operations
     printf("Creating a second list for set operations...\n");
-    LinkedList* list2 = create(sizeof(Person));
+    LinkedList* list2 = create_list(sizeof(Person));
     set_print_function(list2, print_person);
     set_compare_function(list2, compare_person_name);
     set_free_function(list2, free_person);
@@ -446,7 +446,7 @@ void comprehensive_linked_list_demo(void) {
     
     // Convert array to list (using integers for simplicity)
     printf("Creating integer list from array...\n");
-    LinkedList* int_list = create(sizeof(int));
+    LinkedList* int_list = create_list(sizeof(int));
     set_print_function(int_list, print_int);
     set_compare_function(int_list, compare_int);
     
@@ -484,7 +484,7 @@ void comprehensive_linked_list_demo(void) {
     banner("13. SIZE LIMITS AND OVERFLOW BEHAVIOR");
     
     printf("Testing size limits with FIFO behavior...\n");
-    LinkedList* limited_list = create(sizeof(int));
+    LinkedList* limited_list = create_list(sizeof(int));
     set_print_function(limited_list, print_int);
     set_max_size(limited_list, 3, DELETE_OLD_WHEN_FULL);
     
@@ -518,7 +518,7 @@ void comprehensive_linked_list_demo(void) {
     printf("Accessing index 999: %s\n", invalid ? "Success" : "Failed (as expected)");
     
     // Try to delete from empty list
-    LinkedList* empty_list = create(sizeof(int));
+    LinkedList* empty_list = create_list(sizeof(int));
     result = delete_head(empty_list);
     printf("Delete from empty list: %s\n", error_string(result));
     

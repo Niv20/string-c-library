@@ -132,7 +132,7 @@ typedef struct LinkedList {
 const char* error_string(ListResult result);
 
 // --- Lifecycle Functions ---
-LinkedList* create(size_t element_size);
+LinkedList* create_list(size_t element_size);
 
 // --- Setters for LinkedList fields ---
 void set_print_function(LinkedList* list, PrintFunction print_fn);

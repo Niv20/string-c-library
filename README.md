@@ -2,19 +2,6 @@
 
 This is a comprehensive, generic linked list library written in C. It is designed to be type-agnostic by using void pointers for data storage.
 
-## ✨ What's New
-
-**🆕 Convenient Value-Based Insertion Macros!** 
-You can now pass values directly to insertion functions without using the `&` operator:
-
-```c
-Person alice = create_person(1001, "Alice Johnson", 28);
-insert_tail_val(people_list, alice);  // No & needed!
-
-int number = 42;
-insert_head_val(numbers_list, number);  // Much more intuitive!
-```
-
 ## Setup for Examples
 
 To demonstrate the library's functionality, we will use a Person struct. This setup will be assumed for all subsequent examples.
@@ -74,11 +61,11 @@ void free_person(void* data) {
 ```
 
 > [!NOTE]
-> If your struct does **not** contain any dynamically allocated fields (such as pointers to memory allocated with `malloc`), you do **not** need to implement a free function at all.
+> If your struct does **not** contain any dynamically allocated fields (such as pointers to memory allocated with `malloc`), you do **not** need to implement the last function at all.
 
 ## 1. Create List
 
-### `create`
+### `create_list`
 
 This is the starting point for using the library. It allocates memory for a new, empty `LinkedList` structure and initializes it.
 
@@ -95,7 +82,7 @@ This is the starting point for using the library. It allocates memory for a new,
 
 ```c
 // Create a list to store Person structs
-LinkedList* person_list = create(sizeof(Person));
+LinkedList* person_list = create_list(sizeof(Person));
 
 // Check if the list was created successfully
 if (!person_list) {
@@ -195,7 +182,7 @@ This function adds a new element to the beginning of the list.
 **Example:**
 
 ```c
-LinkedList* list = create(sizeof(int));
+LinkedList* list = create_list(sizeof(int));
 int n1 = 10, n2 = 20;
 insert_head_ptr(list, &n1); // List: [10]
 insert_head_ptr(list, &n2); // List: [20, 10]
@@ -204,7 +191,7 @@ destroy(list);
 
 ### `insert_tail_ptr`
 
-This function adds a new element to the very end of the list. This is a common operation for building a list in order. It is also a very fast O(1) operation.
+This function adds a new element to the very end of the list.
 
 **Receives:**
 
@@ -218,7 +205,7 @@ This function adds a new element to the very end of the list. This is a common o
 **Example:**
 
 ```c
-LinkedList* list = create(sizeof(int));
+LinkedList* list = create_list(sizeof(int));
 int n1 = 10, n2 = 20;
 insert_tail_ptr(list, &n1); // List: [10]
 insert_tail_ptr(list, &n2); // List: [10, 20]
@@ -242,7 +229,7 @@ This function inserts an element at a specific zero-based index. All elements fr
 **Example:**
 
 ```c
-LinkedList* list = create(sizeof(int));
+LinkedList* list = create_list(sizeof(int));
 int n1 = 10, n2 = 20, n3 = 30;
 insert_tail_ptr(list, &n1); // List: [10]
 insert_tail_ptr(list, &n2); // List: [10, 20]
@@ -269,7 +256,7 @@ This function removes the first element (at index 0) from the list. This is an O
 **Example:**
 
 ```c
-LinkedList* list = create(sizeof(int));
+LinkedList* list = create_list(sizeof(int));
 int n1 = 10, n2 = 20;
 insert_tail_ptr(list, &n1);
 insert_tail_ptr(list, &n2); // List: [10, 20]
@@ -292,7 +279,7 @@ This function removes the last element from the list. This is an O(1) operation.
 **Example:**
 
 ```c
-LinkedList* list = create(sizeof(int));
+LinkedList* list = create_list(sizeof(int));
 int n1 = 10, n2 = 20;
 insert_tail_ptr(list, &n1);
 insert_tail_ptr(list, &n2); // List: [10, 20]
@@ -316,7 +303,7 @@ This function removes an element at a specific zero-based index. Subsequent elem
 **Example:**
 
 ```c
-LinkedList* list = create(sizeof(int));
+LinkedList* list = create_list(sizeof(int));
 int n1 = 10, n2 = 20, n3 = 30;
 insert_tail_ptr(list, &n1);
 insert_tail_ptr(list, &n2);
@@ -348,7 +335,7 @@ int compare_int(const void* a, const void* b) {
     return (*(int*)a - *(int*)b);
 }
 
-LinkedList* list = create(sizeof(int));
+LinkedList* list = create_list(sizeof(int));
 set_compare_function(list, compare_int);
 int nums[] = {10, 20, 10, 30, 10};
 // array_to_list(list, nums, 5); // Assuming this function exists
@@ -375,7 +362,7 @@ This function efficiently removes all elements from the list, resetting its leng
 **Example:**
 
 ```c
-LinkedList* list = create(sizeof(int));
+LinkedList* list = create_list(sizeof(int));
 int n1 = 10, n2 = 20;
 insert_tail_ptr(list, &n1);
 insert_tail_ptr(list, &n2); // List: [10, 20]
@@ -399,7 +386,7 @@ This function is the final cleanup step. It completely deallocates all memory us
 **Example:**
 
 ```c
-LinkedList* list = create(sizeof(int));
+LinkedList* list = create_list(sizeof(int));
 int n = 10;
 insert_tail_ptr(list, &n);
 // ... use the list ...
@@ -426,7 +413,7 @@ A straightforward function that returns the number of elements currently stored 
 **Example:**
 
 ```c
-LinkedList* list = create(sizeof(int));
+LinkedList* list = create_list(sizeof(int));
 int n1 = 10, n2 = 20;
 insert_tail_ptr(list, &n1);
 insert_tail_ptr(list, &n2);
@@ -449,7 +436,7 @@ A simple check to see if the list contains any elements. It's slightly more expr
 **Example:**
 
 ```c
-LinkedList* list = create(sizeof(int));
+LinkedList* list = create_list(sizeof(int));
 printf("Is list empty? %s\n", is_empty(list) ? "Yes" : "No"); // Output: Yes
 int n = 10;
 insert_tail_ptr(list, &n);
@@ -472,7 +459,7 @@ This function iterates through the list and prints all elements to the console. 
 **Example:**
 
 ```c
-LinkedList* list = create(sizeof(Person));
+LinkedList* list = create_list(sizeof(Person));
 set_print_function(list, print_person);
 Person alice = {.name = strdup("Alice"), .age = 30};
 insert_tail_ptr(list, &alice);
@@ -501,7 +488,7 @@ This function provides more control over the output format than `print`. You can
 **Example:**
 
 ```c
-LinkedList* list = create(sizeof(Person));
+LinkedList* list = create_list(sizeof(Person));
 set_print_function(list, print_person);
 Person alice = {.name = strdup("Alice"), .age = 30};
 Person bob = {.name = strdup("Bob"), .age = 25};
@@ -537,7 +524,7 @@ This function retrieves a direct pointer to the data stored at a specific index.
 **Example:**
 
 ```c
-LinkedList* list = create(sizeof(Person));
+LinkedList* list = create_list(sizeof(Person));
 Person alice = {.name = strdup("Alice"), .age = 30};
 insert_tail_ptr(list, &alice);
 Person* p = (Person*)get(list, 0);
@@ -565,7 +552,7 @@ This function updates the element at a specific index with new data. It overwrit
 **Example:**
 
 ```c
-LinkedList* list = create(sizeof(Person));
+LinkedList* list = create_list(sizeof(Person));
 // Setup copy and free functions for Person
 set_copy_function(list, copy_person);
 set_free_function(list, free_person);
@@ -595,7 +582,7 @@ This function searches the list from head to tail and returns the index of the f
 **Example:**
 
 ```c
-LinkedList* list = create(sizeof(Person));
+LinkedList* list = create_list(sizeof(Person));
 set_compare_function(list, compare_person_age);
 Person alice = {.name = strdup("Alice"), .age = 30};
 Person bob = {.name = strdup("Bob"), .age = 25};
@@ -633,7 +620,7 @@ int compare_int(const void* a, const void* b) {
     return (*(int*)a - *(int*)b);
 }
 
-LinkedList* list = create(sizeof(int));
+LinkedList* list = create_list(sizeof(int));
 set_compare_function(list, compare_int);
 int nums[] = {10, 20, 30, 20, 40};
 // array_to_list(list, nums, 5); // Assuming this function exists
@@ -666,7 +653,7 @@ int compare_int(const void* a, const void* b) {
     return (*(int*)a - *(int*)b);
 }
 
-LinkedList* list = create(sizeof(int));
+LinkedList* list = create_list(sizeof(int));
 set_compare_function(list, compare_int);
 int nums[] = {10, 20, 10, 30, 10};
 // array_to_list(list, nums, 5);
@@ -696,7 +683,7 @@ This function sorts the list in-place using the configured compare function. It 
 **Example:**
 
 ```c
-LinkedList* list = create(sizeof(Person));
+LinkedList* list = create_list(sizeof(Person));
 set_print_function(list, print_person);
 set_compare_function(list, compare_person_age);
 // ... add Alice (30), Bob (25), Charlie (35) ...
@@ -729,7 +716,7 @@ This function creates a new, independent copy of an entire list. If a `copy_fn` 
 **Example:**
 
 ```c
-LinkedList* original = create(sizeof(int));
+LinkedList* original = create_list(sizeof(int));
 // ... populate original list ...
 LinkedList* copy = list_copy(original);
 // 'copy' is now a separate list with the same elements.
@@ -756,8 +743,8 @@ This function appends all elements from a second list (`other`) to the end of th
 **Example:**
 
 ```c
-LinkedList* list1 = create(sizeof(int));
-LinkedList* list2 = create(sizeof(int));
+LinkedList* list1 = create_list(sizeof(int));
+LinkedList* list2 = create_list(sizeof(int));
 int n1 = 10, n2 = 20;
 insert_tail_ptr(list1, &n1); // list1: [10]
 insert_tail_ptr(list2, &n2); // list2: [20]
@@ -782,8 +769,8 @@ Creates a brand new list that is the result of concatenating two existing lists.
 **Example:**
 
 ```c
-LinkedList* list1 = create(sizeof(int)); // Contains [10, 20]
-LinkedList* list2 = create(sizeof(int)); // Contains [30, 40]
+LinkedList* list1 = create_list(sizeof(int)); // Contains [10, 20]
+LinkedList* list2 = create_list(sizeof(int)); // Contains [30, 40]
 // ... populate lists ...
 LinkedList* concatenated = list_concat(list1, list2);
 // 'concatenated' is a new list: [10, 20, 30, 40]
@@ -809,7 +796,7 @@ Creates a new list containing a copy of a portion of the original list, from a s
 **Example:**
 
 ```c
-LinkedList* list = create(sizeof(int));
+LinkedList* list = create_list(sizeof(int));
 int nums[] = {10, 20, 30, 40, 50};
 // array_to_list(list, nums, 5); // Assuming this function exists
 // List: [10, 20, 30, 40, 50]
@@ -836,7 +823,7 @@ Rotates the list elements in-place by a specified number of positions. A positiv
 **Example:**
 
 ```c
-LinkedList* list = create(sizeof(int));
+LinkedList* list = create_list(sizeof(int));
 int nums[] = {10, 20, 30, 40, 50};
 // array_to_list(list, nums, 5);
 // List: [10, 20, 30, 40, 50]
@@ -862,7 +849,7 @@ This function reverses the order of all elements in the list in-place by manipul
 **Example:**
 
 ```c
-LinkedList* list = create(sizeof(int));
+LinkedList* list = create_list(sizeof(int));
 int nums[] = {10, 20, 30};
 // array_to_list(list, nums, 3); // Assuming this function exists
 // List: [10, 20, 30]
@@ -891,7 +878,7 @@ bool is_even(const void* data) {
     return (*(int*)data) % 2 == 0;
 }
 
-LinkedList* list = create(sizeof(int));
+LinkedList* list = create_list(sizeof(int));
 int nums[] = {1, 2, 3, 4, 5};
 // array_to_list(list, nums, 5);
 LinkedList* evens = list_filter(list, is_even);
@@ -922,7 +909,7 @@ void get_age(void* dest, const void* src) {
     *(int*)dest = ((Person*)src)->age;
 }
 
-LinkedList* person_list = create(sizeof(Person));
+LinkedList* person_list = create_list(sizeof(Person));
 // ... populate with Alice (30), Bob (25) ...
 // Create a new list containing only the ages
 LinkedList* age_list = list_map(person_list, get_age, sizeof(int));
@@ -950,7 +937,7 @@ These functions find the minimum or maximum element in the list, respectively. T
 **Example:**
 
 ```c
-LinkedList* list = create(sizeof(Person));
+LinkedList* list = create_list(sizeof(Person));
 set_compare_function(list, compare_person_age);
 // ... add Alice (30), Bob (25), Charlie (35) ...
 Person* youngest = (Person*)list_min(list);
@@ -981,7 +968,7 @@ int compare_int(const void* a, const void* b) {
     return (*(int*)a - *(int*)b);
 }
 
-LinkedList* list = create(sizeof(int));
+LinkedList* list = create_list(sizeof(int));
 set_compare_function(list, compare_int);
 int nums[] = {10, 20, 10, 30, 20, 10};
 // array_to_list(list, nums, 6);
@@ -1013,8 +1000,8 @@ int compare_int(const void* a, const void* b) {
     return (*(int*)a - *(int*)b);
 }
 
-LinkedList* list1 = create(sizeof(int)); // Contains [10, 20, 30]
-LinkedList* list2 = create(sizeof(int)); // Contains [20, 40, 30]
+LinkedList* list1 = create_list(sizeof(int)); // Contains [10, 20, 30]
+LinkedList* list2 = create_list(sizeof(int)); // Contains [20, 40, 30]
 set_compare_function(list1, compare_int);
 // ... populate lists ...
 LinkedList* intersection = list_intersection(list1, list2);
@@ -1045,8 +1032,8 @@ int compare_int(const void* a, const void* b) {
     return (*(int*)a - *(int*)b);
 }
 
-LinkedList* list1 = create(sizeof(int)); // Contains [10, 20, 30]
-LinkedList* list2 = create(sizeof(int)); // Contains [20, 40, 30]
+LinkedList* list1 = create_list(sizeof(int)); // Contains [10, 20, 30]
+LinkedList* list2 = create_list(sizeof(int)); // Contains [20, 40, 30]
 set_compare_function(list1, compare_int);
 // ... populate lists ...
 LinkedList* union_list = list_union(list1, list2);
@@ -1078,7 +1065,7 @@ This function clears a list and then populates it with all the elements from a s
 
 ```c
 int numbers[] = {10, 20, 30, 40};
-LinkedList* num_list = create(sizeof(int));
+LinkedList* num_list = create_list(sizeof(int));
 // array_to_list(num_list, numbers, 4);
 // num_list now contains [10, 20, 30, 40]
 destroy(num_list);
@@ -1102,7 +1089,7 @@ This function converts the entire linked list into a new, dynamically allocated 
 **Example:**
 
 ```c
-LinkedList* num_list = create(sizeof(int));
+LinkedList* num_list = create_list(sizeof(int));
 // ... num_list contains [10, 20, 30, 40] ...
 size_t array_size;
 int* new_array = (int*)list_to_array(num_list, &array_size);
@@ -1133,7 +1120,7 @@ Converts the list into a single string representation, with elements separated b
 **Example:**
 
 ```c
-LinkedList* list = create(sizeof(int));
+LinkedList* list = create_list(sizeof(int));
 int nums[] = {10, 20, 30};
 // array_to_list(list, nums, 3);
 char* str = list_to_string(list, ", ");
@@ -1160,6 +1147,6 @@ This function serializes the list's data and saves it to a binary file. This all
 **Example:**
 
 ```c
-LinkedList* num_list = create(sizeof(int));
+LinkedList* num_list = create_list(sizeof(int));
 // ... n
 ```

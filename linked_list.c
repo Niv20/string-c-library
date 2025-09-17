@@ -66,7 +66,7 @@ const char* error_string(ListResult result) {
  * @param element_size The size of each element in bytes.
  * @return A pointer to the newly created LinkedList, or NULL on failure.
  */
-LinkedList* create(size_t element_size) {
+LinkedList* create_list(size_t element_size) {
 
     // Allocate memory for the list structure
     LinkedList* list = (LinkedList*)malloc(sizeof(LinkedList));
@@ -820,7 +820,7 @@ LinkedList* copy(const LinkedList* list) {
 
     if (!list) return NULL;
     
-    LinkedList* new_list = create(list->element_size);
+    LinkedList* new_list = create_list(list->element_size);
     if (!new_list) return NULL;
     
     // Configure the new list with same settings as the original
@@ -869,7 +869,7 @@ LinkedList* concat(const LinkedList* list1, const LinkedList* list2) {
     if (!list1 || !list2) return NULL;
     if (list1->element_size != list2->element_size) return NULL;
     
-    LinkedList* concatenated = create(list1->element_size);
+    LinkedList* concatenated = create_list(list1->element_size);
     if (!concatenated) return NULL;
     
     // Configure the concatenated list with settings from first list
@@ -904,7 +904,7 @@ LinkedList* slice(const LinkedList* list, size_t start, size_t end) {
     
     if (end > list->length) end = list->length;
     
-    LinkedList* sliced = create(list->element_size);
+    LinkedList* sliced = create_list(list->element_size);
     if (!sliced) return NULL;
     
     // Configure the sliced list with same settings as the original
@@ -1023,7 +1023,7 @@ LinkedList* filter(const LinkedList* list, FilterFunction filter_fn) {
     
     if (!list || !filter_fn) return NULL;
     
-    LinkedList* filtered = create(list->element_size);
+    LinkedList* filtered = create_list(list->element_size);
     if (!filtered) return NULL;
     
     // Configure the filtered list with same settings as the original
@@ -1053,7 +1053,7 @@ LinkedList* filter(const LinkedList* list, FilterFunction filter_fn) {
 LinkedList* map(const LinkedList* list, MapFunction map_fn, size_t new_element_size) {
     if (!list || !map_fn) return NULL;
     
-    LinkedList* mapped = create(new_element_size);
+    LinkedList* mapped = create_list(new_element_size);
     if (!mapped) return NULL;
     
     // Don't copy the original list's free/copy functions since the new list 
@@ -1178,7 +1178,7 @@ LinkedList* unique_advanced(const LinkedList* list, CompareFunction custom_compa
     CompareFunction compare_fn = custom_compare ? custom_compare : list->compare_node_function;
     if (!compare_fn) return NULL; // Cannot determine uniqueness without a compare function.
 
-    LinkedList* unique_list = create(list->element_size);
+    LinkedList* unique_list = create_list(list->element_size);
     if (!unique_list) return NULL;
 
     copy_list_configuration(unique_list, list);
@@ -1246,7 +1246,7 @@ LinkedList* intersection(const LinkedList* list1, const LinkedList* list2) {
     if (!list1 || !list2 || !list1->compare_node_function) return NULL;
     if (list1->element_size != list2->element_size) return NULL;
     
-    LinkedList* intersection = create(list1->element_size);
+    LinkedList* intersection = create_list(list1->element_size);
     if (!intersection) return NULL;
     
     // Configure the intersection list with settings from first list
@@ -1493,7 +1493,7 @@ LinkedList* load_from_file(const char* filename, size_t element_size,
         return NULL;
     }
     
-    LinkedList* list = create(element_size);
+    LinkedList* list = create_list(element_size);
     if (!list) {
         fclose(file);
         return NULL;
