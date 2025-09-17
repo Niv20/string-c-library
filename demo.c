@@ -199,18 +199,18 @@ void comprehensive_linked_list_demo(void) {
     Person grace = create_person(1007, "Grace Hopper", 85);
     Person henry = create_person(1008, "Henry Ford", 83);
     
-    // Using the NEW convenience macros - no need for & operator!
-    printf("Using new insert_tail_val macro (passing value directly)...\n");
-    insert_tail_val(people_list, grace);
+    // For structures with dynamic memory, it's safer to use the traditional approach
+    printf("Using insert_tail_ptr for structures with dynamic memory...\n");
+    insert_tail_ptr(people_list, &grace);
     
-    printf("Using new insert_head_val macro (passing value directly)...\n");
-    insert_head_val(people_list, henry);
+    printf("Using insert_head_ptr for structures with dynamic memory...\n");
+    insert_head_ptr(people_list, &henry);
     
-    printf("List after value-based insertions:\n");
+    printf("List after insertions:\n");
     print(people_list);
     
-    // Demonstrate with simple types too
-    printf("\nDemonstrating with integers using value-based macros:\n");
+    // The value-based macros work great for simple types without pointers!
+    printf("\nDemonstrating value-based macros with simple types (integers):\n");
     LinkedList* numbers_list = create_list(sizeof(int));
     set_print_function(numbers_list, print_int);
     
@@ -218,7 +218,7 @@ void comprehensive_linked_list_demo(void) {
     int num1 = 100;
     insert_tail_ptr(numbers_list, &num1);
     
-    // New convenient way - pass values directly!
+    // New convenient way - pass values directly! (Perfect for simple types)
     insert_tail_val(numbers_list, 200);
     insert_head_val(numbers_list, 50);
     insert_index_val(numbers_list, 1, 75);
@@ -229,11 +229,11 @@ void comprehensive_linked_list_demo(void) {
     // Clean up the numbers list
     destroy(numbers_list);
     
-    printf("✓ Value-based insertion macros work perfectly!\n");
-    printf("Now you can write: insert_tail_val(list, your_struct)\n");
-    printf("Instead of:       insert_tail_ptr(list, &your_struct)\n");
+    printf("✓ Value-based insertion macros work perfectly for simple types!\n");
+    printf("For simple types: insert_tail_val(list, 42)\n");
+    printf("For complex types: insert_tail_ptr(list, &your_struct)\n");
     
-    // Clean up the additional people we created
+    // Clean up the original variables - the list has its own copies now
     free(grace.name);
     free(henry.name);
     

@@ -737,25 +737,6 @@ int index_of_advanced(const LinkedList* list, void* data, Direction order) {
  * don't have memory constraints, so I prefer fast O(n log n) over slow O(n^2).
  */
 
-// The standard `qsort` function requires a comparison function with a fixed signature,
-// which doesn't allow passing custom context like the sort order or a specific compare function.
-// These static variables act as a context bridge to a wrapper function.
-static CompareFunction g_compare_function = NULL;
-static bool g_reverse_order = false;
-
-
-// Helper function for qsort comparison
-static int qsort_compare_wrapper(const void* a, const void* b) {
-
-    if (!g_compare_function) return 0;
-
-    // Use the globally set compare function to perform the actual comparison.
-    int result = g_compare_function(a, b);
-
-    // Adjust the result based on the desired sort order (ascending/descending).
-    return g_reverse_order ? -result : result;
-}
-
 /**
  * @brief Sorts the list in place (like Python's sort).
  * @param list The list to sort.
@@ -768,28 +749,33 @@ ListResult sort(LinkedList* list, bool reverse_order) {
     if (!list->compare_node_function) return LIST_ERROR_NO_COMPARE_FUNCTION;
     if (list->length <= 1) return LIST_SUCCESS;
     
-    // Convert list to array for qsort
-    size_t array_size;
-    void* array = to_array(list, &array_size);
-    if (!array) return LIST_ERROR_MEMORY_ALLOC;
+    // Use bubble sort directly on the linked list nodes
+    // This avoids the problem with dynamic memory in array conversion
     
-    // Set up the global context for the qsort_compare_wrapper function.
-    // This allows us to pass the list-specific comparison logic and sort order.
-    g_compare_function = list->compare_node_function;
-    g_reverse_order = reverse_order;
+    bool swapped;
+    do {
+        swapped = false;
+        Node* current = list->head->next;
+        
+        while (current->next != list->tail) {
+            Node* next_node = current->next;
+            
+            int comparison = list->compare_node_function(current->data, next_node->data);
+            bool should_swap = reverse_order ? (comparison < 0) : (comparison > 0);
+            
+            if (should_swap) {
+                // Swap the data pointers (not the nodes themselves)
+                void* temp_data = current->data;
+                current->data = next_node->data;
+                next_node->data = temp_data;
+                swapped = true;
+            }
+            
+            current = next_node;
+        }
+    } while (swapped);
     
-    // Sort the array using qsort with our custom wrapper.
-    qsort(array, array_size, list->element_size, qsort_compare_wrapper);
-    
-    // Convert array back to list
-    ListResult result = from_array(list, array, array_size);
-    
-    // Clean up the global context to prevent side effects in other parts of the program.
-    g_compare_function = NULL;
-    g_reverse_order = false;
-    free(array);
-    
-    return result;
+    return LIST_SUCCESS;
 }
 
 /*
