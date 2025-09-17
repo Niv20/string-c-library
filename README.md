@@ -15,13 +15,13 @@ typedef struct {
 } Person;
 ```
 
-For this library to work, you need to define 3 **helper functions** in your own code, that the list will use to manage your objects. These functions are essential for the library to understand how to work with your specific data type.
+For this library to work, you need to define **helper functions** in your own code that the list will use to manage your objects. These functions are essential for the library to understand how to work with your specific data type.
 
-1. `void PrintFunction(void* data)` - This function assigns a custom printing function to the list.Without this, the list doesn't know how to interpret and print your data structure.
+1. `void PrintFunction(void* data)` - This function assigns a custom printing function to the list. Without this, the list doesn't know how to interpret and print your data structure.
 
-2. `int CompareFunction(const void* data1, const void* data2)` – This function is used to compare two elements in your data structure. It return a negative value if the first element (`data1`) is less than the second (`data2`), zero if they are equal, and a positive value if the first is greater than the second.
+2. `int CompareFunction(const void* data1, const void* data2)` – This function is used to compare two elements in your data structure. It returns a negative value if the first element (`data1`) is less than the second (`data2`), zero if they are equal, and a positive value if the first is greater than the second.
 
-3. `void FreeFunction(void* data)` – This function frees all dynamically allocated memory **inside** your struct, such as strings or arrays allocated with malloc (The library itself frees the memory of the struct itself).
+3. `void FreeFunction(void* data)` – This function frees all dynamically allocated memory **inside** your struct, such as strings or arrays allocated with malloc. (The library itself manages the memory of the struct itself).
 
 > [!NOTE]
 > The parameters for these functions are of type `void*`, so you need to cast the pointer back to your data type within the function.
@@ -132,43 +132,94 @@ set_max_size(person_list, UNLIMITED, REJECT_NEW_WHEN_FULL);
 
 ## 3. Insertion in Linked List
 
-The library provides two ways to insert elements: the traditional pointer-based functions and convenient value-based macros.
+The library provides two distinct approaches for inserting elements:
 
-### 🆕 Convenient Value-Based Insertion (NEW!)
+### 🔹 Pointer-Based Insertion (`insert_*_ptr`)
 
-For a more intuitive API, you can use the new convenience macros that allow you to pass values directly without using the `&` operator:
+When you allocate memory in the heap and want the library to store the pointer directly:
 
 ```c
-// Traditional way (still works)
-Person alice = create_person(1001, "Alice Johnson", 28);
-insert_tail_ptr(people_list, &alice);  // Notice the & operator
+// You allocate the Person in heap
+Person* alice = malloc(sizeof(Person));
+alice->id = 1001;
+alice->name = malloc(strlen("Alice Johnson") + 1);
+strcpy(alice->name, "Alice Johnson");
+alice->age = 28;
 
-// NEW convenient way - pass values directly!
-Person bob = create_person(1002, "Bob Smith", 35);
-insert_tail_val(people_list, bob);  // No & needed!
-
-// Works with any type
-int number = 42;
-insert_head_val(numbers_list, number);
-
-// Even with literals
-insert_tail_val(numbers_list, 100);
-insert_at_val(numbers_list, 1, 75);
+// Library stores the pointer
+insert_tail_ptr(people_list, alice);
+// alice is now "owned" by the list
 ```
 
-**Available convenience macros:**
-- `insert_head_val(list, value)`
-- `insert_tail_val(list, value)`
-- `insert_at_val(list, index, value)`
+### 🔹 Value-Based Insertion (`insert_*_val`)
 
-> [!NOTE]
-> These macros work with GCC and Clang compilers. For other compilers, they fall back to the traditional pointer-based approach.
+When you have a value (on stack or elsewhere) and want the library to handle the allocation:
 
-### Traditional Pointer-Based Insertion
+```c
+// You create the Person on stack or as a temporary
+Person bob = create_person(1002, "Bob Smith", 35);
 
-### `insert_head_ptr`
+// Library allocates memory and copies the value
+insert_tail_val(people_list, bob);
+// bob can be safely freed/go out of scope
+```
 
-This function adds a new element to the beginning of the list.
+### Insertion Functions
+
+Both approaches support the same insertion positions:
+
+#### Head Insertion
+- `insert_head_ptr(list, ptr)` - Insert at the beginning (pointer-based)
+- `insert_head_val(list, value)` - Insert at the beginning (value-based)
+
+#### Tail Insertion  
+- `insert_tail_ptr(list, ptr)` - Insert at the end (pointer-based)
+- `insert_tail_val(list, value)` - Insert at the end (value-based)
+
+#### Index Insertion
+- `insert_index_ptr(list, index, ptr)` - Insert at specific position (pointer-based)
+- `insert_index_val(list, index, value)` - Insert at specific position (value-based)
+
+### Examples with Simple Types
+
+Value-based insertion works great with simple types:
+
+```c
+LinkedList* numbers = create_list(sizeof(int));
+
+// Direct insertion of values
+insert_tail_val(numbers, 42);
+insert_head_val(numbers, 10);
+insert_index_val(numbers, 1, 25);
+
+// Works with structs without dynamic memory too
+typedef struct { int x, y; } Point;
+LinkedList* points = create_list(sizeof(Point));
+
+Point p = {3, 4};
+insert_tail_val(points, p);  // Perfectly safe!
+```
+
+### When to Use Which Method
+
+**Use `insert_*_ptr` when:**
+- You want explicit control over memory management
+- Working with large structures where copying is expensive
+- The structure is already allocated on the heap
+
+**Use `insert_*_val` when:**
+- Working with simple data types (int, float, etc.)
+- Working with small structs without dynamic memory
+- You want the library to handle allocation automatically
+- You have a copy function configured for deep copying
+
+**Important:** For structures with pointers to dynamic memory (like strings), always configure a `copy_function` to ensure proper deep copying when using `insert_*_val` or any list operations that create new lists (`copy`, `filter`, `map`, etc.).
+
+### Function Details
+
+#### `insert_head_ptr`
+
+This function adds a new element to the beginning of the list using a pointer.
 
 **Receives:**
 
@@ -703,7 +754,7 @@ destroy(list);
 
 ### `list_copy`
 
-This function creates a new, independent copy of an entire list. If a `copy_fn` is configured, it will be used to deep copy each element, ensuring the new list is completely separate from the original.
+This function creates a new, independent copy of an entire list. If a `copy_fn` is configured, it will be used to deep copy each element, ensuring the new list is completely separate from the original. Without a copy function, it performs a shallow copy using `memcpy`.
 
 **Receives:**
 

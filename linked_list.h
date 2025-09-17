@@ -42,8 +42,7 @@ typedef enum {
     LIST_ERROR_INVALID_OPERATION,   /**< Invalid operation for current state */
     LIST_ERROR_NO_COMPARE_FUNCTION, /**< Compare function required but not provided */
     LIST_ERROR_NO_PRINT_FUNCTION,   /**< Print function required but not provided */
-    LIST_ERROR_NO_FREE_FUNCTION,    /**< Free function required but not provided */
-    LIST_ERROR_NO_COPY_FUNCTION     /**< Copy function required but not provided */
+    LIST_ERROR_NO_FREE_FUNCTION     /**< Free function required but not provided */
 } ListResult;
 
 typedef enum {
@@ -75,6 +74,8 @@ typedef int (*CompareFunction)(const void* data1, const void* data2);
  * @param data A void pointer to the element's data to be freed.
  */
 typedef void (*FreeFunction)(void* data);
+
+
 
 /**
  * @brief A function pointer type for deep copying an element's data.

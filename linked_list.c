@@ -21,6 +21,9 @@ static ListResult insert_node_core(LinkedList*, void*, Node**);  // Core inserti
 static ListResult delete_node_core(LinkedList*, Node*);          // Core deletion helper
 static void copy_list_configuration(LinkedList*, const LinkedList*); // Helper to copy function pointers
 
+// Forward declarations for functions used in handle_size_limit
+ListResult delete_head(LinkedList* list);
+
 /*
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃                                               ┃
@@ -47,7 +50,6 @@ const char* error_string(ListResult result) {
         case LIST_ERROR_NO_COMPARE_FUNCTION: return "Compare function required but not provided";
         case LIST_ERROR_NO_PRINT_FUNCTION: return "Print function required but not provided";
         case LIST_ERROR_NO_FREE_FUNCTION: return "Free function required but not provided";
-        case LIST_ERROR_NO_COPY_FUNCTION: return "Copy function required but not provided";
         default: return "Unknown error";
     }
 }
@@ -56,7 +58,7 @@ const char* error_string(ListResult result) {
 /*
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃                                               ┃
-┃                  Create List                  ┃
+┃                1. Create List                 ┃
 ┃                                               ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
  */
@@ -92,8 +94,8 @@ LinkedList* create_list(size_t element_size) {
     // Initialize all fields in the list with default values
     list->length = 0;
     list->element_size = element_size;
-    list->max_size = UNLIMITED;                 // Unlimited by default
-    list->allow_overwrite = REJECT_NEW_WHEN_FULL; // Reject new when full by default
+    list->max_size = UNLIMITED;                     // Unlimited by default
+    list->allow_overwrite = REJECT_NEW_WHEN_FULL;   // Reject new when full by default
     list->print_node_function = NULL;      
     list->compare_node_function = NULL;    
     list->free_node_function = NULL;       
@@ -105,7 +107,7 @@ LinkedList* create_list(size_t element_size) {
 /*
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃                                               ┃
-┃             List Configuration                ┃
+┃            2. List Configuration              ┃
 ┃                                               ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
  */
@@ -141,7 +143,7 @@ void set_free_function(LinkedList* list, FreeFunction free_fn) {
 }
 
 /**
- * @brief Sets the copy function for the list.
+ * @brief Sets the copy function for deep copying complex data types.
  * @param list The list to configure.
  * @param copy_fn Function pointer for deep copying complex elements.
  */
@@ -154,9 +156,6 @@ void set_copy_function(LinkedList* list, CopyFunction copy_fn) {
  * @brief Sets the maximum size of the list and overflow behavior.
  * @param list The list to configure.
  * @param max_size Maximum number of elements (UNLIMITED = no limit).
- * @param behavior Behavior when list reaches max capacity (only relevant if max_size != UNLIMITED).
- * @return LIST_SUCCESS on success, error code on failure.
- */
 ListResult set_max_size(LinkedList* list, size_t max_size, OverflowBehavior behavior) {
     
     if (!list) return LIST_ERROR_NULL_POINTER;
@@ -171,19 +170,25 @@ ListResult set_max_size(LinkedList* list, size_t max_size, OverflowBehavior beha
 
 // INTERNAL HELPER FUNCTION for handling size limits
 static ListResult handle_size_limit(LinkedList* list) {
-
+    if (!list) return LIST_ERROR_NULL_POINTER;
+    
     // If unlimited size or current length is within limits - no action needed
-    if (list->max_size == UNLIMITED || list->length < list->max_size) return LIST_SUCCESS;
+    if (list->max_size == UNLIMITED || list->length < list->max_size) {
+        return LIST_SUCCESS;
+    }
 
     // If we reach this point, the list is full, but overwrite is not allowed
-    if (list->allow_overwrite == REJECT_NEW_WHEN_FULL) return LIST_ERROR_LIST_FULL;
+    if (list->allow_overwrite == REJECT_NEW_WHEN_FULL) {
+        return LIST_ERROR_LIST_FULL;
+    }
 
     // Handle any case where we need to remove elements to stay within limit
     while (list->length >= list->max_size) {
-
         // Remove oldest element (from head) to make room for FIFO behavior
         ListResult result = delete_head(list);
-        if (result != LIST_SUCCESS) return result;
+        if (result != LIST_SUCCESS) {
+            return result;
+        }
     }
     
     return LIST_SUCCESS;
@@ -231,9 +236,9 @@ static ListResult insert_node_core(LinkedList* list, void* data, Node** out_new_
     // Input validation
     if (!list || !data) return LIST_ERROR_NULL_POINTER;
 
-    // Check size limits before insertion
-    ListResult size_check = handle_size_limit(list);
-    if (size_check != LIST_SUCCESS) return size_check;
+    // TODO: Check size limits before insertion
+    // ListResult size_check = handle_size_limit(list);
+    // if (size_check != LIST_SUCCESS) return size_check;
 
     // Create new node with data
     Node* new_node = create_node_with_data(list, data);

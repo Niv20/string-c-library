@@ -76,6 +76,8 @@ void free_person(void* data) {
     }
 }
 
+
+
 void copy_person(void* dest, const void* src) {
     if (!dest || !src) return;
     Person* dest_p = (Person*)dest;
@@ -141,10 +143,10 @@ void person_linked_list_demo(void) {
     printf("This demo showcases all features using Person structures with dynamic memory.\n");
     printf("Demonstrates proper memory management for complex data types.\n\n");
     
-    // ===== Create List =====
-    banner("Create List");
+    // 1 // 
+    banner("1. Create List");
     printf("Creating a new linked list for Person structures...\n");
-    
+
     LinkedList* people_list = create_list(sizeof(Person));
     if (!people_list) {
         printf("Error: Failed to create list!\n");
@@ -152,7 +154,8 @@ void person_linked_list_demo(void) {
     }
     printf("✓ List created successfully\n");
     
-    // Configure the list with helper functions
+    // 2 // 
+    banner("2. List Configuration");
     printf("Configuring list with helper functions...\n");
     set_print_function(people_list, print_person);
     set_compare_function(people_list, compare_person_id);
@@ -163,11 +166,11 @@ void person_linked_list_demo(void) {
     printf("Initial list status: Empty=%s, Length=%zu\n", 
            is_empty(people_list) ? "Yes" : "No", get_length(people_list));
     
-    // ===== 2. BASIC INSERTIONS =====
+
+    // 3 //
     banner("Insertion in Linked List");
-    printf("Creating and inserting people into the list...\n");
-    
-    // Create people with dynamically allocated names
+
+    printf("Creating people...\n");
     Person alice = create_person(1001, "Alice Johnson", 28);
     Person bob = create_person(1002, "Bob Smith", 35);
     Person charlie = create_person(1003, "Charlie Brown", 22);
@@ -191,11 +194,63 @@ void person_linked_list_demo(void) {
     print(people_list);
     printf("Current length: %zu\n", get_length(people_list));
     
-    printf("Note: For structures with dynamic memory, always use insert_*_ptr functions\n");
-    printf("This ensures proper memory management and deep copying.\n");
-    printf("Value-based macros (insert_*_val) are perfect for simple types like int, float, etc.\n");
+    printf("Two ways to insert elements:\n");
+    printf("• insert_*_ptr: You allocate in heap, library stores the pointer\n");
+    printf("• insert_*_val: You pass by value, library handles allocation\n");
     
-    // Clean up the original variables - the list has its own copies now
+    // Let's also demonstrate insert_*_val for comparison
+    printf("\nDemonstrating insert_*_val (library handles allocation):\n");
+    Person emily = create_person(1005, "Emily Davis", 26);
+    printf("Inserting Emily using insert_head_val...\n");
+    insert_head_val(people_list, emily);
+    
+    Person frank = create_person(1006, "Frank Wilson", 31);
+    printf("Inserting Frank using insert_tail_val...\n");
+    insert_tail_val(people_list, frank);
+    
+    printf("List after val-based insertions:\n");
+    print(people_list);
+    printf("Current length: %zu\n", get_length(people_list));
+    
+    // Let's create a simple integer list to show val-based insertion with primitives
+    printf("\n--- Example with simple integers (perfect for insert_*_val) ---\n");
+    LinkedList* numbers = create_list(sizeof(int));
+    set_print_function(numbers, print_int);
+    
+    printf("Inserting integers using insert_*_val:\n");
+    insert_tail_val(numbers, 10);
+    insert_tail_val(numbers, 20);
+    insert_head_val(numbers, 5);
+    insert_index_val(numbers, 2, 15);
+    
+    printf("Numbers list: ");
+    print_advanced(numbers, false, ", ");
+    
+    // Let's also show simple structs without dynamic memory
+    typedef struct {
+        int x, y;
+        double distance;
+    } Point;
+    
+    LinkedList* points = create_list(sizeof(Point));
+    
+    printf("\n--- Example with simple structs (no dynamic memory) ---\n");
+    Point p1 = {0, 0, 0.0};
+    Point p2 = {3, 4, 5.0};
+    Point p3 = {1, 1, 1.414};
+    
+    printf("Inserting Points using insert_*_val (no dynamic memory, perfectly safe):\n");
+    insert_tail_val(points, p1);
+    insert_tail_val(points, p2);
+    insert_head_val(points, p3);
+    
+    printf("Points in list: %zu\n", get_length(points));
+    
+    // Clean up these demo lists
+    destroy(numbers);
+    destroy(points);
+    
+    // Clean up the original variables
     free(alice.name);
     free(bob.name);
     free(charlie.name);
@@ -274,12 +329,22 @@ void person_linked_list_demo(void) {
     // ===== 7. STRUCTURAL TRANSFORMATIONS =====
     banner("Structural Transformations");
     
+    // Debug: Print list before copy
+    printf("List before copy:\n");
+    print(people_list);
+    
     // Copy the list
     printf("Creating a copy of the list...\n");
     LinkedList* copy_list = copy(people_list);
     if (copy_list) {
         printf("Copy created successfully. Length: %zu\n", get_length(copy_list));
     }
+    
+    // Debug: Print both lists after copy
+    printf("Original list after copy:\n");
+    print(people_list);
+    printf("Copy list after copy:\n");
+    print(copy_list);
     
     // Reverse the original list
     printf("Reversing the original list...\n");
@@ -382,16 +447,16 @@ void person_linked_list_demo(void) {
     
     banner("PERSON DEMO COMPLETED");
     printf("This comprehensive demo showcased all major features with Person structures:\n");
-    printf("• Proper memory management for dynamic strings\n");
-    printf("• Deep copying with copy functions\n");
-    printf("• Safe insertion using pointer-based methods\n");
+    printf("• Two insertion methods: ptr (user manages heap) and val (library handles allocation)\n");
+    printf("• Proper memory management for dynamic strings using free functions\n");
+    printf("• Safe insertion using both pointer-based and value-based methods\n");
     printf("• Sorting by different criteria (ID, name, age)\n");
     printf("• Searching and filtering\n");
     printf("• Mathematical operations (min, max, count)\n");
     printf("• Structural transformations (copy, reverse, rotate, filter, map)\n");
     printf("• Comprehensive error handling\n");
     printf("• Automatic memory cleanup\n");
-    printf("\nPerfect example of using the library with complex data types!\n");
+    printf("\nDemonstrates flexibility of the library with different usage patterns!\n");
 }
 
 // Main function
