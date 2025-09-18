@@ -100,7 +100,11 @@ LinkedList* create_list(size_t element_size) {
     list->copy_node_function = NULL;       
 
     return list;
-}
+    }
+    // EOF
+
+
+
 
 /*
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
@@ -664,9 +668,10 @@ bool is_empty(const LinkedList* list) {
  * @param list The list to print.
  * @return LIST_SUCCESS on success, error code on failure.
  */
-ListResult print(const LinkedList* list) {
-    return print_advanced(list, true, "\n");
+ListResult print_list(const LinkedList* list) {
+    return print_list_advanced(list, true, "\n");
 }
+
 
 /**
  * @brief Prints all elements in the list with customizable formatting.
@@ -675,7 +680,7 @@ ListResult print(const LinkedList* list) {
  * @param separator String to print between elements.
  * @return LIST_SUCCESS on success, error code on failure.
  */
-ListResult print_advanced(const LinkedList* list, bool show_index, const char* separator) {
+ListResult print_list_advanced(const LinkedList* list, bool show_index, const char* separator) {
 
     if (!list) return LIST_ERROR_NULL_POINTER;
     if (is_empty(list)) return LIST_ERROR_ELEMENT_NOT_FOUND;

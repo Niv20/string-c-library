@@ -24,6 +24,7 @@
 #else
 #define LL_DEPRECATED(msg)
 #endif
+
 #define UNLIMITED 0
 
 typedef enum { 
@@ -186,8 +187,8 @@ void destroy(LinkedList* list);
 // --- Utility Functions ---
 size_t get_length(const LinkedList* list);
 bool is_empty(const LinkedList* list);
-ListResult print(const LinkedList* list);
-ListResult print_advanced(const LinkedList* list, bool show_index, const char* separator);
+ListResult print_list(const LinkedList* list);
+ListResult print_list_advanced(const LinkedList* list, bool show_index, const char* separator);
 
 // --- Search and Access Functions ---
 void* get(const LinkedList* list, size_t index);
@@ -270,26 +271,31 @@ LinkedList* load_from_file(const char* filename, size_t element_size, FileFormat
  *   insert_tail_value(numbers_list, 100);
  */
 
-#ifdef __GNUC__  // GCC and Clang support
-    #define insert_head_value(list, value) \
-        ({ __typeof__(value) _temp = (value); insert_head_value_internal((list), &_temp); })
-
-    #define insert_tail_value(list, value) \
-        ({ __typeof__(value) _temp = (value); insert_tail_value_internal((list), &_temp); })
-
-    #define insert_index_value(list, index, value) \
-        ({ __typeof__(value) _temp = (value); insert_index_value_internal((list), (index), &_temp); })
+#ifdef __GNUC__  // GCC and Clang support __typeof__ for type inference
+    #define insert_head_value(list, value) do { \
+        __typeof__(value) _temp = (value); \
+        insert_head_value_internal((list), &_temp); \
+    } while(0)
+    #define insert_tail_value(list, value) do { \
+        __typeof__(value) _temp = (value); \
+        insert_tail_value_internal((list), &_temp); \
+    } while(0)
+    #define insert_index_value(list, index, value) do { \
+        __typeof__(value) _temp = (value); \
+        insert_index_value_internal((list), (index), &_temp); \
+    } while(0)
 #else
     // Fallback for compilers that don't support __typeof__
-    // These will require explicit casting or won't work with all types
-    #define insert_head_value(list, value) \
-        insert_head_value_internal((list), &(value))
-
-    #define insert_tail_value(list, value) \
-        insert_tail_value_internal((list), &(value))
-
-    #define insert_index_value(list, index, value) \
-        insert_index_value_internal((list), (index), &(value))
+    #define insert_head_value(list, value) do { \
+        insert_head_value_internal((list), &(value)); \
+    } while(0)
+    #define insert_tail_value(list, value) do { \
+        insert_tail_value_internal((list), &(value)); \
+    } while(0)
+    #define insert_index_value(list, index, value) do { \
+        insert_index_value_internal((list), (index), &(value)); \
+    } while(0)
 #endif
 
 #endif
+// EOF

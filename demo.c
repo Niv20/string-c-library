@@ -13,7 +13,6 @@ typedef struct {
 
 // Helper function prototypes
 void print_person(void* data);
-void print_int(void* data);
 int compare_person_id(const void* a, const void* b);
 int compare_person_name(const void* a, const void* b);
 int compare_person_age(const void* a, const void* b);
@@ -34,18 +33,9 @@ void increment_age(void* dest, const void* src); // Map function to increment ag
 // Implementation of helper functions
 void print_person(void* data) {
     const Person* p = (const Person*)data;
-    if (p && p->name)
-        printf("{ID:%04d, Name:\"%s\", Age:%d}", p->id, p->name, p->age);
-    else if (p)
-        printf("{ID:%04d, Name:NULL, Age:%d}", p->id, p->age);
-    else
-        printf("{NULL}");
+    printf("{ID:%04d, Name:\"%s\", Age:%d\n", p->id, p->name, p->age);
 }
 
-void print_int(void* data) {
-    if (data)
-        printf("%d", *(int*)data);
-}
 
 int compare_person_id(const void* a, const void* b) {
     const Person* p1 = (const Person*)a;
@@ -204,34 +194,34 @@ int main(void) {
     // VALUE MODE examples (pass by value)    
     printf("1. insert_head_value(list, alice)\n");
     insert_head_value(people_list, alice);
-    print(people_list);
+    print_list(people_list);
 
     printf("2. insert_tail_value(list, bob)\n");
     insert_tail_value(people_list, bob);
-    print(people_list);
+    print_list(people_list);
     
     printf("3. insert_index_value(list, 1, charlie)\n");
     insert_index_value(people_list, 1, charlie);
-    print(people_list);
+    print_list(people_list);
     
     // POINTER MODE examples (pass by pointer)
     printf("4. insert_head_ptr(list, diana)\n");
     insert_head_ptr(people_list, diana);
-    print(people_list);
+    print_list(people_list);
     
     printf("5. insert_tail_ptr(list, emily)\n");
     insert_tail_ptr(people_list, emily);
-    print(people_list);
+    print_list(people_list);
 
     printf("6. insert_index_ptr(list, 3, frank)\n");
     insert_index_ptr(people_list, 3, frank);
-    print(people_list);
+    print_list(people_list);
     
     printf("\nAll 6 insertion methods demonstrated!\n");
     printf("Current length: %zu\n", get_length(people_list));
     
     printf("Current list contents:\n");
-    print(people_list);
+    print_list(people_list);
 
     /*
     ///////
@@ -240,7 +230,7 @@ int main(void) {
     banner("4. Deletion Functions");
     
     printf("Initial list before deletions:\n");
-    print(people_list);
+    print_list(people_list);
     
     // Delete from head
     printf("Deleting from head...\n");
@@ -260,7 +250,7 @@ int main(void) {
     }
     
     printf("List after deletions:\n");
-    print(people_list);
+    print_list(people_list);
     
     ///////
     // 5 //
@@ -272,9 +262,9 @@ int main(void) {
     
     printf("Printing with different formats:\n");
     printf("With indices:\n");
-    print(people_list);
+    print_list(people_list);
     printf("Comma separated: ");
-    print_advanced(people_list, false, ", ");
+    print_list_advanced(people_list, false, ", ");
     
     ///////
     // 6 //
@@ -313,18 +303,18 @@ int main(void) {
     set_compare_function(people_list, compare_person_age);
     sort(people_list, false);
     printf("List sorted by age (ascending):\n");
-    print(people_list);
+    print_list(people_list);
     
     printf("Sorting by age (descending)...\n");
     sort(people_list, true);
     printf("List sorted by age (descending):\n");
-    print(people_list);
+    print_list(people_list);
     
     printf("Sorting by name (alphabetical)...\n");
     set_compare_function(people_list, compare_person_name);
     sort(people_list, false);
     printf("List sorted by name (alphabetical):\n");
-    print(people_list);
+    print_list(people_list);
     
     // Restore ID comparison for other operations
     set_compare_function(people_list, compare_person_id);
@@ -336,7 +326,7 @@ int main(void) {
     
     // Debug: Print list before copy
     printf("List before copy:\n");
-    print(people_list);
+    print_list(people_list);
     
     // Copy the list
     printf("Creating a copy of the list...\n");
@@ -347,28 +337,28 @@ int main(void) {
     
     // Debug: Print both lists after copy
     printf("Original list after copy:\n");
-    print(people_list);
+    print_list(people_list);
     printf("Copy list after copy:\n");
-    print(copy_list);
+    print_list(copy_list);
     
     // Reverse the original list
     printf("Reversing the original list...\n");
     reverse(people_list);
     printf("List after reversal:\n");
-    print(people_list);
+    print_list(people_list);
     
     // Rotate the list
     printf("Rotating list by 2 positions to the right...\n");
     rotate(people_list, 2);
     printf("List after rotation:\n");
-    print(people_list);
+    print_list(people_list);
     
     // Filter adults only (age > 18) using new is_adult (FilterFunction signature)
     printf("Creating filtered list (adults only, age>18)...\n");
     LinkedList* adults_only = filter(people_list, is_adult);
     if (adults_only) {
         printf("Adults-only list (age>18):\n");
-        print(adults_only);
+        print_list(adults_only);
     }
     
     // Map to ages
@@ -377,7 +367,7 @@ int main(void) {
     if (ages_list) {
         set_print_function(ages_list, print_int);
         printf("Ages-only list: ");
-        print_advanced(ages_list, false, ", ");
+        print_list_advanced(ages_list, false, ", ");
         destroy(ages_list);
     }
 
@@ -391,7 +381,7 @@ int main(void) {
         set_free_function(older_people, free_person);
         set_copy_function(older_people, copy_person);
         printf("Older people list (age+1):\n");
-        print(older_people);
+        print_list(older_people);
     }
     
     ///////
@@ -452,7 +442,7 @@ int main(void) {
         ListResult fr = from_array(numbers_list, nums, 5);
         printf("from_array result: %s\n", error_string(fr));
         printf("numbers_list contents: ");
-        print_advanced(numbers_list, false, ", ");
+        print_list_advanced(numbers_list, false, ", ");
 
         size_t out_n = 0;
         int* back_arr = (int*)to_array(numbers_list, &out_n);
@@ -489,7 +479,7 @@ int main(void) {
     loaded_numbers = load_from_file("numbers.txt", sizeof(int), FILE_FORMAT_TEXT, "\n", print_int, NULL, NULL, NULL);
         if (loaded_numbers) {
             printf("Loaded list (text): ");
-            print_advanced(loaded_numbers, false, ", ");
+            print_list_advanced(loaded_numbers, false, ", ");
         } else {
             printf("Failed to load numbers.txt\n");
         }
@@ -511,18 +501,6 @@ int main(void) {
     
     printf("✓ All memory cleaned up successfully\n");
     
-    banner("PERSON DEMO COMPLETED");
-    printf("This comprehensive demo showcased all major features with Person structures:\n");
-    printf("• Two insertion methods: ptr (user manages heap) and val (library handles allocation)\n");
-    printf("• Proper memory management for dynamic strings using free functions\n");
-    printf("• Safe insertion using both pointer-based and value-based methods\n");
-    printf("• Sorting by different criteria (ID, name, age)\n");
-    printf("• Searching and filtering\n");
-    printf("• Mathematical operations (min, max, count)\n");
-    printf("• Structural transformations (copy, reverse, rotate, filter, map)\n");
-    printf("• Comprehensive error handling\n");
-    printf("• Automatic memory cleanup\n");
-    printf("\nDemonstrates flexibility of the library with different usage patterns!\n");
     */
     return 0;
 }

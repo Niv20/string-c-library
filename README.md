@@ -503,7 +503,7 @@ printf("Is list empty? %s\n", is_empty(list) ? "Yes" : "No"); // Output: No
 destroy(list);
 ```
 
-### `print`
+### `print_list`
 
 This function iterates through the list and prints all elements to the console. It relies on a print function being set via `set_print_function`. It provides a default format with indices.
 
@@ -525,12 +525,12 @@ insert_tail_ptr(list, &alice);
 // Output:
 // List len: 1
 //   [0]: Name: Alice, Age: 30
-print(list);
+print_list(list);
 free(alice.name);
 destroy(list);
 ```
 
-### `print_advanced`
+### `print_list_advanced`
 
 This function provides more control over the output format than `print`. You can choose whether to display indices and specify a custom separator string to be printed between elements.
 
@@ -554,7 +554,7 @@ Person bob = {.name = strdup("Bob"), .age = 25};
 insert_tail_ptr(list, &alice);
 insert_tail_ptr(list, &bob);
 // Output: Name: Alice, Age: 30 ---> Name: Bob, Age: 25
-print_advanced(list, FALSE, " ---> ");
+print_list_advanced(list, FALSE, " ---> ");
 free(alice.name);
 free(bob.name);
 destroy(list);
@@ -748,11 +748,11 @@ set_compare_function(list, compare_person_age);
 // ... add Alice (30), Bob (25), Charlie (35) ...
 sort(list, FALSE); // Sort ascending by age
 printf("Sorted list (ascending):\n");
-// print(list); // Output: Bob (25), Alice (30), Charlie (35)
+// print_list(list); // Output: Bob (25), Alice (30), Charlie (35)
 
 sort(list, TRUE); // Sort descending by age
 printf("\nSorted list (descending):\n");
-// print(list); // Output: Charlie (35), Alice (30), Bob (25)
+// print_list(list); // Output: Charlie (35), Alice (30), Bob (25)
 destroy(list);
 ```
 
@@ -1248,7 +1248,7 @@ LinkedList* loaded = load_from_file("numbers.txt", sizeof(int),
                                     FILE_FORMAT_TEXT, "\n",
                                     print_int, NULL, NULL, NULL);
 if (loaded) {
-    print(loaded);
+    print_list(loaded);
     destroy(loaded);
 }
 ```
@@ -1277,7 +1277,7 @@ LinkedList* loaded_ids = load_from_file("ids.csv", sizeof(int), FILE_FORMAT_TEXT
                                         print_int, NULL, NULL, NULL);
 if (loaded_ids) {
     printf("Loaded (comma-separated):\n");
-    print(loaded_ids);
+    print_list(loaded_ids);
     destroy(loaded_ids);
 }
 ```
