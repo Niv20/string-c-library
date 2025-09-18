@@ -210,7 +210,7 @@ int index_of(const LinkedList* list, PredicateFunction predicate);
 int index_of_advanced(const LinkedList* list, Direction direction, PredicateFunction predicate);
 
 // --- Sorting and Manipulation Functions ---
-ListResult sort(LinkedList* list, bool reverse, CompareFunction compare_fn);
+ListResult sort(LinkedList* list, CompareFunction compare_fn);
 
 // --- List Operations Functions ---
 LinkedList* copy(const LinkedList* list);

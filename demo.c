@@ -304,7 +304,6 @@ int main(void) {
         printf("'Charlie Brown' not found (may have been updated).\n");
     }
 
-    // 5. Demo index_of_advanced()
     printf("\n--- 5. index_of_advanced() ---\n");
     printf("Searching for the last minor (age < 18) from the tail...\n");
     int last_minor_index = index_of_advanced(people_list, START_FROM_TAIL, is_minor);
@@ -320,33 +319,29 @@ int main(void) {
         printf("No minors found.\n");
     }
 
-    // 6. Demo count_if()
     printf("\n--- 6. count_if() ---\n");
     size_t minor_count = count_if(people_list, is_minor);
     printf("Total number of minors in the list: %zu\n", minor_count);
     
+    /*
     ///////
     // 7 //
     ///////
     banner("7. Sorting Functions");
     
-    printf("Sorting by age (ascending)...\n");
-    sort(people_list, false, compare_person_age);
-    printf("List sorted by age (ascending):\n");
+    printf("Sorting by age\n");
+    sort(people_list, compare_person_age);
     print_list(people_list);
     
-    printf("Sorting by age (descending)...\n");
-    sort(people_list, true, compare_person_age);
-    printf("List sorted by age (descending):\n");
+    printf("Sorting by age\n");
+    sort(people_list, compare_person_age);
     print_list(people_list);
     
-    printf("Sorting by name (alphabetical)...\n");
-    sort(people_list, false, compare_person_name);
+    printf("Sorting by name\n");
+    sort(people_list, compare_person_name);
     printf("List sorted by name (alphabetical):\n");
     print_list(people_list);
     
-    // Restore ID comparison for other operations
-    // restore comparator concept not needed now
     
     ///////
     // 8 //
@@ -512,7 +507,8 @@ int main(void) {
         }
     }
     printf("(Keeping numbers.txt so you can open it)\n");
-    
+    */
+
     ///////
     // 4 //
     ///////

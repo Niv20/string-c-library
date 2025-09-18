@@ -891,26 +891,17 @@ size_t count_if(const LinkedList* list, PredicateFunction predicate) {
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
  */
 
-/* 
- * I made the decision to use qsort with array conversion (instead of bubble sort).
- * While the following code requires O(n) additional memory (not space-efficient), modern computers
- * don't have memory constraints, so I prefer fast O(n log n) over slow O(n^2).
- */
-
 /**
- * @brief Sorts the list in place (like Python's sort).
+ * @brief Sorts the list in place (ascending order).
  * @param list The list to sort.
- * @param reverse If true, sorts in descending order.
+ * @param compare_fn Comparison function.
  * @return LIST_SUCCESS on success, error code on failure.
  */
-ListResult sort(LinkedList* list, bool reverse_order, CompareFunction compare_fn) {
+ListResult sort(LinkedList* list, CompareFunction compare_fn) {
 
     if (!list) return LIST_ERROR_NULL_POINTER;
     if (!compare_fn) return LIST_ERROR_NO_COMPARE_FUNCTION;
     if (list->length <= 1) return LIST_SUCCESS;
-    
-    // Use bubble sort directly on the linked list nodes
-    // This avoids the problem with dynamic memory in array conversion
     
     bool swapped;
     do {
@@ -921,9 +912,7 @@ ListResult sort(LinkedList* list, bool reverse_order, CompareFunction compare_fn
             Node* next_node = current->next;
             
             int comparison = compare_fn(current->data, next_node->data);
-            bool should_swap = reverse_order ? (comparison < 0) : (comparison > 0);
-            
-            if (should_swap) {
+            if (comparison > 0) {
                 // Swap the data pointers (not the nodes themselves)
                 void* temp_data = current->data;
                 current->data = next_node->data;

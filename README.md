@@ -770,12 +770,11 @@ printf("There are %zu minors in the list.\n", minor_count);
 
 `ListResult sort(LinkedList* list, bool reverse, CompareFunction compare_fn);`
 
-This function sorts the list in-place using the configured compare function. It is implemented by converting the list to an array, running the standard library's highly efficient `qsort` (O(n log n)), and then rebuilding the list from the sorted array.
+This function sorts the list in-place using the configured compare function.
 
 **Receives:**
 
 - `list`: A pointer to the `LinkedList`.
-- `reverse_order`: If `TRUE`, sorts in descending order; otherwise, sorts in ascending order.
 
 **Returns:**
 
@@ -784,18 +783,6 @@ This function sorts the list in-place using the configured compare function. It 
 **Example:**
 
 ```c
-LinkedList* list = create_list(sizeof(Person));
-set_print_function(list, print_person);
-set_compare_function(list, compare_person_age);
-// ... add Alice (30), Bob (25), Charlie (35) ...
-sort(list, FALSE); // Sort ascending by age
-printf("Sorted list (ascending):\n");
-// print_list(list); // Output: Bob (25), Alice (30), Charlie (35)
-
-sort(list, TRUE); // Sort descending by age
-printf("\nSorted list (descending):\n");
-// print_list(list); // Output: Charlie (35), Alice (30), Bob (25)
-destroy(list);
 ```
 
 <br></br>
