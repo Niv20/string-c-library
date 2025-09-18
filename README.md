@@ -19,7 +19,7 @@ For this library to work, you need to define **helper functions** in your own co
 
 1. `void PrintFunction(void* data)` - This function assigns a custom printing function to the list. Without this, the list doesn't know how to interpret and print your data structure.
 
-2. `void FreeFunction(void* data)` – This function frees all dynamically allocated memory **inside** your struct, such as strings or arrays allocated with malloc. (The library itself manages the memory of the struct itself).
+2. <a id="free-function"></a>`void FreeFunction(void* data)` – This function frees all dynamically allocated memory **inside** your struct, such as strings or arrays allocated with malloc. (The library itself manages the memory of the struct itself).
 
 > [!NOTE]
 > The parameters for these functions are of type `void*`, so you need to cast the pointer back to your data type within the function.
@@ -54,6 +54,10 @@ void free_person(void* data) {
 ## 1. Create List
 
 ### `create_list`
+
+```c
+LinkedList* create_list(size_t element_size);
+```
 
 This is the starting point for using the library. It allocates memory for a new, empty `LinkedList` structure and initializes it.
 
@@ -94,7 +98,6 @@ Before using the list, you need to configure it with the appropriate [helper fun
 ```c
 // Essential configuration
 set_print_function(person_list, print_person);
-set_compare_function(person_list, compare_person_age);
 set_free_function(person_list, free_person);
 ```
 
@@ -112,7 +115,7 @@ Or no size limit (this is also the default behavior):
 set_max_size(person_list, UNLIMITED, REJECT_NEW_WHEN_FULL);
 ```
 
-> [!IMPORTANT]
+> [!NOTE]
 > When using `UNLIMITED`, the behavior parameter is ignored since there's no capacity limit to reach.
 
 ---
@@ -129,7 +132,7 @@ You can insert structs into the list in two ways:
 > Even if you want the library to handle dynamic allocation of the struct itself (by passing it by value), you are still responsible for allocating any fields inside your struct that require dynamic memory (such as a `char* name` field). Passing by value does **not** exempt you from handling internal allocations.
 
 > [!NOTE]
-> Regardless of whether you insert your struct by value or by pointer, the library will always take care of freeing all memory associated with each element when it is deleted or when the list is destroyed. This includes both the memory allocated for the struct itself, and any dynamically allocated fields inside your struct (such as strings or arrays), which are freed using your provided [third helper functions](#setup-for-examples).
+> Regardless of whether you insert your struct by value or by pointer, the library will always take care of freeing all memory associated with each element when it is deleted or when the list is destroyed. This includes both the memory allocated for the struct itself, and any dynamically allocated fields inside your struct (such as strings or arrays), which are freed using your provided [second helper functions](#free-function).
 
 Both approaches support the same insertion positions:
 
@@ -157,6 +160,10 @@ Person create_person(int id, const char* name, int age) {
 
 #### `insert_head_value`
 
+```c
+ListResult insert_head_value(LinkedList* list, void* value);
+```
+
 Adds a new element to the beginning of the list by value.
 
 **Receives:**
@@ -176,6 +183,10 @@ insert_head_value(people_list, alice);
 ```
 
 #### `insert_head_ptr`
+
+```c
+ListResult insert_head_ptr(LinkedList* list, void* data_ptr);
+```
 
 Adds a new element to the beginning of the list by pointer.
 
@@ -198,6 +209,10 @@ insert_head_ptr(people_list, diana);
 
 ### `insert_tail_value`
 
+```c
+ListResult insert_tail_value(LinkedList* list, void* value);
+```
+
 Adds a new element to the end of the list by value.
 
 **Receives:**
@@ -218,6 +233,10 @@ insert_tail_value(people_list, bob);
 
 
 ### `insert_tail_ptr`
+
+```c
+ListResult insert_tail_ptr(LinkedList* list, void* data_ptr);
+```
 
 Adds a new element to the end of the list by pointer.
 
@@ -240,6 +259,10 @@ insert_tail_ptr(people_list, emily);
 
 ### `insert_index_value`
 
+```c
+ListResult insert_index_value(LinkedList* list, size_t index, void* value);
+```
+
 Inserts a new element at a specific zero-based index by value.
 
 **Receives:**
@@ -260,6 +283,10 @@ insert_index_value(people_list, 1, charlie);
 ```
 
 ### `insert_index_ptr`
+
+```c
+ListResult insert_index_ptr(LinkedList* list, size_t index, void* data_ptr);
+```
 
 This function inserts an element at a specific zero-based index. All elements from that index onward are shifted one position to the right. The operation is optimized to traverse from the head or tail, whichever is closer to the target index.
 
@@ -287,6 +314,10 @@ insert_index_ptr(people_list, 3, frank);
 
 ### `delete_head`
 
+```c
+ListResult delete_head(LinkedList* list);
+```
+
 This function removes the first element (at index 0) from the list.
 
 **Receives:**
@@ -304,6 +335,10 @@ delete_head(people_list);
 ```
 
 ### `delete_tail`
+
+```c
+ListResult delete_tail(LinkedList* list);
+```
 
 This function removes the last element from the list.
 
@@ -323,6 +358,10 @@ delete_tail(people_list);
 
 ### `delete_index`
 
+```c
+ListResult delete_index(LinkedList* list, size_t index);
+```
+
 This function removes an element at a specific zero-based index. Subsequent elements are shifted to the left.
 
 **Receives:**
@@ -341,6 +380,10 @@ delete_index(people_list, 1); // Deletes the *second* element
 ```
 
 ### `remove_advanced`
+
+```c
+ListResult remove_advanced(LinkedList* list, int count, Direction direction, FilterFunction predicate);
+```
 
 This is a powerful function that finds and removes elements based on their value. It requires a compare function to be set. You can control how many matching elements to remove and from which direction to start the search.
 
@@ -397,6 +440,10 @@ These examples show how you can use your own filter functions to control which e
 
 ### `clear`
 
+```c
+ListResult clear(LinkedList* list);
+```
+
 This function removes all elements from the list, resetting its length to zero. It properly frees the memory for each element using the configured free function.
 
 **Receives:**
@@ -414,6 +461,10 @@ clear(people_list);
 ```
 
 ### `destroy`
+
+```c
+void destroy(LinkedList* list);
+```
 
 This function is the final cleanup step. It completely deallocates all memory used by the list, including clearing all elements (using `clear`), freeing the dummy nodes, and finally freeing the `LinkedList` structure itself.
 
@@ -440,6 +491,10 @@ destroy(people_list);
 
 ### `get_length`
 
+```c
+size_t get_length(const LinkedList* list);
+```
+
 A straightforward function that returns the number of elements currently stored in the list. This is an O(1) operation as the length is tracked internally.
 
 **Receives:**
@@ -463,6 +518,10 @@ destroy(list);
 
 ### `is_empty`
 
+```c
+bool is_empty(const LinkedList* list);
+```
+
 A simple check to see if the list contains any elements. It's slightly more expressive than checking `get_length(list) == 0`.
 
 **Receives:**
@@ -485,6 +544,10 @@ destroy(list);
 ```
 
 ### `print_list`
+
+```c
+ListResult print_list(const LinkedList* list);
+```
 
 This function iterates through the list and prints all elements to the console. It relies on a print function being set via `set_print_function`. It provides a default format with indices.
 
@@ -514,6 +577,10 @@ destroy(list);
 ```
 
 ### `print_list_advanced`
+
+```c
+ListResult print_list_advanced(const LinkedList* list, bool show_size, bool show_index, const char* separator);
+```
 
 This function provides more control over the output format than `print`. You can choose whether to display indices and specify a custom separator string to be printed between elements.
 
@@ -549,6 +616,10 @@ destroy(list);
 
 ### `get`
 
+```c
+void* get(const LinkedList* list, size_t index);
+```
+
 This function retrieves a direct pointer to the data stored at a specific index. This is for read-only access and does not make a copy. It's very fast if you just need to inspect an element's value.
 
 **Receives:**
@@ -579,6 +650,10 @@ destroy(list);
 
 ### `set`
 
+```c
+ListResult set(LinkedList* list, size_t index, void* data);
+```
+
 This function updates the element at a specific index with new data. It overwrites the existing data at that position. It properly frees the old data using the configured free function before copying the new data.
 
 **Receives:**
@@ -608,6 +683,10 @@ destroy(list);
 ```
 
 ### `index`
+
+```c
+int index_of(const LinkedList* list, void* data, CompareFunction compare_fn);
+```
 
 This function searches the list from head to tail and returns the index of the first element that matches the provided data. It requires a compare function to be set.
 
@@ -642,6 +721,10 @@ destroy(list);
 
 ### `index_advanced`
 
+```c
+int index_of_advanced(const LinkedList* list, void* data, Direction direction, CompareFunction compare_fn);
+```
+
 Similar to `index`, but allows you to specify the search direction. You can search from the head (for the first match) or from the tail (for the last match).
 
 **Receives:**
@@ -675,6 +758,10 @@ destroy(list);
 ```
 
 ### `count_occurrences`
+
+```c
+size_t count_if(const LinkedList* list, bool (*predicate)(const void *element, void *arg), void *arg);
+```
 
 This function iterates through the entire list and counts how many times a specific element appears. It requires a compare function to be set.
 
@@ -711,6 +798,10 @@ destroy(list);
 
 ### `sort`
 
+```c
+ListResult sort(LinkedList* list, bool reverse, CompareFunction compare_fn);
+```
+
 This function sorts the list in-place using the configured compare function. It is implemented by converting the list to an array, running the standard library's highly efficient `qsort` (O(n log n)), and then rebuilding the list from the sorted array.
 
 **Receives:**
@@ -745,6 +836,10 @@ destroy(list);
 
 ### `list_copy`
 
+```c
+LinkedList* copy(const LinkedList* list);
+```
+
 This function creates a new, independent copy of an entire list. If a `copy_fn` is configured, it will be used to deep copy each element, ensuring the new list is completely separate from the original. Without a copy function, it performs a shallow copy using `memcpy`.
 
 **Receives:**
@@ -770,6 +865,10 @@ destroy(copy);
 ```
 
 ### `list_extend`
+
+```c
+ListResult extend(LinkedList* list, const LinkedList* other);
+```
 
 This function appends all elements from a second list (`other`) to the end of the first list (`list`). The other list remains unchanged.
 
@@ -797,6 +896,10 @@ destroy(list2);
 
 ### `list_concat`
 
+```c
+LinkedList* concat(const LinkedList* list1, const LinkedList* list2);
+```
+
 Creates a brand new list that is the result of concatenating two existing lists. Both original lists remain unchanged.
 
 **Receives:**
@@ -822,6 +925,10 @@ destroy(concatenated);
 ```
 
 ### `list_slice`
+
+```c
+LinkedList* slice(const LinkedList* list, size_t start, size_t end);
+```
 
 Creates a new list containing a copy of a portion of the original list, from a start index (inclusive) to an end index (exclusive).
 
@@ -851,6 +958,10 @@ destroy(sliced);
 
 ### `list_rotate`
 
+```c
+ListResult rotate(LinkedList* list, int positions);
+```
+
 Rotates the list elements in-place by a specified number of positions. A positive number rotates to the right (end to front), and a negative number rotates to the left (front to end). This is an O(n) operation but does not involve reallocating nodes.
 
 **Receives:**
@@ -878,6 +989,10 @@ destroy(list);
 
 ### `list_reverse`
 
+```c
+ListResult reverse(LinkedList* list);
+```
+
 This function reverses the order of all elements in the list in-place by manipulating the next and prev pointers of each node. It's an efficient O(n) operation.
 
 **Receives:**
@@ -900,6 +1015,10 @@ destroy(list);
 ```
 
 ### `list_filter`
+
+```c
+LinkedList* filter(const LinkedList* list, FilterFunction filter_fn);
+```
 
 Creates a new list containing only the elements from the original list that satisfy a certain condition, defined by a `filter_fn` function.
 
@@ -930,6 +1049,10 @@ destroy(evens);
 ```
 
 ### `list_map`
+
+```c
+LinkedList* map(const LinkedList* list, MapFunction map_fn, size_t new_element_size);
+```
 
 Creates a new list by applying a transformation function to every element of the original list. This is useful for projecting your data into a different form.
 
@@ -966,6 +1089,11 @@ destroy(age_list);
 
 ### `list_min` / `list_max`
 
+```c
+void* min_by(const LinkedList* list, int (*compare)(const void *a, const void *b));
+void* max_by(const LinkedList* list, int (*compare)(const void *a, const void *b));
+```
+
 These functions find the minimum or maximum element in the list, respectively. They require a compare function to be set to determine the ordering.
 
 **Receives:**
@@ -991,6 +1119,10 @@ destroy(list);
 ```
 
 ### `list_unique`
+
+```c
+LinkedList* unique(const LinkedList* list, CompareFunction compare_fn);
+```
 
 This function creates a new list containing only the unique elements from the original list. It preserves the order of the first occurrence of each element. Requires a compare function.
 
@@ -1023,6 +1155,10 @@ destroy(unique_list);
 
 ### `list_intersection`
 
+```c
+LinkedList* intersection(const LinkedList* list1, const LinkedList* list2, CompareFunction compare_fn);
+```
+
 This function creates a new list containing only the elements that are present in both input lists. Requires a compare function.
 
 **Receives:**
@@ -1054,6 +1190,10 @@ destroy(intersection);
 ```
 
 ### `list_union`
+
+```c
+LinkedList* union_lists(const LinkedList* list1, const LinkedList* list2, CompareFunction compare_fn);
+```
 
 This function creates a new list containing all unique elements from both input lists combined. Requires a compare function.
 
@@ -1091,6 +1231,10 @@ destroy(union_list);
 
 ### `array_to_list`
 
+```c
+ListResult from_array(LinkedList* list, const void* arr, size_t n);
+```
+
 This function clears a list and then populates it with all the elements from a standard C array.
 
 **Receives:**
@@ -1114,6 +1258,10 @@ destroy(num_list);
 ```
 
 ### `to_array`
+
+```c
+void* to_array(const LinkedList* list, size_t* out_size);
+```
 
 Converts the entire linked list into a newly allocated contiguous C array. Useful for interoperability with APIs that expect raw arrays.
 
@@ -1148,6 +1296,10 @@ destroy(num_list);
 
 ### `to_string`
 
+```c
+char* to_string(const LinkedList* list, const char* separator);
+```
+
 Converts the list into a single heap‑allocated string with a custom separator. Intended for primitive element sizes (int / double / char). Other element sizes become the token `[data]` (לא סיריאליזציה הפיכה מלאה).
 
 **Receives:**
@@ -1174,6 +1326,10 @@ destroy(list);
 ```
 
 ### `save_to_file` (Unified: Binary / Text)
+
+```c
+ListResult save_to_file(const LinkedList* list, const char* filename, FileFormat format, const char* separator);
+```
 
 שומר את הרשימה לקובץ בפורמט הנבחר.
 
@@ -1206,6 +1362,10 @@ printf("save_to_file (TEXT): %s\n", error_string(r));
 ```
 
 ### `load_from_file`
+
+```c
+LinkedList* load_from_file(const char* filename, size_t element_size, FileFormat format, const char* separator, PrintFunction print_fn, CompareFunction compare_fn, FreeFunction free_fn, CopyFunction copy_fn);
+```
 
 טוען רשימה חדשה מקובץ (Binary או Text).
 
