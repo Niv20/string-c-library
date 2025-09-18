@@ -763,58 +763,51 @@ void* get(const LinkedList* list, size_t index) {
 }
 
 /**
- * @brief Updates an element at a specific index by copying the new value.
- * @param list The list to update.
- * @param index The index of the element to update.
- * @param data A pointer to the new data to be copied.
+ * @brief Generic function to set a specific field in a struct element.
+ * @param list The list containing the element.
+ * @param index The index of the element to modify.
+ * @param field_offset The byte offset of the field within the struct.
+ * @param field_size The size of the field in bytes.
+ * @param new_value Pointer to the new value to set.
  * @return LIST_SUCCESS on success, error code on failure.
  */
-ListResult set_value(LinkedList* list, size_t index, void* data) {
-    
-    if (!list || !data) return LIST_ERROR_NULL_POINTER;
+ListResult set_field_generic(LinkedList* list, size_t index, size_t field_offset, size_t field_size, const void* new_value) {
+    if (!list || !new_value) return LIST_ERROR_NULL_POINTER;
     if (index >= list->length) return LIST_ERROR_INDEX_OUT_OF_BOUNDS;
-
-    Node* current = find_node_by_index(list, index);
-    if (!current) return LIST_ERROR_INDEX_OUT_OF_BOUNDS; // Should not happen if index is in bounds
-    
-    // Free the old data's inner contents if a free function is provided
-    if (list->free_node_function) {
-        list->free_node_function(current->data);
-    }
-    
-    // Copy the new data into the existing memory block
-    memcpy(current->data, data, list->element_size);
-    
-    // The node's mode should ideally be LIST_MODE_VALUE, but we don't enforce it.
-    // The user is responsible for consistency.
-    
-    return LIST_SUCCESS;
-}
-
-/**
- * @brief Updates an element at a specific index by taking ownership of a new pointer.
- * @param list The list to update.
- * @param index The index of the element to update.
- * @param data_ptr A pointer to the new data; the list takes ownership of this pointer.
- * @return LIST_SUCCESS on success, error code on failure.
- */
-ListResult set_ptr(LinkedList* list, size_t index, void* data_ptr) {
-    
-    if (!list || !data_ptr) return LIST_ERROR_NULL_POINTER;
-    if (index >= list->length) return LIST_ERROR_INDEX_OUT_OF_BOUNDS;
+    if (field_offset + field_size > list->element_size) return LIST_ERROR_INVALID_OPERATION;
 
     Node* current = find_node_by_index(list, index);
     if (!current) return LIST_ERROR_INDEX_OUT_OF_BOUNDS;
     
-    // Free the old data block completely (inner contents and the block itself)
-    if (list->free_node_function) {
-        list->free_node_function(current->data);
-    }
-    free(current->data);
+    // Calculate the address of the specific field
+    char* field_ptr = (char*)current->data + field_offset;
     
-    // Assign the new pointer and update the mode
-    current->data = data_ptr;
-    current->mode = LIST_MODE_POINTER;
+    // For string fields, we need special handling
+    if (field_size == sizeof(char*)) {
+        // This might be a string pointer field
+        char** string_field = (char**)field_ptr;
+        const char* new_string = *(const char**)new_value;
+        
+        // Free old string if it exists
+        if (*string_field) {
+            free(*string_field);
+        }
+        
+        // Allocate and copy new string
+        if (new_string) {
+            *string_field = malloc(strlen(new_string) + 1);
+            if (*string_field) {
+                strcpy(*string_field, new_string);
+            } else {
+                return LIST_ERROR_MEMORY_ALLOC;
+            }
+        } else {
+            *string_field = NULL;
+        }
+    } else {
+        // For non-pointer fields, just copy the data
+        memcpy(field_ptr, new_value, field_size);
+    }
     
     return LIST_SUCCESS;
 }

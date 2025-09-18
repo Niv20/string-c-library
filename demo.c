@@ -276,35 +276,26 @@ int main(void) {
     ///////
     banner("6. Search and Access Functions");
     
-    // 1. Demo get()
-    printf("\n--- 1. get() ---\n");
-    Person* person_at_1 = (Person*)get(people_list, 1);
-    if (person_at_1) {
-        printf("Element at index 1 is: ");
-        print_person(person_at_1);
-        printf("\n");
+    printf("get the element at index 0:\n");
+    Person* first_person = (Person*)get(people_list, 0);
+    if (first_person) {
+        printf("The id of the first person is: %d\n", first_person->id);
     }
 
-    // 2. Demo set_value()
-    printf("\n--- 2. set_value() ---\n");
-    Person updated_person = create_person(999, "Charlie Updated", 12);
-    printf("Updating element at index 1 with a new value.\n");
-    set_value(people_list, 1, &updated_person);
-    free(updated_person.name); // Free the temporary person's name
-    printf("List after set_value():\n");
+    printf("Updating element at index 1 by setting individual fields\n");
+    set_field(people_list, 1, Person, id, 999);
+    set_field(people_list, 1, Person, name, "Charlie Updated");
+    set_field(people_list, 1, Person, age, 12);
+    printf("List after set_field():\n");
     print_list(people_list);
 
-    // 3. Demo set_ptr()
-    printf("\n--- 3. set_ptr() ---\n");
-    Person* new_person_ptr = (Person*)malloc(sizeof(Person));
-    *new_person_ptr = create_person(888, "Alice on Heap", 17);
-    printf("Updating element at index 2 with a new pointer.\n");
-    set_ptr(people_list, 2, new_person_ptr);
-    printf("List after set_ptr():\n");
+    printf("Updating element at index 2 by setting individual fields\n");
+    set_field(people_list, 2, Person, id, 888);
+    set_field(people_list, 2, Person, name, "Alice on Heap");
+    set_field(people_list, 2, Person, age, 17);
+    printf("List after set_field():\n");
     print_list(people_list);
 
-    // 4. Demo index_of()
-    printf("\n--- 4. index_of() ---\n");
     printf("Searching for 'Charlie Updated'...\n");
     int index = index_of(people_list, is_charlie_brown);
     if (index >= 0) {

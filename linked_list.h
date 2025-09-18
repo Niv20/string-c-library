@@ -194,8 +194,18 @@ ListResult print_list_advanced(const LinkedList* list, bool show_size, bool show
 
 // --- Search and Access Functions ---
 void* get(const LinkedList* list, size_t index);
-ListResult set_value(LinkedList* list, size_t index, void* data);
-ListResult set_ptr(LinkedList* list, size_t index, void* data_ptr);
+
+// Generic field setting function - internal use by macro
+ListResult set_field_generic(LinkedList* list, size_t index, size_t field_offset, size_t field_size, const void* new_value);
+
+// Macro for setting individual fields in structs
+#define set_field(list, index, struct_type, field_name, new_value) \
+    do { \
+        __typeof__(((struct_type*)0)->field_name) temp_value = (new_value); \
+        set_field_generic(list, index, offsetof(struct_type, field_name), \
+                         sizeof(((struct_type*)0)->field_name), &temp_value); \
+    } while(0)
+
 int index_of(const LinkedList* list, PredicateFunction predicate);
 int index_of_advanced(const LinkedList* list, Direction direction, PredicateFunction predicate);
 
