@@ -87,7 +87,7 @@ printf("Successfully created a list for Person objects.\n");
 
 This function only creates the list. It is currently "empty" (except for the dummy nodes, of course). Later, we will learn how to [add elements to it](#3-insertion-in-linked-list).
 
----
+
 
 ## 2. List Configuration
 
@@ -116,7 +116,7 @@ set_max_size(person_list, UNLIMITED, REJECT_NEW_WHEN_FULL);
 > [!NOTE]
 > When using `UNLIMITED`, the behavior parameter is ignored since there's no capacity limit to reach.
 
----
+
 
 ## 3. Insertion in Linked List
 
@@ -294,7 +294,7 @@ Person* frank = (Person*)malloc(sizeof(Person));
 insert_index_ptr(people_list, 3, frank);
 ```
 
----
+
 
 ## 4. Deletion Functions
 
@@ -459,7 +459,7 @@ destroy(people_list);
 > [!IMPORTANT]
 > After calling `destroy`, the list pointer becomes invalid and should not be used again. You should set it to `NULL` to avoid dangling pointers.
 
----
+
 
 ## 5. Utility Functions
 
@@ -576,7 +576,7 @@ free(bob.name);
 destroy(list);
 ```
 
----
+
 
 ## 6. Search and Access Functions
 
@@ -748,7 +748,7 @@ printf("The number 10 appears %zu times.\n", count); // Output: 3
 destroy(list);
 ```
 
----
+
 
 ## 7. Sorting Functions
 
@@ -784,7 +784,7 @@ printf("\nSorted list (descending):\n");
 destroy(list);
 ```
 
----
+
 
 ## 8. Structural Transformations
 
@@ -1021,7 +1021,7 @@ destroy(person_list);
 destroy(age_list);
 ```
 
----
+
 
 ## 9. Mathematical Functions
 
@@ -1155,7 +1155,7 @@ destroy(list2);
 destroy(union_list);
 ```
 
----
+
 
 ## 10. List \<--\> Array
 
@@ -1216,7 +1216,7 @@ if (new_array) {
 destroy(num_list);
 ```
 
----
+
 
 ## 11. List \<--\> String / File
 
