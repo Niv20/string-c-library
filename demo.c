@@ -191,28 +191,26 @@ int main(void) {
     
     printf("Demonstrating all 6 insertion combinations:\n\n");
     
-    // VALUE MODE examples (pass by value)    
     printf("1. insert_head_value(list, alice)\n");
     insert_head_value(people_list, alice);
     print_list(people_list);
 
-    printf("2. insert_tail_value(list, bob)\n");
-    insert_tail_value(people_list, bob);
-    print_list(people_list);
-    
-    printf("3. insert_index_value(list, 1, charlie)\n");
-    insert_index_value(people_list, 1, charlie);
-    print_list(people_list);
-    
-    // POINTER MODE examples (pass by pointer)
-    printf("4. insert_head_ptr(list, diana)\n");
+    printf("2. insert_head_ptr(list, diana)\n");
     insert_head_ptr(people_list, diana);
     print_list(people_list);
-    
-    printf("5. insert_tail_ptr(list, emily)\n");
+
+    printf("3. insert_tail_value(list, bob)\n");
+    insert_tail_value(people_list, bob);
+    print_list(people_list);
+
+    printf("4. insert_tail_ptr(list, emily)\n");
     insert_tail_ptr(people_list, emily);
     print_list(people_list);
 
+    printf("5. insert_index_value(list, 1, charlie)\n");
+    insert_index_value(people_list, 1, charlie);
+    print_list(people_list);
+    
     printf("6. insert_index_ptr(list, 3, frank)\n");
     insert_index_ptr(people_list, 3, frank);
     print_list(people_list);

@@ -183,7 +183,7 @@ Adds a new element to the beginning of the list by value.
 **Example:**
 
 ```c
-Person alice = create_person(1012, "Alice Johnson", 28);
+Person alice = create_person(1012, "Alice Johnson", 16);
 insert_head_value(people_list, alice);
 ```
 
@@ -204,7 +204,7 @@ Adds a new element to the beginning of the list by pointer.
 
 ```c
 Person* diana = (Person*)malloc(sizeof(Person));
-*diana = create_person(1017, "Diana Prince", 30);
+*diana = create_person(1017, "Diana Prince", 13);
 insert_head_ptr(people_list, diana);
 ```
 
@@ -246,7 +246,7 @@ Adds a new element to the end of the list by pointer.
 
 ```c
 Person* emily = (Person*)malloc(sizeof(Person));
-*emily = create_person(1042, "Emily Davis", 26);
+*emily = create_person(1042, "Emily Davis", 22);
 insert_tail_ptr(people_list, emily);
 ```
 
@@ -267,7 +267,7 @@ Inserts a new element at a specific zero-based index by value.
 **Example:**
 
 ```c
-Person charlie = create_person(1098, "Charlie Brown", 22);
+Person charlie = create_person(1098, "Charlie Brown", 11);
 insert_index_value(people_list, 1, charlie); 
 ```
 
@@ -302,7 +302,7 @@ insert_index_ptr(people_list, 3, frank);
 
 ### `delete_head`
 
-This function removes the first element (at index 0) from the list. This is an O(1) operation.
+This function removes the first element (at index 0) from the list.
 
 **Receives:**
 
@@ -315,17 +315,12 @@ This function removes the first element (at index 0) from the list. This is an O
 **Example:**
 
 ```c
-LinkedList* list = create_list(sizeof(int));
-int n1 = 10, n2 = 20;
-insert_tail_ptr(list, &n1);
-insert_tail_ptr(list, &n2); // List: [10, 20]
-delete_head(list);   // List: [20]
-destroy(list);
+delete_head(list);
 ```
 
 ### `delete_tail`
 
-This function removes the last element from the list. This is an O(1) operation.
+This function removes the last element from the list.
 
 **Receives:**
 
@@ -338,12 +333,7 @@ This function removes the last element from the list. This is an O(1) operation.
 **Example:**
 
 ```c
-LinkedList* list = create_list(sizeof(int));
-int n1 = 10, n2 = 20;
-insert_tail_ptr(list, &n1);
-insert_tail_ptr(list, &n2); // List: [10, 20]
-delete_tail(list);   // List: [10]
-destroy(list);
+delete_tail(list);
 ```
 
 ### `delete_at`
@@ -362,14 +352,12 @@ This function removes an element at a specific zero-based index. Subsequent elem
 **Example:**
 
 ```c
-LinkedList* list = create_list(sizeof(int));
-int n1 = 10, n2 = 20, n3 = 30;
-insert_tail_ptr(list, &n1);
-insert_tail_ptr(list, &n2);
-insert_tail_ptr(list, &n3); // List: [10, 20, 30]
-delete_at(list, 1); // List: [10, 30]
-destroy(list);
+delete_at(list, 1); // Deletes the second element (index 1)
 ```
+
+> [!NOTE]
+> If you try to delete at an index greater than the current length of the list, the element will be deleted from the end (tail) of the list. If you use a negative index, the element will be deleted from the beginning (head) of the list.
+
 
 ### `remove_advanced`
 
@@ -389,21 +377,6 @@ This is a powerful function that finds and removes elements based on their value
 **Example:**
 
 ```c
-// Assume a compare_int function exists for comparing integers
-int compare_int(const void* a, const void* b) {
-    return (*(int*)a - *(int*)b);
-}
-
-LinkedList* list = create_list(sizeof(int));
-set_compare_function(list, compare_int);
-int nums[] = {10, 20, 10, 30, 10};
-// array_to_list(list, nums, 5); // Assuming this function exists
-// List: [10, 20, 10, 30, 10]
-int target = 10;
-// Remove all occurrences of 10
-remove_advanced(list, &target, DELETE_ALL_OCCURRENCES, SEARCH_FROM_HEAD);
-// List is now: [20, 30]
-destroy(list);
 ```
 
 ### `clear`
@@ -445,12 +418,7 @@ This function is the final cleanup step. It completely deallocates all memory us
 **Example:**
 
 ```c
-LinkedList* list = create_list(sizeof(int));
-int n = 10;
-insert_tail_ptr(list, &n);
-// ... use the list ...
-destroy(list); // All memory is freed.
-// list = NULL; // Good practice to nullify the pointer after destroying.
+destroy(list);
 ```
 
 ---
@@ -506,6 +474,8 @@ destroy(list);
 ### `print_list`
 
 This function iterates through the list and prints all elements to the console. It relies on a print function being set via `set_print_function`. It provides a default format with indices.
+
+לציין שלא צריך לכתוב אנטר אלא רק להדפיס את המבנה. באופן אוטמטי יש אנטר בין כל הדפסה ואם לא רוצים אז אפשר להשתמש בפונקציה המתקדמת יותר בהמשך
 
 **Receives:**
 
