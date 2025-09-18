@@ -95,7 +95,7 @@ LinkedList* create_list(size_t element_size) {
     list->max_size = UNLIMITED;                     // Unlimited by default
     list->allow_overwrite = REJECT_NEW_WHEN_FULL;   // Reject new when full by default
     list->print_node_function = NULL;      
-    list->compare_node_function = NULL;    
+    // Removed compare_node_function field usage.
     list->free_node_function = NULL;       
     list->copy_node_function = NULL;       
 
@@ -129,10 +129,7 @@ void set_print_function(LinkedList* list, PrintFunction print_fn) {
  * @param list The list to configure.
  * @param compare_fn Function pointer for comparing elements.
  */
-void set_compare_function(LinkedList* list, CompareFunction compare_fn) {
-    if (list)
-        list->compare_node_function = compare_fn;
-}
+// set_compare_function removed – comparator now passed per-call.
 
 /**
  * @brief Sets the free function for the list.
@@ -403,7 +400,15 @@ ListResult insert_tail_ptr(LinkedList* list, void* data_ptr) {
  */
 ListResult insert_index_ptr(LinkedList* list, size_t index, void* data_ptr) {
     
-    if (index < 0 || index >= list->length) return LIST_ERROR_INDEX_OUT_OF_BOUNDS;
+    // Handle boundary conditions
+    if (index <= 0) {
+        // Insert at head for index 0
+        return insert_head_ptr(list, data_ptr);
+    }
+    if (index >= list->length) {
+        // Insert at tail for indices beyond list length
+        return insert_tail_ptr(list, data_ptr);
+    }
     
     Node* new_node;
     ListResult result = insert_node_core_generic(list, data_ptr, LIST_MODE_POINTER, &new_node);
@@ -519,7 +524,7 @@ ListResult delete_index(LinkedList* list, size_t index) {
     
     if (!list) return LIST_ERROR_NULL_POINTER;
     if (is_empty(list)) return LIST_ERROR_INVALID_OPERATION;
-    if (index < 0 || index >= list->length) return LIST_ERROR_INDEX_OUT_OF_BOUNDS;
+    if (index >= list->length) return LIST_ERROR_INDEX_OUT_OF_BOUNDS; // size_t cannot be negative
     
     Node* current;
     
@@ -551,16 +556,15 @@ ListResult delete_index(LinkedList* list, size_t index) {
  * @param order START_FROM_HEAD or START_FROM_TAIL.
  * @return LIST_SUCCESS if at least one element was removed, error code otherwise.
  */
-ListResult remove_advanced(LinkedList* list, void* data, int count, Direction order) {
-    
-    if (!list || !data) return LIST_ERROR_NULL_POINTER;
+ListResult remove_advanced(LinkedList* list, int count, Direction order, FilterFunction predicate) {
+    if (!list) return LIST_ERROR_NULL_POINTER;
+    if (!predicate) return LIST_ERROR_INVALID_OPERATION; // Or define a new error if desired.
     if (is_empty(list)) return LIST_ERROR_ELEMENT_NOT_FOUND;
-    if (!list->compare_node_function) return LIST_ERROR_NO_COMPARE_FUNCTION;
-    
+
     int removed_count = 0;
     Node* current;
     Node* end_sentinel;
-    
+
     // Set up traversal direction
     if (order == START_FROM_TAIL) {
         current = list->tail->prev;
@@ -569,23 +573,21 @@ ListResult remove_advanced(LinkedList* list, void* data, int count, Direction or
         current = list->head->next;
         end_sentinel = list->tail;
     }
-    
+
     // Traverse and remove matching elements
     while (current != end_sentinel && (count == DELETE_ALL_OCCURRENCES || removed_count < count)) {
-        
         Node* next_node = (order == START_FROM_TAIL) ? current->prev : current->next;
-        
-        if (list->compare_node_function(current->data, data) == 0) {
-            // Found a match - remove it using core deletion logic
+
+        if (predicate(current->data)) {
             ListResult result = delete_node_core(list, current);
             if (result == LIST_SUCCESS) {
                 removed_count++;
             }
         }
-        
+
         current = next_node;
     }
-    
+
     return (removed_count > 0) ? LIST_SUCCESS : LIST_ERROR_ELEMENT_NOT_FOUND;
 }
 
@@ -710,6 +712,7 @@ ListResult print_list_advanced(const LinkedList* list, bool show_size, bool show
     return LIST_SUCCESS;
 }
 
+
 /*
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃                                               ┃
@@ -794,9 +797,7 @@ ListResult set(LinkedList* list, size_t index, void* data) {
  * @param data The data to find.
  * @return The index if found, negative error code if error occurred.
  */
-int index_of(const LinkedList* list, void* data) {
-    return index_of_advanced(list, data, START_FROM_HEAD);
-}
+int index_of(const LinkedList* list, void* data, CompareFunction compare_fn) { return index_of_advanced(list, data, START_FROM_HEAD, compare_fn); }
 
 /**
  * @brief Returns the index of the first/last occurrence of a value with direction control.
@@ -805,17 +806,17 @@ int index_of(const LinkedList* list, void* data) {
  * @param direction START_FROM_HEAD (default) or START_FROM_TAIL.
  * @return The index if found, negative error code if error occurred.
  */
-int index_of_advanced(const LinkedList* list, void* data, Direction order) {
+int index_of_advanced(const LinkedList* list, void* data, Direction order, CompareFunction compare_fn) {
     if (!list) return -LIST_ERROR_NULL_POINTER;
     if (!data) return -LIST_ERROR_NULL_POINTER;
-    if (!list->compare_node_function) return -LIST_ERROR_NO_COMPARE_FUNCTION;
+    if (!compare_fn) return -LIST_ERROR_NO_COMPARE_FUNCTION;
 
     if (order == START_FROM_TAIL) {
         // Search from tail to head
         Node* current = list->tail->prev;
         size_t index = list->length - 1;
         while (current != list->head) {
-            if (list->compare_node_function(current->data, data) == 0) {
+            if (compare_fn(current->data, data) == 0) {
                 return (int)index;
             }
             current = current->prev;
@@ -827,7 +828,7 @@ int index_of_advanced(const LinkedList* list, void* data, Direction order) {
         Node* current = list->head->next;
         size_t index = 0;
         while (current != list->tail) {
-            if (list->compare_node_function(current->data, data) == 0) {
+            if (compare_fn(current->data, data) == 0) {
                 return (int)index;
             }
             current = current->next;
@@ -857,10 +858,10 @@ int index_of_advanced(const LinkedList* list, void* data, Direction order) {
  * @param reverse If true, sorts in descending order.
  * @return LIST_SUCCESS on success, error code on failure.
  */
-ListResult sort(LinkedList* list, bool reverse_order) {
+ListResult sort(LinkedList* list, bool reverse_order, CompareFunction compare_fn) {
 
     if (!list) return LIST_ERROR_NULL_POINTER;
-    if (!list->compare_node_function) return LIST_ERROR_NO_COMPARE_FUNCTION;
+    if (!compare_fn) return LIST_ERROR_NO_COMPARE_FUNCTION;
     if (list->length <= 1) return LIST_SUCCESS;
     
     // Use bubble sort directly on the linked list nodes
@@ -874,7 +875,7 @@ ListResult sort(LinkedList* list, bool reverse_order) {
         while (current->next != list->tail) {
             Node* next_node = current->next;
             
-            int comparison = list->compare_node_function(current->data, next_node->data);
+            int comparison = compare_fn(current->data, next_node->data);
             bool should_swap = reverse_order ? (comparison < 0) : (comparison > 0);
             
             if (should_swap) {
@@ -906,7 +907,6 @@ static void copy_list_configuration(LinkedList* dest, const LinkedList* src) {
     if (!dest || !src) return;
     
     dest->print_node_function = src->print_node_function;
-    dest->compare_node_function = src->compare_node_function;
     dest->free_node_function = src->free_node_function;
     dest->copy_node_function = src->copy_node_function;
 }
@@ -1260,11 +1260,7 @@ void* max_by(const LinkedList* list, int (*compare)(const void *a, const void *b
  * @param list The source list.
  * @return A new list with unique elements, or NULL on failure.
  */
-LinkedList* unique(const LinkedList* list) {
-    if (!list) return NULL;
-    // Call the advanced function with the list's default comparator and preserving the first occurrence.
-    return unique_advanced(list, list->compare_node_function, START_FROM_HEAD);
-}
+LinkedList* unique(const LinkedList* list, CompareFunction compare_fn) { return unique_advanced(list, compare_fn, START_FROM_HEAD); }
 
 /**
  * @brief Creates a new list with unique elements based on a custom comparison function and preservation order.
@@ -1273,12 +1269,9 @@ LinkedList* unique(const LinkedList* list) {
  * @param order START_FROM_HEAD to keep the first seen unique element, START_FROM_TAIL to keep the last.
  * @return A new list with unique elements, or NULL on failure.
  */
-LinkedList* unique_advanced(const LinkedList* list, CompareFunction custom_compare, Direction order) {
+LinkedList* unique_advanced(const LinkedList* list, CompareFunction compare_fn, Direction order) {
     if (!list) return NULL;
-
-    // Use the provided custom_compare function, or fall back to the list's default.
-    CompareFunction compare_fn = custom_compare ? custom_compare : list->compare_node_function;
-    if (!compare_fn) return NULL; // Cannot determine uniqueness without a compare function.
+    if (!compare_fn) return NULL;
 
     LinkedList* unique_list = create_list(list->element_size);
     if (!unique_list) return NULL;
@@ -1343,9 +1336,8 @@ LinkedList* unique_advanced(const LinkedList* list, CompareFunction custom_compa
  * @param list2 Second list.
  * @return A new list with common elements, or NULL on failure.
  */
-LinkedList* intersection(const LinkedList* list1, const LinkedList* list2) {
-    
-    if (!list1 || !list2 || !list1->compare_node_function) return NULL;
+LinkedList* intersection(const LinkedList* list1, const LinkedList* list2, CompareFunction compare_fn) {
+    if (!list1 || !list2 || !compare_fn) return NULL;
     if (list1->element_size != list2->element_size) return NULL;
     
     LinkedList* intersection = create_list(list1->element_size);
@@ -1358,8 +1350,8 @@ LinkedList* intersection(const LinkedList* list1, const LinkedList* list2) {
     while (current != list1->tail) {
 
         // If element exists in both lists and not already in result
-        if (index_of(list2, current->data) != -1 && 
-            index_of(intersection, current->data) == -1) {
+        if (index_of(list2, current->data, compare_fn) != -1 && 
+            index_of(intersection, current->data, compare_fn) == -1) {
             if (insert_tail_value_internal(intersection, current->data) != LIST_SUCCESS) {
                 destroy(intersection);
                 return NULL;
@@ -1377,19 +1369,18 @@ LinkedList* intersection(const LinkedList* list1, const LinkedList* list2) {
  * @param list2 Second list.
  * @return A new list with all unique elements from both lists, or NULL on failure.
  */
-LinkedList* union_lists(const LinkedList* list1, const LinkedList* list2) {
-    
-    if (!list1 || !list2) return NULL;
+LinkedList* union_lists(const LinkedList* list1, const LinkedList* list2, CompareFunction compare_fn) {
+    if (!list1 || !list2 || !compare_fn) return NULL;
     if (list1->element_size != list2->element_size) return NULL;
     
     // Start with unique elements from first list
-    LinkedList* union_list = unique(list1);
+    LinkedList* union_list = unique(list1, compare_fn);
     if (!union_list) return NULL;
     
     // Add unique elements from second list
     Node* current = list2->head->next;
     while (current != list2->tail) {
-        if (index_of(union_list, current->data) == -1) {
+    if (index_of(union_list, current->data, compare_fn) == -1) {
             if (insert_tail_value_internal(union_list, current->data) != LIST_SUCCESS) {
                 destroy(union_list);
                 return NULL;
@@ -1601,6 +1592,7 @@ LinkedList* load_from_file(const char* filename, size_t element_size, FileFormat
                            const char* separator,
                            PrintFunction print_fn, CompareFunction compare_fn,
                            FreeFunction free_fn, CopyFunction copy_fn) {
+    (void)compare_fn; // comparator no longer stored; kept for backward signature compatibility
     if (!filename) return NULL;
     if (format == FILE_FORMAT_BINARY) {
         FILE* bfile = fopen(filename, "rb");
@@ -1612,7 +1604,7 @@ LinkedList* load_from_file(const char* filename, size_t element_size, FileFormat
         LinkedList* blist = create_list(element_size);
         if (!blist) { fclose(bfile); return NULL; }
         if (print_fn) set_print_function(blist, print_fn);
-        if (compare_fn) set_compare_function(blist, compare_fn);
+    // compare_fn provided per call now (no stored comparator)
         if (free_fn) set_free_function(blist, free_fn);
         if (copy_fn) set_copy_function(blist, copy_fn);
         for (size_t i=0;i<saved_length;i++) {
@@ -1631,7 +1623,7 @@ LinkedList* load_from_file(const char* filename, size_t element_size, FileFormat
     LinkedList* list = create_list(element_size);
     if (!list) { fclose(file); return NULL; }
     if (print_fn) set_print_function(list, print_fn);
-    if (compare_fn) set_compare_function(list, compare_fn);
+    // compare_fn provided per call now (no stored comparator)
     if (free_fn) set_free_function(list, free_fn);
     if (copy_fn) set_copy_function(list, copy_fn);
 

@@ -142,7 +142,6 @@ typedef struct LinkedList {
 
     // --- User-provided helper functions ---
     PrintFunction print_node_function;   /**< Function to print an element. */
-    CompareFunction compare_node_function; /**< Function to compare two elements. */
     FreeFunction free_node_function;     /**< Function to free a complex element. */
     CopyFunction copy_node_function;     /**< Function to deep copy a complex element. */
 } LinkedList;
@@ -156,7 +155,6 @@ LinkedList* create_list(size_t element_size);
 
 // --- Setters for LinkedList fields ---
 void set_print_function(LinkedList* list, PrintFunction print_fn);
-void set_compare_function(LinkedList* list, CompareFunction compare_fn);
 void set_free_function(LinkedList* list, FreeFunction free_fn);
 void set_copy_function(LinkedList* list, CopyFunction copy_fn);
 
@@ -180,7 +178,9 @@ ListResult insert_index_ptr(LinkedList* list, size_t index, void* data_ptr);
 ListResult delete_head(LinkedList* list);
 ListResult delete_tail(LinkedList* list);
 ListResult delete_index(LinkedList* list, size_t index);
-ListResult remove_advanced(LinkedList* list, void* data, int count, Direction direction);
+// Predicate-based advanced removal: removes up to 'count' elements (DELETE_ALL_OCCURRENCES for all)
+// that satisfy predicate(element) == true, traversing from specified direction.
+ListResult remove_advanced(LinkedList* list, int count, Direction direction, FilterFunction predicate);
 ListResult clear(LinkedList* list);
 void destroy(LinkedList* list);
 
@@ -193,11 +193,11 @@ ListResult print_list_advanced(const LinkedList* list, bool show_size, bool show
 // --- Search and Access Functions ---
 void* get(const LinkedList* list, size_t index);
 ListResult set(LinkedList* list, size_t index, void* data);
-int index_of(const LinkedList* list, void* data);
-int index_of_advanced(const LinkedList* list, void* data, Direction direction);
+int index_of(const LinkedList* list, void* data, CompareFunction compare_fn);
+int index_of_advanced(const LinkedList* list, void* data, Direction direction, CompareFunction compare_fn);
 
 // --- Sorting and Manipulation Functions ---
-ListResult sort(LinkedList* list, bool reverse);
+ListResult sort(LinkedList* list, bool reverse, CompareFunction compare_fn);
 
 // --- List Operations Functions ---
 LinkedList* copy(const LinkedList* list);
@@ -215,10 +215,10 @@ LinkedList* map(const LinkedList* list, MapFunction map_fn, size_t new_element_s
 size_t count_if(const LinkedList* list, bool (*predicate)(const void *element, void *arg), void *arg);
 void* min_by(const LinkedList* list, int (*compare)(const void *a, const void *b));
 void* max_by(const LinkedList* list, int (*compare)(const void *a, const void *b));
-LinkedList* unique(const LinkedList* list);
-LinkedList* unique_advanced(const LinkedList* list, CompareFunction custom_compare, Direction order);
-LinkedList* intersection(const LinkedList* list1, const LinkedList* list2);
-LinkedList* union_lists(const LinkedList* list1, const LinkedList* list2);
+LinkedList* unique(const LinkedList* list, CompareFunction compare_fn);
+LinkedList* unique_advanced(const LinkedList* list, CompareFunction compare_fn, Direction order);
+LinkedList* intersection(const LinkedList* list1, const LinkedList* list2, CompareFunction compare_fn);
+LinkedList* union_lists(const LinkedList* list1, const LinkedList* list2, CompareFunction compare_fn);
 
 // --- Array to List Conversion Functions ---
 ListResult from_array(LinkedList* list, const void* arr, size_t n);

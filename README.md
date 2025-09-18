@@ -19,9 +19,7 @@ For this library to work, you need to define **helper functions** in your own co
 
 1. `void PrintFunction(void* data)` - This function assigns a custom printing function to the list. Without this, the list doesn't know how to interpret and print your data structure.
 
-2. `int CompareFunction(const void* data1, const void* data2)` – This function is used to compare two elements in your data structure. It returns a negative value if the first element (`data1`) is less than the second (`data2`), zero if they are equal, and a positive value if the first is greater than the second.
-
-3. `void FreeFunction(void* data)` – This function frees all dynamically allocated memory **inside** your struct, such as strings or arrays allocated with malloc. (The library itself manages the memory of the struct itself).
+2. `void FreeFunction(void* data)` – This function frees all dynamically allocated memory **inside** your struct, such as strings or arrays allocated with malloc. (The library itself manages the memory of the struct itself).
 
 > [!NOTE]
 > The parameters for these functions are of type `void*`, so you need to cast the pointer back to your data type within the function.
@@ -38,17 +36,7 @@ void print_person(void* data) {
     printf("Id: %d, Name: %s, Age: %d\n", p->id, p->name, p->age);
 }
 
-// 2. Function to compare two Persons by age
-int compare_person_age(const void* data1, const void* data2) {
-
-    // Cast the void pointers back to Person pointers
-    Person* p1 = (Person*)data1;
-    Person* p2 = (Person*)data2;
-
-    return p1->age - p2->age;
-}
-
-// 3. Function to free the dynamically allocated name within a Person struct
+// 2. Function to free the dynamically allocated name within a Person struct
 void free_person(void* data) {
 
     // Cast the void pointers back to Person pointers
@@ -289,7 +277,7 @@ This function inserts an element at a specific zero-based index. All elements fr
 
 ```c
 Person* frank = (Person*)malloc(sizeof(Person));
-*frank = create_person(1000, "Frank Wilson", 31);
+*frank = create_person(1033, "Frank Wilson", 31);
 insert_index_ptr(people_list, 3, frank);
 ```
 
@@ -312,7 +300,7 @@ This function removes the first element (at index 0) from the list.
 **Example:**
 
 ```c
-delete_head(list);
+delete_head(people_list);
 ```
 
 ### `delete_tail`
@@ -330,7 +318,7 @@ This function removes the last element from the list.
 **Example:**
 
 ```c
-delete_tail(list);
+delete_tail(people_list);
 ```
 
 ### `delete_index`
@@ -349,7 +337,7 @@ This function removes an element at a specific zero-based index. Subsequent elem
 **Example:**
 
 ```c
-delete_index(list, 1); // Deletes the *second* element
+delete_index(people_list, 1); // Deletes the *second* element
 ```
 
 ### `remove_advanced`
@@ -359,9 +347,9 @@ This is a powerful function that finds and removes elements based on their value
 **Receives:**
 
 - `list`: A pointer to the `LinkedList`.
-- `data`: A pointer to the data to find and remove.
 - `count`: The number of occurrences to remove. Use `DELETE_ALL_OCCURRENCES` to remove all matches.
-- `direction`: `SEARCH_FROM_HEAD` or `SEARCH_FROM_TAIL`.
+- `order`: `START_FROM_HEAD` or `START_FROM_TAIL` (direction to begin searching).
+- `predicate`: A function that takes a pointer to an element and returns `TRUE` if it should be removed, `FALSE` otherwise.
 
 **Returns:**
 
@@ -369,8 +357,43 @@ This is a powerful function that finds and removes elements based on their value
 
 **Example:**
 
+The following example removes all people whose name contains the letter 'E' or 'e'.
+
+First, let's write the helper function that checks if a Person's name contains the letter 'E' or 'e':
+
 ```c
+bool is_person_name_contains_e(const void* struct) {
+    const Person* p = (const Person*)struct;
+
+    for (const char* c = p->name; *c; ++c)
+        if (*c == 'E' || *c == 'e') return true;
+    
+    return false;
+}
 ```
+
+Now, you can use this function with `remove_advanced` to remove all matching elements from the list:
+
+```c
+remove_advanced(people_list, DELETE_ALL_OCCURRENCES, START_FROM_HEAD, is_person_name_contains_e);
+```
+
+**Example:**
+
+This next example removes up to 3 people whose ID is divisible by 2, starting from the tail of the list:
+
+```c
+bool is_person_id_divisible_by_2(const void* element) {
+    const Person* p = (const Person*)element;
+    return (p->id % 2) == 0;
+}
+```
+
+```c
+remove_advanced(people_list, 3, START_FROM_TAIL, is_person_id_divisible_by_2);
+```
+
+These examples show how you can use your own filter functions to control which elements are removed from the list.
 
 ### `clear`
 
@@ -387,7 +410,7 @@ This function removes all elements from the list, resetting its length to zero. 
 **Example:**
 
 ```c
-clear(list);
+clear(people_list);
 ```
 
 ### `destroy`
@@ -405,7 +428,7 @@ This function is the final cleanup step. It completely deallocates all memory us
 **Example:**
 
 ```c
-destroy(list);
+destroy(people_list);
 ```
 
 > [!IMPORTANT]

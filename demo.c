@@ -23,7 +23,6 @@ Person create_person(int id, const char* name, int age);
 bool is_adult_predicate(const void* element, void* arg);
 // Simple filter function (signature requires only data)
 bool is_adult(const void* data);
-// (legacy) name-based filter previously used; keep for demonstration optionally
 bool is_adult_filter(const void* data); // TODO: remove when replacing with is_adult usage
 bool has_name(const void* element, void* arg);
 void map_person_to_age(void* dest, const void* src);
@@ -133,6 +132,21 @@ void banner(const char* title) {
     printf("\n\n============= %s =============\n", title);
 }
 
+// Predicate: returns true if Person's name contains 'E' or 'e'
+bool is_person_name_contains_e(const void* element) {
+    const Person* p = (const Person*)element;
+    for (const char* c = p->name; *c; ++c) {
+        if (*c == 'E' || *c == 'e') return true;
+    }
+    return false;
+}
+
+// Predicate: returns true if Person's id divisible by 2
+bool is_person_id_divisible_by_2(const void* element) {
+    const Person* p = (const Person*)element;
+    return (p->id % 2) == 0;
+}
+
 // Main demo function for Person structures
 int main(void) {
 
@@ -159,7 +173,7 @@ int main(void) {
     printf("Configuring list with helper functions...\n");
 
     set_print_function(people_list, print_person);
-    set_compare_function(people_list, compare_person_id);
+    // compare_person_id used per-call now
     set_free_function(people_list, free_person);
     set_copy_function(people_list, copy_person);
 
@@ -187,7 +201,7 @@ int main(void) {
     }
     *diana = create_person(1017, "Diana Prince", 13);
     *emily = create_person(1042, "Emily Davis", 22);
-    *frank = create_person(1000, "Frank Wilson", 31);
+    *frank = create_person(1033, "Frank Wilson", 31);
     
     printf("Demonstrating all 6 insertion combinations:\n\n");
     
@@ -214,27 +228,10 @@ int main(void) {
     // Current list order:
     // Diana > Charlie > Alice > Frank > Bob > Emily
 
- 
-    ///////
-    // 4 //
-    ///////
-    banner("4. Deletion Functions");
-        
-    // Delete from head
-    printf("Deleting from head...\n");
-    delete_head(people_list);
-
-    // Delete from tail
-    printf("Deleting from tail...\n");
-    delete_tail(people_list);
-
-    // Delete at specific index
-    printf("Deleting at index 2...\n");
-    delete_index(people_list, 2);
-
-    printf("List after deletions:\n");
-    print_list(people_list);
-    
+    ///////////////////////////////////////////////////////////////////////////////////
+    //    NOTE: The deletion functions (section 4) are placed at the end of main     //
+    // because I still want to work with the Person structures before removing them. //
+    ///////////////////////////////////////////////////////////////////////////////////
     
     /*
     ///////
@@ -285,24 +282,22 @@ int main(void) {
     banner("7. Sorting Functions");
     
     printf("Sorting by age (ascending)...\n");
-    set_compare_function(people_list, compare_person_age);
-    sort(people_list, false);
+    sort(people_list, false, compare_person_age);
     printf("List sorted by age (ascending):\n");
     print_list(people_list);
     
     printf("Sorting by age (descending)...\n");
-    sort(people_list, true);
+    sort(people_list, true, compare_person_age);
     printf("List sorted by age (descending):\n");
     print_list(people_list);
     
     printf("Sorting by name (alphabetical)...\n");
-    set_compare_function(people_list, compare_person_name);
-    sort(people_list, false);
+    sort(people_list, false, compare_person_name);
     printf("List sorted by name (alphabetical):\n");
     print_list(people_list);
     
     // Restore ID comparison for other operations
-    set_compare_function(people_list, compare_person_id);
+    // restore comparator concept not needed now
     
     ///////
     // 8 //
@@ -315,7 +310,7 @@ int main(void) {
     
     // Copy the list
     printf("Creating a copy of the list...\n");
-    LinkedList* copy_list = copy(people_list);
+    LinkedList* copy_list = copy(people_list); // copy unaffected
     if (copy_list) {
         printf("Copy created successfully. Length: %zu\n", get_length(copy_list));
     }
@@ -362,7 +357,6 @@ int main(void) {
     if (older_people) {
         // Configure for printing & memory management
         set_print_function(older_people, print_person);
-        set_compare_function(older_people, compare_person_id);
         set_free_function(older_people, free_person);
         set_copy_function(older_people, copy_person);
         printf("Older people list (age+1):\n");
@@ -470,22 +464,39 @@ int main(void) {
         }
     }
     printf("(Keeping numbers.txt so you can open it)\n");
+    
+    ///////
+    // 4 //
+    ///////
+    
+    // Delete from head
+    printf("Deleting from head...\n");
+    delete_head(people_list);
 
-    // ===== CLEANUP =====
-    banner("CLEANUP");
-    printf("Cleaning up all allocated memory...\n");
-    
-    // Destroy all lists (automatic cleanup of Person structures via free_function)
+    // Delete from tail
+    printf("Deleting from tail...\n");
+    delete_tail(people_list);
+
+    // Delete at specific index
+    printf("Deleting at index 2...\n");
+    delete_index(people_list, 2);
+
+    printf("Deleting all people whose name contains 'E' or 'e'...\n");
+    remove_advanced(people_list, DELETE_ALL_OCCURRENCES, START_FROM_HEAD, is_person_name_contains_e);    
+
+    printf("Deleting last three persons (from end) whose ID divisible by 2...\n");
+    remove_advanced(people_list, 3, START_FROM_TAIL, is_person_id_divisible_by_2);
+
+    printf("Deleting all remaining persons...\n");
+    clear(people_list);
+
+    printf("Deleting the entire list...\n");
     destroy(people_list);
-    if (copy_list) destroy(copy_list);
-    if (adults_only) destroy(adults_only);
-    if (older_people) destroy(older_people);
-    if (numbers_list) destroy(numbers_list);
-    if (loaded_numbers) destroy(loaded_numbers);
-    if (numbers_str) free(numbers_str);
     
-    printf("✓ All memory cleaned up successfully\n");
-    
+    people_list = NULL; // Good practice to avoid dangling pointer...
+
+
+
     */
     return 0;
 }
