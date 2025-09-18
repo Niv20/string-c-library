@@ -347,38 +347,24 @@ int main(void) {
     // 8 //
     ///////
     banner("8. Structural Transformations");
-    
-    // Debug: Print list before copy
-    printf("List before copy:\n");
-    print_list(people_list);
-    
-    // Copy the list
+        
     printf("Creating a copy of the list...\n");
     LinkedList* copy_list = copy(people_list); // copy unaffected
     if (copy_list) {
-        printf("Copy created successfully. Length: %zu\n", get_length(copy_list));
+        printf("Copy created successfully\n");
     }
-    
-    // Debug: Print both lists after copy
-    printf("Original list after copy:\n");
-    print_list(people_list);
-    printf("Copy list after copy:\n");
-    print_list(copy_list);
-    
-    // Reverse the original list
+        
     printf("Reversing the original list...\n");
     reverse(people_list);
     printf("List after reversal:\n");
     print_list(people_list);
     
-    // Rotate the list
     printf("Rotating list by 2 positions to the right...\n");
     rotate(people_list, 2);
     printf("List after rotation:\n");
-    print_list(people_list);
+    print_list(copy_list);
     
-    // Filter adults only (age > 18) using new is_adult (FilterFunction signature)
-    printf("Creating filtered list (adults only, age>18)...\n");
+    printf("Creating filtered list with adults only (age>18)...\n");
     LinkedList* adults_only = filter(people_list, is_adult);
     if (adults_only) {
         printf("Adults-only list (age>18):\n");
