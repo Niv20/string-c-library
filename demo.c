@@ -173,9 +173,9 @@ int main(void) {
     printf("Creating people...\n");
 
     // Stack allocated Persons for value-mode (you keep your stack variable)
-    Person alice = create_person(1012, "Alice Johnson", 28);
+    Person alice = create_person(1012, "Alice Johnson", 16);
     Person bob = create_person(1010, "Bob Smith", 35);
-    Person charlie = create_person(1098, "Charlie Brown", 22);
+    Person charlie = create_person(1098, "Charlie Brown", 11);
 
     // Heap allocated Persons for pointer-mode (ownership transfers to list; do not free manually)
     Person* diana = (Person*)malloc(sizeof(Person));
@@ -185,51 +185,41 @@ int main(void) {
         printf("Memory allocation failed for heap Persons.\n");
         return 1;
     }
-    *diana = create_person(1017, "Diana Prince", 30);
-    *emily = create_person(1042, "Emily Davis", 26);
+    *diana = create_person(1017, "Diana Prince", 13);
+    *emily = create_person(1042, "Emily Davis", 22);
     *frank = create_person(1000, "Frank Wilson", 31);
     
     printf("Demonstrating all 6 insertion combinations:\n\n");
     
     printf("1. insert_head_value(list, alice)\n");
     insert_head_value(people_list, alice);
-    print_list(people_list);
 
     printf("2. insert_head_ptr(list, diana)\n");
     insert_head_ptr(people_list, diana);
-    print_list(people_list);
 
     printf("3. insert_tail_value(list, bob)\n");
     insert_tail_value(people_list, bob);
-    print_list(people_list);
 
     printf("4. insert_tail_ptr(list, emily)\n");
     insert_tail_ptr(people_list, emily);
-    print_list(people_list);
 
     printf("5. insert_index_value(list, 1, charlie)\n");
     insert_index_value(people_list, 1, charlie);
-    print_list(people_list);
     
     printf("6. insert_index_ptr(list, 3, frank)\n");
     insert_index_ptr(people_list, 3, frank);
-    print_list(people_list);
     
-    printf("\nAll 6 insertion methods demonstrated!\n");
-    printf("Current length: %zu\n", get_length(people_list));
+    printf("\n✓ All 6 insertion methods demonstrated!\n");
     
-    printf("Current list contents:\n");
-    print_list(people_list);
+    // Current list order:
+    // Diana > Charlie > Alice > Frank > Bob > Emily
 
-    /*
+ 
     ///////
     // 4 //
     ///////
     banner("4. Deletion Functions");
-    
-    printf("Initial list before deletions:\n");
-    print_list(people_list);
-    
+        
     // Delete from head
     printf("Deleting from head...\n");
     ListResult result = delete_head(people_list);
@@ -250,6 +240,7 @@ int main(void) {
     printf("List after deletions:\n");
     print_list(people_list);
     
+    /*
     ///////
     // 5 //
     ///////
