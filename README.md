@@ -567,7 +567,7 @@ print_list_advanced(people_list, true, false, ", ");
 
 `void* get(const LinkedList* list, size_t index);`
 
-This function retrieves a direct pointer to the data stored at a specific index. This is for read-only access and does not make a copy. It's very fast if you just need to inspect an element's value.
+This function retrieves a direct pointer to the data stored at a specific index. This is for read-only access and does not make a copy.
 
 **Receives:**
 
@@ -584,28 +584,26 @@ This function retrieves a direct pointer to the data stored at a specific index.
 **Example:**
 
 ```c
-LinkedList* list = create_list(sizeof(Person));
-Person alice = {.name = strdup("Alice"), .age = 30};
-insert_tail_ptr(list, &alice);
-Person* p = (Person*)get(list, 0);
-if (p) {
-    printf("Person at index 0 is %s.\n", p->name); // Output: Alice
-}
-free(alice.name);
-destroy(list);
+Person* p = (Person*)get(people_list, 2);
+printf("Person at index 2 is %s.\n", p->name);
 ```
 
-### `set`
+### `set_value`
 
-`ListResult set(LinkedList* list, size_t index, void* data);`
+`ListResult set_value(LinkedList* list, size_t index, void* data);`
 
-This function updates the element at a specific index with new data. It overwrites the existing data at that position. It properly frees the old data using the configured free function before copying the new data.
+This function updates the element at a specific index by **copying** the new data by value. It overwrites the existing data at that position.
+
+**Behavior:**
+1. If a `free_function` is configured, it is called on the old data to free any internal dynamic memory (like strings).
+2. The content of the `data` you provide is copied into the node's existing memory block using `memcpy`.
+3. The list does **not** take ownership of the `data` pointer you pass; it only reads from it.
 
 **Receives:**
 
 - `list`: A pointer to the `LinkedList`.
 - `index`: The index of the element to update.
-- `data`: A pointer to the new data.
+- `data`: A pointer to the new data to be copied.
 
 **Returns:**
 
@@ -614,65 +612,98 @@ This function updates the element at a specific index with new data. It overwrit
 **Example:**
 
 ```c
-LinkedList* list = create_list(sizeof(Person));
-// Setup copy and free functions for Person
-set_copy_function(list, copy_person);
-set_free_function(list, free_person);
-Person alice = {.name = strdup("Alice"), .age = 30};
-insert_tail_ptr(list, &alice); // List: [Alice (30)]
-Person alice_new = {.name = strdup("Alice"), .age = 31};
-set(list, 0, &alice_new); // List: [Alice (31)]
-free(alice.name);
-free(alice_new.name);
-destroy(list);
+// Create a new person on the stack
+Person updated_person = create_person(1100, "Updated Name", 40);
+
+// Update the element at index 0 by copying the value of updated_person
+set_value(people_list, 0, &updated_person);
+
+// Since the data was copied, we must free the name inside the stack variable
+free(updated_person.name);
 ```
 
-### `index`
+### `set_ptr`
 
-`int index_of(const LinkedList* list, void* data, CompareFunction compare_fn);`
+`ListResult set_ptr(LinkedList* list, size_t index, void* data_ptr);`
 
-This function searches the list from head to tail and returns the index of the first element that matches the provided data. It requires a compare function to be set.
+This function updates the element at a specific index by **transferring ownership** of a new pointer.
+
+**Behavior:**
+1. The entire old data block at the target index is freed (including internal contents via `free_function` and the struct itself).
+2. The node's data pointer is replaced with `data_ptr`.
+3. The list now **owns** `data_ptr` and is responsible for freeing it later. You should not free `data_ptr` yourself after calling this function.
 
 **Receives:**
 
 - `list`: A pointer to the `LinkedList`.
-- `data`: A pointer to the data to search for.
+- `index`: The index of the element to update.
+- `data_ptr`: A pointer to a dynamically allocated struct.
 
 **Returns:**
 
-- The non-negative index of the element if found.
-- A negative error code if not found or an error occurs.
+- `LIST_SUCCESS` on success, or an error code on failure.
 
 **Example:**
 
 ```c
-LinkedList* list = create_list(sizeof(Person));
-set_compare_function(list, compare_person_age);
-Person alice = {.name = strdup("Alice"), .age = 30};
-Person bob = {.name = strdup("Bob"), .age = 25};
-insert_tail_ptr(list, &bob);
-insert_tail_ptr(list, &alice); // List: [Bob (25), Alice (30)]
-Person target = {.age = 30}; // We only need age for the comparison
-int index = index(list, &target);
-if (index >= 0) {
-    printf("A person aged 30 is at index: %d\n", index); // Output: 1
-}
-free(alice.name);
-free(bob.name);
-destroy(list);
+// Allocate a new person on the heap
+Person* new_person_ptr = (Person*)malloc(sizeof(Person));
+*new_person_ptr = create_person(1200, "Heap Person", 50);
+
+// Update the element at index 1 by transferring the pointer
+// The list now owns new_person_ptr
+set_ptr(people_list, 1, new_person_ptr);
+
+// DO NOT free(new_person_ptr) here! The list will manage it.
 ```
 
-### `index_advanced`
+### `index_of`
 
-`int index_of_advanced(const LinkedList* list, void* data, Direction direction, CompareFunction compare_fn);`
+`int index_of(const LinkedList* list, PredicateFunction predicate);`
 
-Similar to `index`, but allows you to specify the search direction. You can search from the head (for the first match) or from the tail (for the last match).
+This function searches the list from head to tail and returns the index of the first element that satisfies the given `predicate`.
+
+**Receives:**
+
+- `list`: A pointer to the `LinkedList`.
+- `predicate`: A function that takes an element and returns `true` if it's a match.
+
+**Returns:**
+
+- The index of the first matching element, or a negative error code if not found.
+
+**Example:**
+
+To find the index of the first person named "Charlie Brown", you would need a specific predicate function.
+
+```c
+// Predicate function to find a person named "Charlie Brown".
+bool is_charlie_brown(const void* element) {
+    const Person* p = (const Person*)element;
+    return strcmp(p->name, "Charlie Brown") == 0;
+}
+
+// ... later in the code ...
+int index = index_of(people_list, is_charlie_brown);
+
+if (index >= 0) {
+    printf("Found 'Charlie Brown' at index %d.\n", index);
+} else {
+    printf("'Charlie Brown' not found.\n");
+}
+```
+
+### `index_of_advanced`
+
+`int index_of_advanced(const LinkedList* list, Direction direction, PredicateFunction predicate);`
+
+Similar to `index_of`, but allows you to specify the search direction (`START_FROM_HEAD` or `START_FROM_TAIL`).
 
 **Receives:**
 
 - `list`: The list to search in.
-- `data`: The data to find.
-- `direction`: `SEARCH_FROM_HEAD` (for the first occurrence) or `SEARCH_FROM_TAIL` (for the last occurrence).
+- `direction`: The direction to search.
+- `predicate`: A function that returns `true` for a matching element.
 
 **Returns:**
 
@@ -680,55 +711,55 @@ Similar to `index`, but allows you to specify the search direction. You can sear
 
 **Example:**
 
+To find the *last* person in the list who is a minor (under 18):
+
 ```c
-// Assume a compare_int function exists for comparing integers
-int compare_int(const void* a, const void* b) {
-    return (*(int*)a - *(int*)b);
+// Predicate to check if a person is a minor.
+bool is_minor(const void* element) {
+    const Person* p = (const Person*)element;
+    return p->age < 18;
 }
 
-LinkedList* list = create_list(sizeof(int));
-set_compare_function(list, compare_int);
-int nums[] = {10, 20, 30, 20, 40};
-// array_to_list(list, nums, 5); // Assuming this function exists
-// List: [10, 20, 30, 20, 40]
-int target = 20;
-int first_idx = index_advanced(list, &target, SEARCH_FROM_HEAD); // Result: 1
-int last_idx = index_advanced(list, &target, SEARCH_FROM_TAIL);  // Result: 3
-printf("First 20 is at index %d, last 20 is at index %d\n", first_idx, last_idx);
-destroy(list);
+// ... later in the code ...
+int last_minor_index = index_of_advanced(people_list, START_FROM_TAIL, is_minor);
+
+if (last_minor_index >= 0) {
+    Person* p = (Person*)get(people_list, last_minor_index);
+    printf("The last minor found is '%s' at index %d.\n", p->name, last_minor_index);
+} else {
+    printf("No minors found in the list.\n");
+}
 ```
 
-### `count_occurrences`
+### `count_if`
 
-`size_t count_if(const LinkedList* list, bool (*predicate)(const void *element, void *arg), void *arg);`
+`size_t count_if(const LinkedList* list, PredicateFunction predicate);`
 
-This function iterates through the entire list and counts how many times a specific element appears. It requires a compare function to be set.
+This function iterates through the entire list and counts how many elements satisfy the given `predicate`.
 
 **Receives:**
 
 - `list`: A pointer to the `LinkedList`.
-- `data`: A pointer to the data to count.
+- `predicate`: A function that takes an element and returns `true` if it satisfies the condition.
 
 **Returns:**
 
-- The number of occurrences as a `size_t`.
+- The number of elements that satisfy the condition.
 
 **Example:**
 
+To count how many people in the list are minors (under 18):
+
 ```c
-// Assume a compare_int function exists for comparing integers
-int compare_int(const void* a, const void* b) {
-    return (*(int*)a - *(int*)b);
+// Predicate to check if a person is a minor.
+bool is_minor(const void* element) {
+    const Person* p = (const Person*)element;
+    return p->age < 18;
 }
 
-LinkedList* list = create_list(sizeof(int));
-set_compare_function(list, compare_int);
-int nums[] = {10, 20, 10, 30, 10};
-// array_to_list(list, nums, 5);
-int target = 10;
-size_t count = count_occurrences(list, &target);
-printf("The number 10 appears %zu times.\n", count); // Output: 3
-destroy(list);
+// ... later in the code ...
+size_t minor_count = count_if(people_list, is_minor);
+printf("There are %zu minors in the list.\n", minor_count);
 ```
 
 <br></br>

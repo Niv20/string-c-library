@@ -28,6 +28,11 @@ bool has_name(const void* element, void* arg);
 void map_person_to_age(void* dest, const void* src);
 void banner(const char* title);
 void increment_age(void* dest, const void* src); // Map function to increment age (deep copy)
+bool is_person_name_contains_e(const void* element);
+bool is_person_id_divisible_by_2(const void* element);
+bool is_charlie_brown(const void* element);
+bool is_minor(const void* element);
+void print_int(void* data);
 
 // Implementation of helper functions
 void print_person(void* data) {
@@ -147,6 +152,23 @@ bool is_person_id_divisible_by_2(const void* element) {
     return (p->id % 2) == 0;
 }
 
+// Predicate to find a person by a specific name
+bool is_charlie_brown(const void* element) {
+    const Person* p = (const Person*)element;
+    return strcmp(p->name, "Charlie Brown") == 0;
+}
+
+// Predicate to find people younger than a certain age (hardcoded for simplicity)
+bool is_minor(const void* element) {
+    const Person* p = (const Person*)element;
+    return p->age < 18;
+}
+
+// Print function for integers
+void print_int(void* data) {
+    printf("%d", *(int*)data);
+}
+
 // Main demo function for Person structures
 int main(void) {
 
@@ -248,34 +270,69 @@ int main(void) {
     printf("Printing the list (no indices, comma-separated):\n");
     print_list_advanced(people_list, true, false, ", ");
     
-    /*
+    
     ///////
     // 6 //
     ///////
     banner("6. Search and Access Functions");
     
-    // Get element by index
-    printf("Accessing element at index 1:\n");
+    // 1. Demo get()
+    printf("\n--- 1. get() ---\n");
     Person* person_at_1 = (Person*)get(people_list, 1);
     if (person_at_1) {
-        printf("Person at index 1: ");
+        printf("Element at index 1 is: ");
         print_person(person_at_1);
         printf("\n");
     }
-    
-    // Search for element
-    printf("Searching for Bob by ID...\n");
-    int bob_index = index_of(people_list, &bob);
-    if (bob_index >= 0) {
-        printf("Bob found at index: %d\n", bob_index);
+
+    // 2. Demo set_value()
+    printf("\n--- 2. set_value() ---\n");
+    Person updated_person = create_person(999, "Charlie Updated", 12);
+    printf("Updating element at index 1 with a new value.\n");
+    set_value(people_list, 1, &updated_person);
+    free(updated_person.name); // Free the temporary person's name
+    printf("List after set_value():\n");
+    print_list(people_list);
+
+    // 3. Demo set_ptr()
+    printf("\n--- 3. set_ptr() ---\n");
+    Person* new_person_ptr = (Person*)malloc(sizeof(Person));
+    *new_person_ptr = create_person(888, "Alice on Heap", 17);
+    printf("Updating element at index 2 with a new pointer.\n");
+    set_ptr(people_list, 2, new_person_ptr);
+    printf("List after set_ptr():\n");
+    print_list(people_list);
+
+    // 4. Demo index_of()
+    printf("\n--- 4. index_of() ---\n");
+    printf("Searching for 'Charlie Updated'...\n");
+    int index = index_of(people_list, is_charlie_brown);
+    if (index >= 0) {
+        printf("'Charlie Brown' found at index: %d\n", index);
     } else {
-        printf("Bob not found (error code: %d)\n", bob_index);
+        printf("'Charlie Brown' not found (may have been updated).\n");
     }
-    
-    // Advanced search from tail
-    printf("Searching from tail for Charlie...\n");
-    int charlie_index = index_of_advanced(people_list, &charlie, START_FROM_TAIL);
-    printf("Charlie found at index: %d (searching from tail)\n", charlie_index);
+
+    // 5. Demo index_of_advanced()
+    printf("\n--- 5. index_of_advanced() ---\n");
+    printf("Searching for the last minor (age < 18) from the tail...\n");
+    int last_minor_index = index_of_advanced(people_list, START_FROM_TAIL, is_minor);
+    if (last_minor_index >= 0) {
+        printf("Last minor found at index: %d\n", last_minor_index);
+        Person* minor = (Person*)get(people_list, last_minor_index);
+        if (minor) {
+            printf("  -> Details: ");
+            print_person(minor);
+            printf("\n");
+        }
+    } else {
+        printf("No minors found.\n");
+    }
+
+    // 6. Demo count_if()
+    printf("\n--- 6. count_if() ---\n");
+    size_t minor_count = count_if(people_list, is_minor);
+    printf("Total number of minors in the list: %zu\n", minor_count);
     
     ///////
     // 7 //
@@ -348,7 +405,7 @@ int main(void) {
     if (ages_list) {
         set_print_function(ages_list, print_int);
         printf("Ages-only list: ");
-        print_list_advanced(ages_list, false, ", ");
+        print_list_advanced(ages_list, false, false, ", ");
         destroy(ages_list);
     }
 
@@ -400,13 +457,12 @@ int main(void) {
     }
     
     // Count adults (age >= 18)
-    size_t adult_count = count_if(people_list, is_adult_predicate, NULL);
+    size_t adult_count = count_if(people_list, is_adult_filter);
     printf("Number of adults (age >= 18): %zu\n", adult_count);
     
-    // Count people named "Alice"
-    char* alice_name = "Alice Johnson";
-    size_t alice_count = count_if(people_list, has_name, alice_name);
-    printf("Number of people named '%s': %zu\n", alice_name, alice_count);
+    // Count people named "Alice" - we'll need to find them manually for now
+    // Note: count_if doesn't support additional arguments in this implementation
+    printf("Note: Counting by name requires manual iteration in this implementation\n");
     
     ////////
     // 10 //
@@ -422,7 +478,7 @@ int main(void) {
         ListResult fr = from_array(numbers_list, nums, 5);
         printf("from_array result: %s\n", error_string(fr));
         printf("numbers_list contents: ");
-        print_list_advanced(numbers_list, false, ", ");
+        print_list_advanced(numbers_list, false, false, ", ");
 
         size_t out_n = 0;
         int* back_arr = (int*)to_array(numbers_list, &out_n);
@@ -459,7 +515,7 @@ int main(void) {
     loaded_numbers = load_from_file("numbers.txt", sizeof(int), FILE_FORMAT_TEXT, "\n", print_int, NULL, NULL, NULL);
         if (loaded_numbers) {
             printf("Loaded list (text): ");
-            print_list_advanced(loaded_numbers, false, ", ");
+            print_list_advanced(loaded_numbers, false, false, ", ");
         } else {
             printf("Failed to load numbers.txt\n");
         }
@@ -469,35 +525,54 @@ int main(void) {
     ///////
     // 4 //
     ///////
+    banner("4. Deletion Functions");
     
     // Delete from head
     printf("Deleting from head...\n");
     delete_head(people_list);
+    printf("List after deleting from head:\n");
+    print_list(people_list);
 
     // Delete from tail
     printf("Deleting from tail...\n");
     delete_tail(people_list);
+    printf("List after deleting from tail:\n");
+    print_list(people_list);
 
     // Delete at specific index
-    printf("Deleting at index 2...\n");
-    delete_index(people_list, 2);
+    printf("Deleting at index 1...\n");
+    delete_index(people_list, 1);
+    printf("List after deleting at index 1:\n");
+    print_list(people_list);
 
     printf("Deleting all people whose name contains 'E' or 'e'...\n");
     remove_advanced(people_list, DELETE_ALL_OCCURRENCES, START_FROM_HEAD, is_person_name_contains_e);    
+    printf("List after removing people with 'E' or 'e' in name:\n");
+    print_list(people_list);
 
     printf("Deleting last three persons (from end) whose ID divisible by 2...\n");
     remove_advanced(people_list, 3, START_FROM_TAIL, is_person_id_divisible_by_2);
+    printf("List after removing up to 3 people with even IDs:\n");
+    print_list(people_list);
 
     printf("Deleting all remaining persons...\n");
     clear(people_list);
+    printf("List after clearing all elements:\n");
+    print_list(people_list);
 
     printf("Deleting the entire list...\n");
     destroy(people_list);
     
-    people_list = NULL; // Good practice to avoid dangling pointer...
+    people_list = NULL; // Good practice to avoid dangling pointer
+    
+    // Cleanup other lists
+    if (copy_list) destroy(copy_list);
+    if (adults_only) destroy(adults_only);
+    if (older_people) destroy(older_people);
+    if (numbers_list) destroy(numbers_list);
+    if (loaded_numbers) destroy(loaded_numbers);
+    if (numbers_str) free(numbers_str);
 
-
-
-    */
+    printf("\n✓ Demo completed successfully!\n");
     return 0;
 }

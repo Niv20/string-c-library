@@ -118,6 +118,13 @@ typedef enum {
 typedef void (*MapFunction)(void* dest, const void* src);
 
 /**
+ * @brief A function pointer type for checking a condition on an element.
+ * @param element A const void pointer to the element's data to test.
+ * @return True if the condition is met, false otherwise.
+ */
+typedef bool (*PredicateFunction)(const void* element);
+
+/**
  * @brief Internal structure representing a node in the linked list.
  * @note Users of the library should not manipulate this structure directly.
  */
@@ -187,9 +194,10 @@ ListResult print_list_advanced(const LinkedList* list, bool show_size, bool show
 
 // --- Search and Access Functions ---
 void* get(const LinkedList* list, size_t index);
-ListResult set(LinkedList* list, size_t index, void* data);
-int index_of(const LinkedList* list, void* data, CompareFunction compare_fn);
-int index_of_advanced(const LinkedList* list, void* data, Direction direction, CompareFunction compare_fn);
+ListResult set_value(LinkedList* list, size_t index, void* data);
+ListResult set_ptr(LinkedList* list, size_t index, void* data_ptr);
+int index_of(const LinkedList* list, PredicateFunction predicate);
+int index_of_advanced(const LinkedList* list, Direction direction, PredicateFunction predicate);
 
 // --- Sorting and Manipulation Functions ---
 ListResult sort(LinkedList* list, bool reverse, CompareFunction compare_fn);
@@ -207,9 +215,9 @@ LinkedList* filter(const LinkedList* list, FilterFunction filter_fn);
 LinkedList* map(const LinkedList* list, MapFunction map_fn, size_t new_element_size);
 
 // --- Mathematical Functions ---
-size_t count_if(const LinkedList* list, bool (*predicate)(const void *element, void *arg), void *arg);
 void* min_by(const LinkedList* list, int (*compare)(const void *a, const void *b));
 void* max_by(const LinkedList* list, int (*compare)(const void *a, const void *b));
+size_t count_if(const LinkedList* list, PredicateFunction predicate);
 LinkedList* unique(const LinkedList* list, CompareFunction compare_fn);
 LinkedList* unique_advanced(const LinkedList* list, CompareFunction compare_fn, Direction order);
 LinkedList* intersection(const LinkedList* list1, const LinkedList* list2, CompareFunction compare_fn);

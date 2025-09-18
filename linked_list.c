@@ -763,60 +763,90 @@ void* get(const LinkedList* list, size_t index) {
 }
 
 /**
- * @brief Sets an element at a specific index.
- * @param list The list to set in.
- * @param index The index to set.
- * @param data The data to set.
+ * @brief Updates an element at a specific index by copying the new value.
+ * @param list The list to update.
+ * @param index The index of the element to update.
+ * @param data A pointer to the new data to be copied.
  * @return LIST_SUCCESS on success, error code on failure.
  */
-ListResult set(LinkedList* list, size_t index, void* data) {
+ListResult set_value(LinkedList* list, size_t index, void* data) {
     
     if (!list || !data) return LIST_ERROR_NULL_POINTER;
     if (index >= list->length) return LIST_ERROR_INDEX_OUT_OF_BOUNDS;
-    if (!list->free_node_function) return LIST_ERROR_NO_FREE_FUNCTION;
 
     Node* current = find_node_by_index(list, index);
-    if (!current) return LIST_ERROR_INDEX_OUT_OF_BOUNDS;
+    if (!current) return LIST_ERROR_INDEX_OUT_OF_BOUNDS; // Should not happen if index is in bounds
     
-    // Free old data
-    list->free_node_function(current->data);
-    
-    // Copy new data
-    if (list->copy_node_function) {
-        list->copy_node_function(current->data, data);
-    } else {
-        memcpy(current->data, data, list->element_size);
+    // Free the old data's inner contents if a free function is provided
+    if (list->free_node_function) {
+        list->free_node_function(current->data);
     }
+    
+    // Copy the new data into the existing memory block
+    memcpy(current->data, data, list->element_size);
+    
+    // The node's mode should ideally be LIST_MODE_VALUE, but we don't enforce it.
+    // The user is responsible for consistency.
     
     return LIST_SUCCESS;
 }
 
 /**
- * @brief Returns the index of the first occurrence of a value (like Python's index).
- * @param list The list to search in.
- * @param data The data to find.
- * @return The index if found, negative error code if error occurred.
+ * @brief Updates an element at a specific index by taking ownership of a new pointer.
+ * @param list The list to update.
+ * @param index The index of the element to update.
+ * @param data_ptr A pointer to the new data; the list takes ownership of this pointer.
+ * @return LIST_SUCCESS on success, error code on failure.
  */
-int index_of(const LinkedList* list, void* data, CompareFunction compare_fn) { return index_of_advanced(list, data, START_FROM_HEAD, compare_fn); }
+ListResult set_ptr(LinkedList* list, size_t index, void* data_ptr) {
+    
+    if (!list || !data_ptr) return LIST_ERROR_NULL_POINTER;
+    if (index >= list->length) return LIST_ERROR_INDEX_OUT_OF_BOUNDS;
+
+    Node* current = find_node_by_index(list, index);
+    if (!current) return LIST_ERROR_INDEX_OUT_OF_BOUNDS;
+    
+    // Free the old data block completely (inner contents and the block itself)
+    if (list->free_node_function) {
+        list->free_node_function(current->data);
+    }
+    free(current->data);
+    
+    // Assign the new pointer and update the mode
+    current->data = data_ptr;
+    current->mode = LIST_MODE_POINTER;
+    
+    return LIST_SUCCESS;
+}
 
 /**
- * @brief Returns the index of the first/last occurrence of a value with direction control.
+ * @brief Returns the index of the first element that satisfies the predicate.
  * @param list The list to search in.
- * @param data The data to find.
- * @param direction START_FROM_HEAD (default) or START_FROM_TAIL.
- * @return The index if found, negative error code if error occurred.
+ * @param predicate The function to test each element.
+ * @param arg An optional argument to pass to the predicate.
+ * @return The index if found, or a negative error code.
  */
-int index_of_advanced(const LinkedList* list, void* data, Direction order, CompareFunction compare_fn) {
+int index_of(const LinkedList* list, PredicateFunction predicate) {
+    return index_of_advanced(list, START_FROM_HEAD, predicate);
+}
+
+/**
+ * @brief Returns the index of the first or last element that satisfies the predicate.
+ * @param list The list to search in.
+ * @param direction START_FROM_HEAD or START_FROM_TAIL.
+ * @param predicate The function to test each element.
+ * @return The index if found, or a negative error code.
+ */
+int index_of_advanced(const LinkedList* list, Direction order, PredicateFunction predicate) {
     if (!list) return -LIST_ERROR_NULL_POINTER;
-    if (!data) return -LIST_ERROR_NULL_POINTER;
-    if (!compare_fn) return -LIST_ERROR_NO_COMPARE_FUNCTION;
+    if (!predicate) return -LIST_ERROR_INVALID_OPERATION;
 
     if (order == START_FROM_TAIL) {
         // Search from tail to head
         Node* current = list->tail->prev;
         size_t index = list->length - 1;
         while (current != list->head) {
-            if (compare_fn(current->data, data) == 0) {
+            if (predicate(current->data)) {
                 return (int)index;
             }
             current = current->prev;
@@ -828,7 +858,7 @@ int index_of_advanced(const LinkedList* list, void* data, Direction order, Compa
         Node* current = list->head->next;
         size_t index = 0;
         while (current != list->tail) {
-            if (compare_fn(current->data, data) == 0) {
+            if (predicate(current->data)) {
                 return (int)index;
             }
             current = current->next;
@@ -837,6 +867,28 @@ int index_of_advanced(const LinkedList* list, void* data, Direction order, Compa
     }
     return -LIST_ERROR_ELEMENT_NOT_FOUND; // Element not found
 }
+
+/**
+ * @brief Counts how many elements in the list satisfy a given condition.
+ * @param list The list to iterate over.
+ * @param predicate A function pointer that returns true if an element satisfies the condition.
+ * @param arg An optional argument to pass to the predicate function.
+ * @return The number of elements that satisfy the condition.
+ */
+size_t count_if(const LinkedList* list, PredicateFunction predicate) {
+    if (!list || !predicate) return 0;
+    
+    size_t count = 0;
+    Node* current = list->head->next;
+    while (current != list->tail) {
+        if (predicate(current->data)) {
+            count++;
+        }
+        current = current->next;
+    }
+    return count;
+}
+
 
 /*
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
@@ -1193,27 +1245,6 @@ LinkedList* map(const LinkedList* list, MapFunction map_fn, size_t new_element_s
  */
 
 /**
- * @brief Counts how many elements in the list satisfy a given condition.
- * @param list The list to iterate over.
- * @param predicate A function pointer that returns true if an element satisfies the condition.
- * @param arg An optional argument to pass to the predicate function.
- * @return The number of elements that satisfy the condition.
- */
-size_t count_if(const LinkedList* list, bool (*predicate)(const void *element, void *arg), void *arg) {
-    if (!list || !predicate) return 0;
-    
-    size_t count = 0;
-    Node* current = list->head->next;
-    while (current != list->tail) {
-        if (predicate(current->data, arg)) {
-            count++;
-        }
-        current = current->next;
-    }
-    return count;
-}
-
-/**
  * @brief Finds the minimum element in the list based on a custom comparison function.
  * @param list The list to search in.
  * @param compare A function pointer to compare two elements. Should return < 0 if a < b, 0 if a == b, > 0 if a > b.
@@ -1260,7 +1291,9 @@ void* max_by(const LinkedList* list, int (*compare)(const void *a, const void *b
  * @param list The source list.
  * @return A new list with unique elements, or NULL on failure.
  */
-LinkedList* unique(const LinkedList* list, CompareFunction compare_fn) { return unique_advanced(list, compare_fn, START_FROM_HEAD); }
+LinkedList* unique(const LinkedList* list, CompareFunction compare_fn) { 
+    return unique_advanced(list, compare_fn, START_FROM_HEAD); 
+}
 
 /**
  * @brief Creates a new list with unique elements based on a custom comparison function and preservation order.
@@ -1331,6 +1364,28 @@ LinkedList* unique_advanced(const LinkedList* list, CompareFunction compare_fn, 
 }
 
 /**
+ * @brief Helper function to find index of element using compare function.
+ * @param list The list to search in.
+ * @param data The data to search for.
+ * @param compare_fn Comparison function.
+ * @return Index if found, -1 if not found.
+ */
+static int index_of_with_compare(const LinkedList* list, const void* data, CompareFunction compare_fn) {
+    if (!list || !data || !compare_fn) return -1;
+    
+    Node* current = list->head->next;
+    int index = 0;
+    while (current != list->tail) {
+        if (compare_fn(current->data, data) == 0) {
+            return index;
+        }
+        current = current->next;
+        index++;
+    }
+    return -1;
+}
+
+/**
  * @brief Creates a new list containing the intersection of two lists.
  * @param list1 First list.
  * @param list2 Second list.
@@ -1350,8 +1405,8 @@ LinkedList* intersection(const LinkedList* list1, const LinkedList* list2, Compa
     while (current != list1->tail) {
 
         // If element exists in both lists and not already in result
-        if (index_of(list2, current->data, compare_fn) != -1 && 
-            index_of(intersection, current->data, compare_fn) == -1) {
+        if (index_of_with_compare(list2, current->data, compare_fn) != -1 && 
+            index_of_with_compare(intersection, current->data, compare_fn) == -1) {
             if (insert_tail_value_internal(intersection, current->data) != LIST_SUCCESS) {
                 destroy(intersection);
                 return NULL;
@@ -1380,7 +1435,7 @@ LinkedList* union_lists(const LinkedList* list1, const LinkedList* list2, Compar
     // Add unique elements from second list
     Node* current = list2->head->next;
     while (current != list2->tail) {
-    if (index_of(union_list, current->data, compare_fn) == -1) {
+    if (index_of_with_compare(union_list, current->data, compare_fn) == -1) {
             if (insert_tail_value_internal(union_list, current->data) != LIST_SUCCESS) {
                 destroy(union_list);
                 return NULL;
