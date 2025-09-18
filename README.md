@@ -293,9 +293,6 @@ Person* frank = (Person*)malloc(sizeof(Person));
 insert_index_ptr(people_list, 3, frank);
 ```
 
-> [!NOTE]
-> If you try to insert at an index greater than the current length of the list, the element will be inserted at the end (tail) of the list. If you use a negative index, the element will be inserted at the beginning (head) of the list.
-
 ---
 
 ## 4. Deletion Functions
@@ -336,7 +333,7 @@ This function removes the last element from the list.
 delete_tail(list);
 ```
 
-### `delete_at`
+### `delete_index`
 
 This function removes an element at a specific zero-based index. Subsequent elements are shifted to the left.
 
@@ -352,12 +349,8 @@ This function removes an element at a specific zero-based index. Subsequent elem
 **Example:**
 
 ```c
-delete_at(list, 1); // Deletes the second element (index 1)
+delete_index(list, 1); // Deletes the *second* element
 ```
-
-> [!NOTE]
-> If you try to delete at an index greater than the current length of the list, the element will be deleted from the end (tail) of the list. If you use a negative index, the element will be deleted from the beginning (head) of the list.
-
 
 ### `remove_advanced`
 
@@ -381,7 +374,7 @@ This is a powerful function that finds and removes elements based on their value
 
 ### `clear`
 
-This function efficiently removes all elements from the list, resetting its length to zero. It properly frees the memory for each element using the configured free function.
+This function removes all elements from the list, resetting its length to zero. It properly frees the memory for each element using the configured free function.
 
 **Receives:**
 
@@ -394,18 +387,12 @@ This function efficiently removes all elements from the list, resetting its leng
 **Example:**
 
 ```c
-LinkedList* list = create_list(sizeof(int));
-int n1 = 10, n2 = 20;
-insert_tail_ptr(list, &n1);
-insert_tail_ptr(list, &n2); // List: [10, 20]
-clear(list); // List: []
-printf("Is list empty? %s\n", is_empty(list) ? "Yes" : "No"); // Output: Yes
-destroy(list);
+clear(list);
 ```
 
 ### `destroy`
 
-This function is the final cleanup step. It completely deallocates all memory used by the list, including clearing all elements (using `clear`), freeing the dummy nodes, and finally freeing the `LinkedList` structure itself. After calling this, the list pointer is no longer valid.
+This function is the final cleanup step. It completely deallocates all memory used by the list, including clearing all elements (using `clear`), freeing the dummy nodes, and finally freeing the `LinkedList` structure itself.
 
 **Receives:**
 
@@ -420,6 +407,9 @@ This function is the final cleanup step. It completely deallocates all memory us
 ```c
 destroy(list);
 ```
+
+> [!IMPORTANT]
+> After calling `destroy`, the list pointer becomes invalid and should not be used again. You should set it to `NULL` to avoid dangling pointers.
 
 ---
 

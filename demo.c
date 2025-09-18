@@ -222,23 +222,19 @@ int main(void) {
         
     // Delete from head
     printf("Deleting from head...\n");
-    ListResult result = delete_head(people_list);
-    printf("Delete result: %s\n", error_string(result));
-    
+    delete_head(people_list);
+
     // Delete from tail
     printf("Deleting from tail...\n");
-    result = delete_tail(people_list);
-    printf("Delete result: %s\n", error_string(result));
-    
+    delete_tail(people_list);
+
     // Delete at specific index
-    if (get_length(people_list) > 0) {
-        printf("Deleting at index 0...\n");
-        result = delete_index(people_list, 0);
-        printf("Delete result: %s\n", error_string(result));
-    }
-    
+    printf("Deleting at index 2...\n");
+    delete_index(people_list, 2);
+
     printf("List after deletions:\n");
     print_list(people_list);
+    
     
     /*
     ///////

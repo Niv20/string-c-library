@@ -403,15 +403,7 @@ ListResult insert_tail_ptr(LinkedList* list, void* data_ptr) {
  */
 ListResult insert_index_ptr(LinkedList* list, size_t index, void* data_ptr) {
     
-    // Handle boundary conditions
-    if (index <= 0) {
-        // Insert at head for index 0
-        return insert_head_ptr(list, data_ptr);
-    }
-    if (index >= list->length) {
-        // Insert at tail for indices beyond list length
-        return insert_tail_ptr(list, data_ptr);
-    }
+    if (index < 0 || index >= list->length) return LIST_ERROR_INDEX_OUT_OF_BOUNDS;
     
     Node* new_node;
     ListResult result = insert_node_core_generic(list, data_ptr, LIST_MODE_POINTER, &new_node);
@@ -527,7 +519,7 @@ ListResult delete_index(LinkedList* list, size_t index) {
     
     if (!list) return LIST_ERROR_NULL_POINTER;
     if (is_empty(list)) return LIST_ERROR_INVALID_OPERATION;
-    if (index >= list->length) return LIST_ERROR_INDEX_OUT_OF_BOUNDS;
+    if (index < 0 || index >= list->length) return LIST_ERROR_INDEX_OUT_OF_BOUNDS;
     
     Node* current;
     
