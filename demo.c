@@ -233,7 +233,7 @@ int main(void) {
     // because I still want to work with the Person structures before removing them. //
     ///////////////////////////////////////////////////////////////////////////////////
     
-    /*
+    
     ///////
     // 5 //
     ///////
@@ -242,12 +242,13 @@ int main(void) {
     printf("List length: %zu\n", get_length(people_list));
     printf("Is empty: %s\n", is_empty(people_list) ? "Yes" : "No");
     
-    printf("Printing with different formats:\n");
-    printf("With indices:\n");
+    printf("Printing the list:\n");
     print_list(people_list);
-    printf("Comma separated: ");
-    print_list_advanced(people_list, false, ", ");
+
+    printf("Printing the list (no indices, comma-separated):\n");
+    print_list_advanced(people_list, true, false, ", ");
     
+    /*
     ///////
     // 6 //
     ///////

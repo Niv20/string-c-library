@@ -167,9 +167,6 @@ ListResult insert_head_value_internal(LinkedList* list, void* data);
 ListResult insert_tail_value_internal(LinkedList* list, void* data);
 ListResult insert_index_value_internal(LinkedList* list, size_t index, void* data);
 
-// Pointer mode functions - store the user-provided pointer directly (no copy, ownership transfers to list)
-// REQUIREMENT: 'data_ptr' must point to a heap-allocated block of size >= element_size.
-// The list will call free_node_function (if set) on the block's internal fields and then free(data_ptr) on deletion.
 ListResult insert_head_ptr(LinkedList* list, void* data_ptr);
 ListResult insert_tail_ptr(LinkedList* list, void* data_ptr);
 ListResult insert_index_ptr(LinkedList* list, size_t index, void* data_ptr);
@@ -178,8 +175,6 @@ ListResult insert_index_ptr(LinkedList* list, size_t index, void* data_ptr);
 ListResult delete_head(LinkedList* list);
 ListResult delete_tail(LinkedList* list);
 ListResult delete_index(LinkedList* list, size_t index);
-// Predicate-based advanced removal: removes up to 'count' elements (DELETE_ALL_OCCURRENCES for all)
-// that satisfy predicate(element) == true, traversing from specified direction.
 ListResult remove_advanced(LinkedList* list, int count, Direction direction, FilterFunction predicate);
 ListResult clear(LinkedList* list);
 void destroy(LinkedList* list);

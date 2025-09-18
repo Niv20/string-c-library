@@ -17,7 +17,7 @@ typedef struct {
 
 For this library to work, you need to define **helper functions** in your own code that the list will use to manage your objects. These functions are essential for the library to understand how to work with your specific data type.
 
-1. `void PrintFunction(void* data)` - This function assigns a custom printing function to the list. Without this, the list doesn't know how to interpret and print your data structure.
+1. <a id="print-function"></a>`void PrintFunction(void* data)` - This function assigns a custom printing function to the list. You don't need to print a newline at the end of your print function, becase the library automatically do this for you.
 
 2. <a id="free-function"></a>`void FreeFunction(void* data)` – This function frees all dynamically allocated memory **inside** your struct, such as strings or arrays allocated with malloc. (The library itself manages the memory of the struct itself).
 
@@ -458,7 +458,7 @@ This function is the final cleanup step. It completely deallocates all memory us
 destroy(people_list);
 ```
 
-> [!IMPORTANT]
+> [!WARNING]
 > After calling `destroy`, the list pointer becomes invalid and should not be used again. You should set it to `NULL` to avoid dangling pointers.
 
 <br></br>
@@ -469,7 +469,7 @@ destroy(people_list);
 
 `size_t get_length(const LinkedList* list);`
 
-A straightforward function that returns the number of elements currently stored in the list. This is an O(1) operation as the length is tracked internally.
+Function that returns the number of elements currently stored in the list.
 
 **Receives:**
 
@@ -482,19 +482,14 @@ A straightforward function that returns the number of elements currently stored 
 **Example:**
 
 ```c
-LinkedList* list = create_list(sizeof(int));
-int n1 = 10, n2 = 20;
-insert_tail_ptr(list, &n1);
-insert_tail_ptr(list, &n2);
-printf("List length: %zu\n", get_length(list)); // Output: 2
-destroy(list);
+printf("List length: %zu\n", get_length(people_list));
 ```
 
 ### `is_empty`
 
 `bool is_empty(const LinkedList* list);`
 
-A simple check to see if the list contains any elements. It's slightly more expressive than checking `get_length(list) == 0`.
+A simple check to see if the list contains any elements.
 
 **Receives:**
 
@@ -507,21 +502,14 @@ A simple check to see if the list contains any elements. It's slightly more expr
 **Example:**
 
 ```c
-LinkedList* list = create_list(sizeof(int));
-printf("Is list empty? %s\n", is_empty(list) ? "Yes" : "No"); // Output: Yes
-int n = 10;
-insert_tail_ptr(list, &n);
-printf("Is list empty? %s\n", is_empty(list) ? "Yes" : "No"); // Output: No
-destroy(list);
+printf("Is list empty? %s\n", is_empty(people_list) ? "Yes" : "No");
 ```
 
 ### `print_list`
 
 `ListResult print_list(const LinkedList* list);`
 
-This function iterates through the list and prints all elements to the console. It relies on a print function being set via `set_print_function`. It provides a default format with indices.
-
-לציין שלא צריך לכתוב אנטר אלא רק להדפיס את המבנה. באופן אוטמטי יש אנטר בין כל הדפסה ואם לא רוצים אז אפשר להשתמש בפונקציה המתקדמת יותר בהמשך
+This function iterates through the list and prints all elements to the console. It relies on a [print function](#print-function) being set via [`set_print_function`](#set-print-function). It provides a default format with indices.
 
 **Receives:**
 
@@ -534,17 +522,15 @@ This function iterates through the list and prints all elements to the console. 
 **Example:**
 
 ```c
-LinkedList* list = create_list(sizeof(Person));
-set_print_function(list, print_person);
-Person alice = {.name = strdup("Alice"), .age = 30};
-insert_tail_ptr(list, &alice);
+print_list(people_list);
 // Output:
-// List len: 1
-//   [0]: Name: Alice, Age: 30
-print_list(list);
-free(alice.name);
-destroy(list);
+// [0]: {ID:1017, Name:"Diana Prince", Age:13}
+// [1]: {ID:1098, Name:"Charlie Brown", Age:11}
+// ... and so on for each element
 ```
+
+> [!NOTE]
+> As I wrote earlier, you do not need to manually print a newline after each element in your print function. By default `print_list` function automatically prints each structure on a separate line. If you want to customize the output format (for example, print elements without newlines or with a different separator), use the advanced printing function described below.
 
 ### `print_list_advanced`
 
@@ -553,8 +539,8 @@ destroy(list);
 This function provides more control over the output format than `print`. You can choose whether to display indices and specify a custom separator string to be printed between elements.
 
 **Receives:**
-
 - `list`: A pointer to the `LinkedList`.
+- `show_size`: If `TRUE`, prints the total number of elements before the list.
 - `show_index`: If `TRUE`, prints the `[index]:` prefix for each element.
 - `separator`: The string to print between elements (e.g., `", "`, `" -> "`).
 
@@ -564,18 +550,13 @@ This function provides more control over the output format than `print`. You can
 
 **Example:**
 
+let's say you want to print the list length, omit indices, and separate elements with commas:
+
 ```c
-LinkedList* list = create_list(sizeof(Person));
-set_print_function(list, print_person);
-Person alice = {.name = strdup("Alice"), .age = 30};
-Person bob = {.name = strdup("Bob"), .age = 25};
-insert_tail_ptr(list, &alice);
-insert_tail_ptr(list, &bob);
-// Output: Name: Alice, Age: 30 ---> Name: Bob, Age: 25
-print_list_advanced(list, FALSE, " ---> ");
-free(alice.name);
-free(bob.name);
-destroy(list);
+print_list_advanced(people_list, true, false, ", ");
+// Output:
+// List len: 6
+// {ID:1017, Name:"Diana Prince", Age:13}, {ID:1098, Name:"Charlie Brown", Age:11}, ...
 ```
 
 <br></br>
