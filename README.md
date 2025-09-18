@@ -52,7 +52,6 @@ void free_person(void* data) {
 > If your struct does **not** contain any dynamically allocated fields (such as pointers to memory allocated with `malloc`), you do **not** need to implement the last function at all.
 
 <br></br>
-<br></br>
 
 ## 1. Create List
 
@@ -91,7 +90,6 @@ printf("Successfully created a list for Person objects.\n");
 This function only creates the list. It is currently "empty" (except for the dummy nodes, of course). Later, we will learn how to [add elements to it](#3-insertion-in-linked-list).
 
 <br></br>
-<br></br>
 
 ## 2. List Configuration
 
@@ -120,7 +118,6 @@ set_max_size(person_list, UNLIMITED, REJECT_NEW_WHEN_FULL);
 > [!NOTE]
 > When using `UNLIMITED`, the behavior parameter is ignored since there's no capacity limit to reach.
 
-<br></br>
 <br></br>
 
 ## 3. Insertion in Linked List
@@ -300,7 +297,6 @@ insert_index_ptr(people_list, 3, frank);
 ```
 
 <br></br>
-<br></br>
 
 ## 4. Deletion Functions
 
@@ -466,7 +462,6 @@ destroy(people_list);
 > After calling `destroy`, the list pointer becomes invalid and should not be used again. You should set it to `NULL` to avoid dangling pointers.
 
 <br></br>
-<br></br>
 
 ## 5. Utility Functions
 
@@ -583,7 +578,6 @@ free(bob.name);
 destroy(list);
 ```
 
-<br></br>
 <br></br>
 
 ## 6. Search and Access Functions
@@ -757,7 +751,6 @@ destroy(list);
 ```
 
 <br></br>
-<br></br>
 
 ## 7. Sorting Functions
 
@@ -793,7 +786,6 @@ printf("\nSorted list (descending):\n");
 destroy(list);
 ```
 
-<br></br>
 <br></br>
 
 ## 8. Structural Transformations
@@ -1011,7 +1003,6 @@ Creates a new list by applying a transformation function to every element of the
 - `new_element_size`: The `sizeof` the elements in the new, mapped list.
 
 <br></br>
-<br></br>
 
 ## 9. Mathematical Functions
 
@@ -1036,13 +1027,11 @@ destroy(num_list);
 ```
 
 <br></br>
-<br></br>
 
 ## 11. List <--> String / File
 destroy(age_list);
 ```
 
-<br></br>
 <br></br>
 
 ## 9. Mathematical Functions
@@ -1177,7 +1166,6 @@ destroy(list2);
 destroy(union_list);
 ```
 
-<br></br>
 <br></br>
 
 ## 10. List <--> Array
