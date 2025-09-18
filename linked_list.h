@@ -188,7 +188,7 @@ void destroy(LinkedList* list);
 size_t get_length(const LinkedList* list);
 bool is_empty(const LinkedList* list);
 ListResult print_list(const LinkedList* list);
-ListResult print_list_advanced(const LinkedList* list, bool show_index, const char* separator);
+ListResult print_list_advanced(const LinkedList* list, bool show_size, bool show_index, const char* separator);
 
 // --- Search and Access Functions ---
 void* get(const LinkedList* list, size_t index);

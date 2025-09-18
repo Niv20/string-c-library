@@ -33,7 +33,7 @@ void increment_age(void* dest, const void* src); // Map function to increment ag
 // Implementation of helper functions
 void print_person(void* data) {
     const Person* p = (const Person*)data;
-    printf("{ID:%04d, Name:\"%s\", Age:%d\n", p->id, p->name, p->age);
+    printf("{ID:%04d, Name:\"%s\", Age:%d}", p->id, p->name, p->age);
 }
 
 

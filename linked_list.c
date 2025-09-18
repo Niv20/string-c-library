@@ -669,30 +669,29 @@ bool is_empty(const LinkedList* list) {
  * @return LIST_SUCCESS on success, error code on failure.
  */
 ListResult print_list(const LinkedList* list) {
-    return print_list_advanced(list, true, "\n");
+    return print_list_advanced(list, false, true, "\n");
 }
 
 
 /**
  * @brief Prints all elements in the list with customizable formatting.
  * @param list The list to print.
+ * @param show_size Whether to show the total size of the list.
  * @param show_index Whether to show element indices.
  * @param separator String to print between elements.
  * @return LIST_SUCCESS on success, error code on failure.
  */
-ListResult print_list_advanced(const LinkedList* list, bool show_index, const char* separator) {
+ListResult print_list_advanced(const LinkedList* list, bool show_size, bool show_index, const char* separator) {
 
     if (!list) return LIST_ERROR_NULL_POINTER;
     if (is_empty(list)) return LIST_ERROR_ELEMENT_NOT_FOUND;
     if (!list->print_node_function) return LIST_ERROR_NO_PRINT_FUNCTION;
     
-    if (!separator) separator = "\n"; // Default separator
-
     // Determine starting and ending points (always dummy nodes)
     Node* current_node = list->head->next;
     Node* end_node = list->tail;
 
-    if (show_index)
+    if (show_size)
         printf("List len: %zu\n", list->length);
 
     size_t index = 0;
@@ -713,9 +712,8 @@ ListResult print_list_advanced(const LinkedList* list, bool show_index, const ch
             printf("%s", separator);
     }
 
-    // Edge case: if using custom separator, ensure it ends with a newline
-    if (strcmp(separator, "\n") != 0)
-        printf("\n");
+    // Final newline for clean output
+    printf("\n");
     
     return LIST_SUCCESS;
 }
