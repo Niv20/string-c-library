@@ -86,9 +86,7 @@ printf("Successfully created a list for Person objects.\n");
 > This function sets up dummy head and tail nodes, to simplify the logic for all other list operations by ensuring that every "real" node is always between two other nodes.
 
 This function only creates the list. It is currently "empty" (except for the dummy nodes, of course). Later, we will learn how to [add elements to it](#3-insertion-in-linked-list).
-
-
-
+<br><br>
 ## 2. List Configuration
 
 Before using the list, you need to configure it with the appropriate [helper functions](#setup-for-examples).
@@ -115,9 +113,7 @@ set_max_size(person_list, UNLIMITED, REJECT_NEW_WHEN_FULL);
 
 > [!NOTE]
 > When using `UNLIMITED`, the behavior parameter is ignored since there's no capacity limit to reach.
-
-
-
+<br><br>
 ## 3. Insertion in Linked List
 
 You can insert structs into the list in two ways:
@@ -293,9 +289,7 @@ Person* frank = (Person*)malloc(sizeof(Person));
 *frank = create_person(1033, "Frank Wilson", 31);
 insert_index_ptr(people_list, 3, frank);
 ```
-
-
-
+<br><br>
 ## 4. Deletion Functions
 
 ### `delete_head`
@@ -458,9 +452,7 @@ destroy(people_list);
 
 > [!IMPORTANT]
 > After calling `destroy`, the list pointer becomes invalid and should not be used again. You should set it to `NULL` to avoid dangling pointers.
-
-
-
+<br><br>
 ## 5. Utility Functions
 
 ### `get_length`
@@ -575,9 +567,7 @@ free(alice.name);
 free(bob.name);
 destroy(list);
 ```
-
-
-
+<br><br>
 ## 6. Search and Access Functions
 
 ### `get`
@@ -747,9 +737,7 @@ size_t count = count_occurrences(list, &target);
 printf("The number 10 appears %zu times.\n", count); // Output: 3
 destroy(list);
 ```
-
-
-
+<br><br>
 ## 7. Sorting Functions
 
 ### `sort`
@@ -783,9 +771,7 @@ printf("\nSorted list (descending):\n");
 // print_list(list); // Output: Charlie (35), Alice (30), Bob (25)
 destroy(list);
 ```
-
-
-
+<br><br>
 ## 8. Structural Transformations
 
 ### `list_copy`
@@ -999,6 +985,8 @@ Creates a new list by applying a transformation function to every element of the
 - `list`: The source list.
 - `map_fn`: A function that takes a destination pointer and a source element's data and performs the transformation.
 - `new_element_size`: The `sizeof` the elements in the new, mapped list.
+<br><br>
+## 9. Mathematical Functions
 
 **Returns:**
 
@@ -1017,12 +1005,13 @@ LinkedList* person_list = create_list(sizeof(Person));
 // Create a new list containing only the ages
 LinkedList* age_list = list_map(person_list, get_age, sizeof(int));
 // 'age_list' is a new list of ints: [30, 25]
-destroy(person_list);
+destroy(num_list);
+```
+<br><br>
+## 11. List <--> String / File
 destroy(age_list);
 ```
-
-
-
+<br><br>
 ## 9. Mathematical Functions
 
 ### `list_min` / `list_max`
@@ -1153,6 +1142,9 @@ LinkedList* union_list = list_union(list1, list2);
 destroy(list1);
 destroy(list2);
 destroy(union_list);
+```
+<br><br>
+## 10. List <--> Array
 ```
 
 
