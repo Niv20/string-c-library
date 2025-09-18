@@ -216,20 +216,18 @@ static Node* create_node_generic(LinkedList* list, void* data, ListMemoryMode mo
             return NULL;
         }
         
-        // Copy the data using appropriate method
-        if (list->copy_node_function) {
-            list->copy_node_function(new_node->data, data);
-        } else {
-            memcpy(new_node->data, data, list->element_size);
-        }
-    } else {
-        // Pointer mode: Store the pointer directly (no allocation or copying)
+        // Copy the data
+        memcpy(new_node->data, data, list->element_size);
+
+    } else if (mode == LIST_MODE_POINTER) {
+        // Pointer mode: store pointer directly (ownership of the pointed block transfers to list)
         new_node->data = data;
     }
     
-    // Initialize pointers
+    // Initialize pointers & mode
     new_node->next = NULL;
     new_node->prev = NULL;
+    new_node->mode = mode;
     
     return new_node;
 }
@@ -239,10 +237,6 @@ static ListResult insert_node_core_generic(LinkedList* list, void* data, ListMem
     
     // Input validation
     if (!list || !data) return LIST_ERROR_NULL_POINTER;
-
-    // TODO: Check size limits before insertion
-    // ListResult size_check = handle_size_limit(list);
-    // if (size_check != LIST_SUCCESS) return size_check;
 
     // Create new node using generic function
     Node* new_node = create_node_generic(list, data, mode);
@@ -357,7 +351,7 @@ ListResult insert_index_value_internal(LinkedList* list, size_t index, void* dat
 ListResult insert_head_ptr(LinkedList* list, void* data_ptr) {
     
     Node* new_node;
-    ListResult result = insert_node_core_generic(list, data_ptr, LIST_MODE_VALUE, &new_node);
+    ListResult result = insert_node_core_generic(list, data_ptr, LIST_MODE_POINTER, &new_node);
     if (result != LIST_SUCCESS) return result;
 
     // Link the new node at the head
@@ -381,7 +375,7 @@ ListResult insert_head_ptr(LinkedList* list, void* data_ptr) {
 ListResult insert_tail_ptr(LinkedList* list, void* data_ptr) {
     
     Node* new_node;
-    ListResult result = insert_node_core_generic(list, data_ptr, LIST_MODE_VALUE, &new_node);
+    ListResult result = insert_node_core_generic(list, data_ptr, LIST_MODE_POINTER, &new_node);
     if (result != LIST_SUCCESS) return result;
 
     // Link the new node at the tail
@@ -416,7 +410,7 @@ ListResult insert_index_ptr(LinkedList* list, size_t index, void* data_ptr) {
     }
     
     Node* new_node;
-    ListResult result = insert_node_core_generic(list, data_ptr, LIST_MODE_VALUE, &new_node);
+    ListResult result = insert_node_core_generic(list, data_ptr, LIST_MODE_POINTER, &new_node);
     if (result != LIST_SUCCESS) return result;
     
     Node* current;
@@ -468,10 +462,18 @@ static ListResult delete_node_core(LinkedList* list, Node* node_to_delete) {
     prev_node->next = next_node;
     next_node->prev = prev_node;
     
-    // Free the data - the library always allocates memory for data
-    if (list->free_node_function) {
-        list->free_node_function(node_to_delete->data);
-    } else {
+    // Free the data based on ownership mode
+    if (node_to_delete->mode == LIST_MODE_VALUE) {
+        // We allocated the block; free inner fields via callback then free block
+        if (list->free_node_function) {
+            list->free_node_function(node_to_delete->data);
+        }
+        free(node_to_delete->data);
+    } else { // LIST_MODE_POINTER
+        // We only stored user pointer; we now own it so apply free function first then free struct
+        if (list->free_node_function) {
+            list->free_node_function(node_to_delete->data);
+        }
         free(node_to_delete->data);
     }
     

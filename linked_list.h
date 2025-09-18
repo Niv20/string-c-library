@@ -124,6 +124,7 @@ typedef struct Node {
     void* data;          /**< Pointer to the data stored in the node. */
     struct Node* next;   /**< Pointer to the next node in the list. */
     struct Node* prev;   /**< Pointer to the previous node in the list. */
+    ListMemoryMode mode; /**< How the data is managed: value copy (owned) or external pointer (ownership transferred). */
 } Node;
 
 /**
@@ -167,7 +168,9 @@ ListResult insert_head_value_internal(LinkedList* list, void* data);
 ListResult insert_tail_value_internal(LinkedList* list, void* data);
 ListResult insert_index_value_internal(LinkedList* list, size_t index, void* data);
 
-// Pointer mode functions - also copy data into list-managed memory
+// Pointer mode functions - store the user-provided pointer directly (no copy, ownership transfers to list)
+// REQUIREMENT: 'data_ptr' must point to a heap-allocated block of size >= element_size.
+// The list will call free_node_function (if set) on the block's internal fields and then free(data_ptr) on deletion.
 ListResult insert_head_ptr(LinkedList* list, void* data_ptr);
 ListResult insert_tail_ptr(LinkedList* list, void* data_ptr);
 ListResult insert_index_ptr(LinkedList* list, size_t index, void* data_ptr);

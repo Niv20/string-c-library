@@ -98,12 +98,8 @@ Person create_person(int id, const char* name, int age) {
     Person p;
     p.id = id;
     p.age = age;
-    if (name) {
-        p.name = malloc(strlen(name) + 1);
-        if (p.name) strcpy(p.name, name);
-    } else {
-        p.name = NULL;
-    }
+    p.name = malloc(strlen(name) + 1);
+    if (p.name) strcpy(p.name, name);
     return p;
 }
 
@@ -144,11 +140,11 @@ void increment_age(void* dest, const void* src) {
 }
 
 void banner(const char* title) {
-    printf("\n\n========== %s ==========\n", title);
+    printf("\n\n============= %s =============\n", title);
 }
 
 // Main demo function for Person structures
-void main() {
+int main(void) {
 
     printf("Generic Linked List Library - Person Demo\n");
     printf("==========================================\n");
@@ -162,7 +158,7 @@ void main() {
     LinkedList* people_list = create_list(sizeof(Person));
     if (!people_list) {
         printf("Error: Failed to create list!\n");
-        return;
+        return 1;
     }
     printf("✓ List created successfully\n");
     
@@ -171,14 +167,13 @@ void main() {
     ///////
     banner("2. List Configuration");
     printf("Configuring list with helper functions...\n");
+
     set_print_function(people_list, print_person);
     set_compare_function(people_list, compare_person_id);
     set_free_function(people_list, free_person);
     set_copy_function(people_list, copy_person);
+
     printf("✓ List configured with print, compare, free, and copy functions\n");
-    
-    printf("Initial list status: Empty=%s, Length=%zu\n", 
-           is_empty(people_list) ? "Yes" : "No", get_length(people_list));
     
     ///////
     // 3 //
@@ -186,69 +181,59 @@ void main() {
     banner("3. Insertion in Linked List");
 
     printf("Creating people...\n");
-    Person alice = create_person(1001, "Alice Johnson", 28);
-    Person bob = create_person(1002, "Bob Smith", 35);
-    Person charlie = create_person(1003, "Charlie Brown", 22);
-    Person diana = create_person(1004, "Diana Prince", 30);
-    Person emily = create_person(1005, "Emily Davis", 26);
-    Person frank = create_person(1006, "Frank Wilson", 31);
+
+    // Stack allocated Persons for value-mode (you keep your stack variable)
+    Person alice = create_person(1012, "Alice Johnson", 28);
+    Person bob = create_person(1010, "Bob Smith", 35);
+    Person charlie = create_person(1098, "Charlie Brown", 22);
+
+    // Heap allocated Persons for pointer-mode (ownership transfers to list; do not free manually)
+    Person* diana = (Person*)malloc(sizeof(Person));
+    Person* emily = (Person*)malloc(sizeof(Person));
+    Person* frank = (Person*)malloc(sizeof(Person));
+    if (!diana || !emily || !frank) {
+        printf("Memory allocation failed for heap Persons.\n");
+        return 1;
+    }
+    *diana = create_person(1017, "Diana Prince", 30);
+    *emily = create_person(1042, "Emily Davis", 26);
+    *frank = create_person(1000, "Frank Wilson", 31);
     
     printf("Demonstrating all 6 insertion combinations:\n\n");
     
-    // VALUE MODE examples (pass by value)
-    printf("=== VALUE MODE (pass struct by value) ===\n");
-    
-    printf("1. insert_tail_value(list, alice) - Alice to tail by value\n");
-    insert_tail_value(people_list, alice);
+    // VALUE MODE examples (pass by value)    
+    printf("1. insert_head_value(list, alice)\n");
+    insert_head_value(people_list, alice);
+    print(people_list);
+
+    printf("2. insert_tail_value(list, bob)\n");
+    insert_tail_value(people_list, bob);
     print(people_list);
     
-    printf("2. insert_head_value(list, bob) - Bob to head by value\n");
-    insert_head_value(people_list, bob);
-    print(people_list);
-    
-    printf("3. insert_index_value(list, 1, charlie) - Charlie at index 1 by value\n");
+    printf("3. insert_index_value(list, 1, charlie)\n");
     insert_index_value(people_list, 1, charlie);
     print(people_list);
     
-    printf("\n=== POINTER MODE (pass struct by pointer) ===\n");
-    
-    printf("4. insert_tail_ptr(list, &diana) - Diana to tail by pointer\n");
-    insert_tail_ptr(people_list, &diana);
+    // POINTER MODE examples (pass by pointer)
+    printf("4. insert_head_ptr(list, diana)\n");
+    insert_head_ptr(people_list, diana);
     print(people_list);
     
-    printf("5. insert_head_ptr(list, &emily) - Emily to head by pointer\n");
-    insert_head_ptr(people_list, &emily);
+    printf("5. insert_tail_ptr(list, emily)\n");
+    insert_tail_ptr(people_list, emily);
     print(people_list);
-    
-    printf("6. insert_index_ptr(list, 2, &frank) - Frank at index 2 by pointer\n");
-    insert_index_ptr(people_list, 2, &frank);
+
+    printf("6. insert_index_ptr(list, 3, frank)\n");
+    insert_index_ptr(people_list, 3, frank);
     print(people_list);
     
     printf("\nAll 6 insertion methods demonstrated!\n");
     printf("Current length: %zu\n", get_length(people_list));
     
-    printf("\n=== BOUNDARY TESTING ===\n");
-    Person test1 = create_person(9001, "Test1", 25);
-    Person test2 = create_person(9002, "Test2", 30);
-    Person test3 = create_person(9003, "Test3", 35);
-    
-    printf("Testing boundary conditions:\n");
-    printf("List length before boundary tests: %zu\n", get_length(people_list));
-    
-    printf("insert_index_value(list, 0, test1) - index 0 (should go to head)\n");
-    insert_index_value(people_list, 0, test1);
+    printf("Current list contents:\n");
     print(people_list);
-    
-    printf("insert_index_ptr(list, 0, &test2) - index 0 (should go to head)\n");
-    insert_index_ptr(people_list, 0, &test2);
-    print(people_list);
-    
-    printf("insert_index_value(list, 999, test3) - beyond bounds (should go to tail)\n");
-    insert_index_value(people_list, 999, test3);
-    print(people_list);
-    
-    printf("Final length after boundary tests: %zu\n", get_length(people_list));
-    
+
+    /*
     ///////
     // 4 //
     ///////
@@ -538,6 +523,6 @@ void main() {
     printf("• Comprehensive error handling\n");
     printf("• Automatic memory cleanup\n");
     printf("\nDemonstrates flexibility of the library with different usage patterns!\n");
-
+    */
     return 0;
 }

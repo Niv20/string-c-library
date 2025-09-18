@@ -89,7 +89,6 @@ if (!person_list) {
     printf("Failed to create list.\n");
     return 1;
 }
-
 printf("Successfully created a list for Person objects.\n");
 ```
 
@@ -119,7 +118,7 @@ for example, you can set max 100 elements, auto-delete old when full:
 set_max_size(person_list, 100, DELETE_OLD_WHEN_FULL);
 ```
 
-Or no size limit:
+Or no size limit (this is also the default behavior):
 
 ```c
 set_max_size(person_list, UNLIMITED, REJECT_NEW_WHEN_FULL);
@@ -132,67 +131,70 @@ set_max_size(person_list, UNLIMITED, REJECT_NEW_WHEN_FULL);
 
 ## 3. Insertion in Linked List
 
-The library provides two distinct approaches for inserting elements:
-
 You can insert structs into the list in two ways:
 
-- **Pass the struct itself by value** – the list will make an internal copy of the value. In this case, the struct needs to be allocated on the stack, and the library handles copying it into its own internal storage. You don't need to manage heap allocation when using this approach.
+- **Pass the struct itself by value** – You create your struct as a regular stack variable (not with `malloc`). When you insert it, the library automatically copies its contents into its own internal storage on the heap. You don't need to allocate or free memory for the struct itself, just build it on the stack and pass it to the insertion function.
 
-- **Allocate memory for the struct and pass a pointer** – the list will store a copy of the data pointed to by the pointer. In this case, you are responsible for allocating the struct on the heap (using `malloc` or similar), and the library will copy the contents into its own internal storage. You must also ensure that the memory is properly freed when the list is destroyed or when elements are removed.
+- **Allocate memory for the struct and pass a pointer** – you allocate your struct on the heap (using `malloc` or similar), and then pass its pointer to the insertion function. The library will store the pointer itself and use it as the address of the element in the list. In this approach, you are responsible for allocating the memory for your struct, and the library will manage freeing it when you delete elements or destroy the list.
+
+> [!NOTE]
+> Even if you want the library to handle dynamic allocation of the struct itself (by passing it by value), you are still responsible for allocating any fields inside your struct that require dynamic memory (such as a `char* name` field). Passing by value does **not** exempt you from handling internal allocations.
+
+> [!NOTE]
+> Regardless of whether you insert your struct by value or by pointer, the library will always take care of freeing all memory associated with each element when it is deleted or when the list is destroyed. This includes both the memory allocated for the struct itself, and any dynamically allocated fields inside your struct (such as strings or arrays), which are freed using your provided [third helper functions](#setup-for-examples).
 
 Both approaches support the same insertion positions:
 
-| Insertion Type   | Value-Based Function                   | Pointer-Based Function                |
-|------------------|----------------------------------------|--------------------------------------|
-| **Head**         | `insert_head_val(list, value)`         | `insert_head_ptr(list, ptr)`          |
-| **Tail**         | `insert_tail_val(list, value)`         | `insert_tail_ptr(list, ptr)`          |
-| **Index**        | `insert_index_val(list, index, value)` | `insert_index_ptr(list, index, ptr)`  |
+| Insertion Type   | Value-Based Function                     | Pointer-Based Function                |
+|------------------|------------------------------------------|--------------------------------------|
+| **Head**         | `insert_head_value(list, value)`         | `insert_head_ptr(list, ptr)`          |
+| **Tail**         | `insert_tail_value(list, value)`         | `insert_tail_ptr(list, ptr)`          |
+| **Index**        | `insert_index_value(list, index, value)` | `insert_index_ptr(list, index, ptr)`  |
 
-### Examples with Simple Types
-
-Value-based insertion works great with simple types:
+For the next examples, we will assume you have the following helper function to create `Person` structs. Pay attention that the function returns the struct by value.
 
 ```c
-LinkedList* numbers = create_list(sizeof(int));
+Person create_person(int id, const char* name, int age) {
 
-// Direct insertion of values
-insert_tail_val(numbers, 42);
-insert_head_val(numbers, 10);
-insert_index_val(numbers, 1, 25);
+    Person p;
 
-// Works with structs without dynamic memory too
-typedef struct { int x, y; } Point;
-LinkedList* points = create_list(sizeof(Point));
+    p.id = id;
+    p.age = age;
+    p.name = malloc(strlen(name) + 1);
+    if (p.name) strcpy(p.name, name);
 
-Point p = {3, 4};
-insert_tail_val(points, p);  // Perfectly safe!
+    return p;
+}
 ```
 
-### When to Use Which Method
+#### `insert_head_value`
 
-**Use `insert_*_ptr` when:**
-- You want explicit control over memory management
-- Working with large structures where copying is expensive
-- The structure is already allocated on the heap
+Adds a new element to the beginning of the list by value.
 
-**Use `insert_*_val` when:**
-- Working with simple data types (int, float, etc.)
-- Working with small structs without dynamic memory
-- You want the library to handle allocation automatically
-- You have a copy function configured for deep copying
+**Receives:**
 
-**Important:** For structures with pointers to dynamic memory (like strings), always configure a `copy_function` to ensure proper deep copying when using `insert_*_val` or any list operations that create new lists (`copy`, `filter`, `map`, etc.).
+- `list`: A pointer to the `LinkedList`.
+- `value`: The struct value to be inserted (not a pointer).
 
-### Function Details
+**Returns:**
+
+- `LIST_SUCCESS` on success, or an error code on failure.
+
+**Example:**
+
+```c
+Person alice = create_person(1012, "Alice Johnson", 28);
+insert_head_value(people_list, alice);
+```
 
 #### `insert_head_ptr`
 
-This function adds a new element to the beginning of the list using a pointer.
+Adds a new element to the beginning of the list by pointer.
 
 **Receives:**
 
 - `list`: A pointer to the `LinkedList`.
-- `data`: A pointer to the data to be inserted.
+- `ptr`: A pointer to a struct that was allocated on the heap.
 
 **Returns:**
 
@@ -201,21 +203,40 @@ This function adds a new element to the beginning of the list using a pointer.
 **Example:**
 
 ```c
-LinkedList* list = create_list(sizeof(int));
-int n1 = 10, n2 = 20;
-insert_head_ptr(list, &n1); // List: [10]
-insert_head_ptr(list, &n2); // List: [20, 10]
-destroy(list);
+Person* diana = (Person*)malloc(sizeof(Person));
+*diana = create_person(1017, "Diana Prince", 30);
+insert_head_ptr(people_list, diana);
 ```
+
+### `insert_tail_value`
+
+Adds a new element to the end of the list by value.
+
+**Receives:**
+
+- `list`: A pointer to the `LinkedList`.
+- `value`: The struct value to be inserted.
+
+**Returns:**
+
+- `LIST_SUCCESS` on success, or an error code on failure.
+
+**Example:**
+
+```c
+Person bob = create_person(1010, "Bob Smith", 35);
+insert_tail_value(people_list, bob);
+```
+
 
 ### `insert_tail_ptr`
 
-This function adds a new element to the very end of the list.
+Adds a new element to the end of the list by pointer.
 
 **Receives:**
 
 - `list`: A pointer to the `LinkedList`.
-- `data`: A pointer to the data to be inserted. The library makes its own copy.
+- `ptr`: A pointer to a struct that was allocated on the heap.
 
 **Returns:**
 
@@ -224,14 +245,33 @@ This function adds a new element to the very end of the list.
 **Example:**
 
 ```c
-LinkedList* list = create_list(sizeof(int));
-int n1 = 10, n2 = 20;
-insert_tail_ptr(list, &n1); // List: [10]
-insert_tail_ptr(list, &n2); // List: [10, 20]
-destroy(list);
+Person* emily = (Person*)malloc(sizeof(Person));
+*emily = create_person(1042, "Emily Davis", 26);
+insert_tail_ptr(people_list, emily);
 ```
 
-### `insert_at_ptr`
+### `insert_index_value`
+
+Inserts a new element at a specific zero-based index by value.
+
+**Receives:**
+
+- `list`: A pointer to the `LinkedList`.
+- `index`: The index to insert at.
+- `value`: The struct value to be inserted.
+
+**Returns:**
+
+- `LIST_SUCCESS` on success, or an error code on failure.
+
+**Example:**
+
+```c
+Person charlie = create_person(1098, "Charlie Brown", 22);
+insert_index_value(people_list, 1, charlie); 
+```
+
+### `insert_index_ptr`
 
 This function inserts an element at a specific zero-based index. All elements from that index onward are shifted one position to the right. The operation is optimized to traverse from the head or tail, whichever is closer to the target index.
 
@@ -239,7 +279,7 @@ This function inserts an element at a specific zero-based index. All elements fr
 
 - `list`: A pointer to the `LinkedList`.
 - `index`: The zero-based index where the element should be inserted.
-- `data`: A pointer to the data to be inserted.
+- `ptr`: A pointer to a struct that was allocated on the heap.
 
 **Returns:**
 
@@ -248,13 +288,13 @@ This function inserts an element at a specific zero-based index. All elements fr
 **Example:**
 
 ```c
-LinkedList* list = create_list(sizeof(int));
-int n1 = 10, n2 = 20, n3 = 30;
-insert_tail_ptr(list, &n1); // List: [10]
-insert_tail_ptr(list, &n2); // List: [10, 20]
-insert_at_ptr(list, 1, &n3); // List: [10, 30, 20]
-destroy(list);
+Person* frank = (Person*)malloc(sizeof(Person));
+*frank = create_person(1000, "Frank Wilson", 31);
+insert_index_ptr(people_list, 3, frank);
 ```
+
+> [!NOTE]
+> If you try to insert at an index greater than the current length of the list, the element will be inserted at the end (tail) of the list. If you use a negative index, the element will be inserted at the beginning (head) of the list.
 
 ---
 
