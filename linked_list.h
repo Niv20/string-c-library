@@ -35,7 +35,7 @@ typedef enum {
 // Constants for advanced delete operations
 #define DELETE_ALL_OCCURRENCES -1
 
-// --- Error Codes ---
+// Error Codes
 
 /**
  * @brief Enumeration of possible list operation results.
@@ -60,7 +60,7 @@ typedef enum {
 } Direction;
 
 
-// --- Type Definitions ---
+// Type Definitions
 
 /**
  * @brief A function pointer type for printing an element's data.
@@ -147,28 +147,42 @@ typedef struct LinkedList {
     size_t max_size;           /**< Maximum number of elements (UNLIMITED = no limit). */
     OverflowBehavior allow_overwrite; /**< Behavior when list reaches max capacity. */
 
-    // --- User-provided helper functions ---
+    // User-provided helper functions
     PrintFunction print_node_function;   /**< Function to print an element. */
     FreeFunction free_node_function;     /**< Function to free a complex element. */
     CopyFunction copy_node_function;     /**< Function to deep copy a complex element. */
 } LinkedList;
 
 
-// --- Error Handling ---
+///////
+// 0 //
+///////
+// Error Handling
 const char* error_string(ListResult result);
 
-// --- Lifecycle Functions ---
+
+///////
+// 1 //
+///////
+// Lifecycle Functions
 LinkedList* create_list(size_t element_size);
 
-// --- Setters for LinkedList fields ---
+
+///////
+// 2 //
+///////
+// Setters for LinkedList fields
 void set_print_function(LinkedList* list, PrintFunction print_fn);
 void set_free_function(LinkedList* list, FreeFunction free_fn);
 void set_copy_function(LinkedList* list, CopyFunction copy_fn);
 
-// --- Size and Overwrite Management ---
+// Size and Overwrite Management
 ListResult set_max_size(LinkedList* list, size_t max_size, OverflowBehavior behavior);
 
-// --- Insertion Functions ---
+///////
+// 3 //
+///////
+// Insertion Functions
 // Internal functions (used by macros) - copy data into list-managed memory
 ListResult insert_head_value_internal(LinkedList* list, void* data);
 ListResult insert_tail_value_internal(LinkedList* list, void* data);
@@ -178,7 +192,10 @@ ListResult insert_head_ptr(LinkedList* list, void* data_ptr);
 ListResult insert_tail_ptr(LinkedList* list, void* data_ptr);
 ListResult insert_index_ptr(LinkedList* list, size_t index, void* data_ptr);
 
-// --- Deletion Functions ---
+///////
+// 4 //
+///////
+// Deletion Functions
 ListResult delete_head(LinkedList* list);
 ListResult delete_tail(LinkedList* list);
 ListResult delete_index(LinkedList* list, size_t index);
@@ -186,33 +203,60 @@ ListResult remove_advanced(LinkedList* list, int count, Direction direction, Fil
 ListResult clear(LinkedList* list);
 void destroy(LinkedList* list);
 
-// --- Utility Functions ---
+
+//////////////////////////
+// 5. Utility Functions //
+//////////////////////////
+
 size_t get_length(const LinkedList* list);
+
 bool is_empty(const LinkedList* list);
+
 ListResult print_list(const LinkedList* list);
 ListResult print_list_advanced(const LinkedList* list, bool show_size, bool show_index, const char* separator);
 
-// --- Search and Access Functions ---
+////////////////////////////////////
+// 6. Search and Access Functions //
+////////////////////////////////////
+
 void* get(const LinkedList* list, size_t index);
-
-// Generic field setting function - internal use by macro
-ListResult set_field_generic(LinkedList* list, size_t index, size_t field_offset, size_t field_size, const void* new_value);
-
-// Macro for setting individual fields in structs
-#define set_field(list, index, struct_type, field_name, new_value) \
-    do { \
-        __typeof__(((struct_type*)0)->field_name) temp_value = (new_value); \
-        set_field_generic(list, index, offsetof(struct_type, field_name), \
-                         sizeof(((struct_type*)0)->field_name), &temp_value); \
-    } while(0)
 
 int index_of(const LinkedList* list, PredicateFunction predicate);
 int index_of_advanced(const LinkedList* list, Direction direction, PredicateFunction predicate);
 
-// --- Sorting and Manipulation Functions ---
+size_t count_matching(const LinkedList* list, PredicateFunction predicate);
+
+ListResult set_field_impl(LinkedList* list, size_t index, size_t field_offset, size_t field_size, const void* new_value);
+ListResult set_allocated_field_impl(LinkedList* list, size_t index, size_t field_offset, size_t data_size, const void* new_data);
+
+// Convenient macros for setting fields in structs (internal names)
+#define set_field_macro(list, index, struct_type, field_name, new_value) \
+    do { \
+        __typeof__(((struct_type*)0)->field_name) temp_value = (new_value); \
+        set_field_impl(list, index, offsetof(struct_type, field_name), \
+                  sizeof(((struct_type*)0)->field_name), &temp_value); \
+    } while(0)
+
+#define set_allocated_field_macro(list, index, struct_type, field_name, data_size, new_data) \
+    set_allocated_field_impl(list, index, offsetof(struct_type, field_name), data_size, new_data)
+
+// User-friendly aliases (hide the fact that these are macros)
+#define set_field(list, index, struct_type, field_name, new_value) \
+    set_field_macro(list, index, struct_type, field_name, new_value)
+
+#define set_allocated_field(list, index, struct_type, field_name, data_size, new_data) \
+    set_allocated_field_macro(list, index, struct_type, field_name, data_size, new_data)
+
+///////
+// 7 //
+///////
+// Sorting and Manipulation Functions
 ListResult sort_list(LinkedList* list, CompareFunction compare_fn);
 
-// --- List Operations Functions ---
+///////
+// 8 //
+///////
+// List Operations Functions
 LinkedList* copy(const LinkedList* list);
 ListResult extend(LinkedList* list, const LinkedList* other);
 LinkedList* concat(const LinkedList* list1, const LinkedList* list2);
@@ -221,23 +265,22 @@ ListResult rotate(LinkedList* list, int positions);
 ListResult reverse(LinkedList* list);
 LinkedList* filter(const LinkedList* list, FilterFunction filter_fn);
 
-// --- Transformation Functions ---
+// Transformation Functions
 LinkedList* map(const LinkedList* list, MapFunction map_fn, size_t new_element_size);
 
-// --- Mathematical Functions ---
+// Mathematical Functions
 void* min_by(const LinkedList* list, int (*compare)(const void *a, const void *b));
 void* max_by(const LinkedList* list, int (*compare)(const void *a, const void *b));
-size_t count_if(const LinkedList* list, PredicateFunction predicate);
 LinkedList* unique(const LinkedList* list, CompareFunction compare_fn);
 LinkedList* unique_advanced(const LinkedList* list, CompareFunction compare_fn, Direction order);
 LinkedList* intersection(const LinkedList* list1, const LinkedList* list2, CompareFunction compare_fn);
 LinkedList* union_lists(const LinkedList* list1, const LinkedList* list2, CompareFunction compare_fn);
 
-// --- Array to List Conversion Functions ---
+// Array to List Conversion Functions
 ListResult from_array(LinkedList* list, const void* arr, size_t n);
 void* to_array(const LinkedList* list, size_t* out_size);
 
-// --- I/O and Format Functions ---
+// I/O and Format Functions
 // to_string: quick, human-readable join of primitive values (int/double/char) using 'separator'.
 //   Not a lossless serializer: complex element sizes become the literal token "[data]".
 //   Caller must free the returned char*.
@@ -264,7 +307,7 @@ LinkedList* load_from_file(const char* filename, size_t element_size, FileFormat
                            PrintFunction print_fn, CompareFunction compare_fn,
                            FreeFunction free_fn, CopyFunction copy_fn);
 
-// --- Convenience Macros for Passing Values Directly ---
+// Convenience Macros for Passing Values Directly
 
 /**
  * @brief Convenience macros that allow passing values directly instead of pointers.

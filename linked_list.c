@@ -763,56 +763,6 @@ void* get(const LinkedList* list, size_t index) {
 }
 
 /**
- * @brief Generic function to set a specific field in a struct element.
- * @param list The list containing the element.
- * @param index The index of the element to modify.
- * @param field_offset The byte offset of the field within the struct.
- * @param field_size The size of the field in bytes.
- * @param new_value Pointer to the new value to set.
- * @return LIST_SUCCESS on success, error code on failure.
- */
-ListResult set_field_generic(LinkedList* list, size_t index, size_t field_offset, size_t field_size, const void* new_value) {
-    if (!list || !new_value) return LIST_ERROR_NULL_POINTER;
-    if (index >= list->length) return LIST_ERROR_INDEX_OUT_OF_BOUNDS;
-    if (field_offset + field_size > list->element_size) return LIST_ERROR_INVALID_OPERATION;
-
-    Node* current = find_node_by_index(list, index);
-    if (!current) return LIST_ERROR_INDEX_OUT_OF_BOUNDS;
-    
-    // Calculate the address of the specific field
-    char* field_ptr = (char*)current->data + field_offset;
-    
-    // For string fields, we need special handling
-    if (field_size == sizeof(char*)) {
-        // This might be a string pointer field
-        char** string_field = (char**)field_ptr;
-        const char* new_string = *(const char**)new_value;
-        
-        // Free old string if it exists
-        if (*string_field) {
-            free(*string_field);
-        }
-        
-        // Allocate and copy new string
-        if (new_string) {
-            *string_field = malloc(strlen(new_string) + 1);
-            if (*string_field) {
-                strcpy(*string_field, new_string);
-            } else {
-                return LIST_ERROR_MEMORY_ALLOC;
-            }
-        } else {
-            *string_field = NULL;
-        }
-    } else {
-        // For non-pointer fields, just copy the data
-        memcpy(field_ptr, new_value, field_size);
-    }
-    
-    return LIST_SUCCESS;
-}
-
-/**
  * @brief Returns the index of the first element that satisfies the predicate.
  * @param list The list to search in.
  * @param predicate The function to test each element.
@@ -868,7 +818,7 @@ int index_of_advanced(const LinkedList* list, Direction order, PredicateFunction
  * @param arg An optional argument to pass to the predicate function.
  * @return The number of elements that satisfy the condition.
  */
-size_t count_if(const LinkedList* list, PredicateFunction predicate) {
+size_t count_matching(const LinkedList* list, PredicateFunction predicate) {
     if (!list || !predicate) return 0;
     
     size_t count = 0;
@@ -882,6 +832,74 @@ size_t count_if(const LinkedList* list, PredicateFunction predicate) {
     return count;
 }
 
+
+/**
+ * @brief Sets a field value by copying data directly (no memory management).
+ * @param list The list containing the element.
+ * @param index The index of the element to modify.
+ * @param field_offset The byte offset of the field within the struct.
+ * @param field_size The size of the field in bytes.
+ * @param new_value Pointer to the new value to set.
+ * @return LIST_SUCCESS on success, error code on failure.
+ * @note Use this for primitive types and when you manage memory yourself.
+ */
+ListResult set_field_impl(LinkedList* list, size_t index, size_t field_offset, size_t field_size, const void* new_value) {
+    if (!list || !new_value) return LIST_ERROR_NULL_POINTER;
+    if (index >= list->length) return LIST_ERROR_INDEX_OUT_OF_BOUNDS;
+    if (field_offset + field_size > list->element_size) return LIST_ERROR_INVALID_OPERATION;
+
+    Node* current = find_node_by_index(list, index);
+    if (!current) return LIST_ERROR_INDEX_OUT_OF_BOUNDS;
+    
+    // Calculate the address of the specific field
+    char* field_ptr = (char*)current->data + field_offset;
+    
+    // Simple memory copy - overwrites whatever was there
+    memcpy(field_ptr, new_value, field_size);
+    
+    return LIST_SUCCESS;
+}
+
+/**
+ * @brief Sets a dynamically allocated field with proper memory management.
+ * @param list The list containing the element.
+ * @param index The index of the element to modify.
+ * @param field_offset The byte offset of the pointer field within the struct.
+ * @param data_size The size of the data to allocate and copy.
+ * @param new_data Pointer to the new data to copy.
+ * @return LIST_SUCCESS on success, error code on failure.
+ * @note This frees old memory, allocates new memory, and copies the data.
+ */
+ListResult set_allocated_field_impl(LinkedList* list, size_t index, size_t field_offset, size_t data_size, const void* new_data) {
+    if (!list) return LIST_ERROR_NULL_POINTER;
+    if (index >= list->length) return LIST_ERROR_INDEX_OUT_OF_BOUNDS;
+    if (field_offset + sizeof(void*) > list->element_size) return LIST_ERROR_INVALID_OPERATION;
+
+    Node* current = find_node_by_index(list, index);
+    if (!current) return LIST_ERROR_INDEX_OUT_OF_BOUNDS;
+    
+    // Calculate the address of the pointer field
+    void** ptr_field = (void**)((char*)current->data + field_offset);
+    
+    // Free old memory if it exists
+    if (*ptr_field) {
+        free(*ptr_field);
+    }
+    
+    // Allocate and copy new data
+    if (new_data && data_size > 0) {
+        *ptr_field = malloc(data_size);
+        if (*ptr_field) {
+            memcpy(*ptr_field, new_data, data_size);
+        } else {
+            return LIST_ERROR_MEMORY_ALLOC;
+        }
+    } else {
+        *ptr_field = NULL;
+    }
+    
+    return LIST_SUCCESS;
+}
 
 /*
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓

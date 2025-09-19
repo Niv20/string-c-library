@@ -584,77 +584,10 @@ This function retrieves a direct pointer to the data stored at a specific index.
 **Example:**
 
 ```c
-Person* p = (Person*)get(people_list, 2);
-printf("Person at index 2 is %s.\n", p->name);
-```
-
-### `set_value`
-
-`ListResult set_value(LinkedList* list, size_t index, void* data);`
-
-This function updates the element at a specific index by **copying** the new data by value. It overwrites the existing data at that position.
-
-**Behavior:**
-1. If a `free_function` is configured, it is called on the old data to free any internal dynamic memory (like strings).
-2. The content of the `data` you provide is copied into the node's existing memory block using `memcpy`.
-3. The list does **not** take ownership of the `data` pointer you pass; it only reads from it.
-
-**Receives:**
-
-- `list`: A pointer to the `LinkedList`.
-- `index`: The index of the element to update.
-- `data`: A pointer to the new data to be copied.
-
-**Returns:**
-
-- `LIST_SUCCESS` on success, or an error code on failure.
-
-**Example:**
-
-```c
-// Create a new person on the stack
-Person updated_person = create_person(1100, "Updated Name", 40);
-
-// Update the element at index 0 by copying the value of updated_person
-set_value(people_list, 0, &updated_person);
-
-// Since the data was copied, we must free the name inside the stack variable
-free(updated_person.name);
-```
-
-### `set_ptr`
-
-`ListResult set_ptr(LinkedList* list, size_t index, void* data_ptr);`
-
-This function updates the element at a specific index by **transferring ownership** of a new pointer.
-
-**Behavior:**
-1. The entire old data block at the target index is freed (including internal contents via `free_function` and the struct itself).
-2. The node's data pointer is replaced with `data_ptr`.
-3. The list now **owns** `data_ptr` and is responsible for freeing it later. You should not free `data_ptr` yourself after calling this function.
-
-**Receives:**
-
-- `list`: A pointer to the `LinkedList`.
-- `index`: The index of the element to update.
-- `data_ptr`: A pointer to a dynamically allocated struct.
-
-**Returns:**
-
-- `LIST_SUCCESS` on success, or an error code on failure.
-
-**Example:**
-
-```c
-// Allocate a new person on the heap
-Person* new_person_ptr = (Person*)malloc(sizeof(Person));
-*new_person_ptr = create_person(1200, "Heap Person", 50);
-
-// Update the element at index 1 by transferring the pointer
-// The list now owns new_person_ptr
-set_ptr(people_list, 1, new_person_ptr);
-
-// DO NOT free(new_person_ptr) here! The list will manage it.
+Person* first_person = (Person*)get(people_list, 0);
+if (first_person) {
+    printf("The ID of the first person is: %d\n", first_person->id);
+}
 ```
 
 ### `index_of`
@@ -674,16 +607,18 @@ This function searches the list from head to tail and returns the index of the f
 
 **Example:**
 
-To find the index of the first person named "Charlie Brown", you would need a specific predicate function.
+To find the index of the first person named "Charlie Brown", you would need a specific predicate function like this:
 
 ```c
-// Predicate function to find a person named "Charlie Brown".
 bool is_charlie_brown(const void* element) {
     const Person* p = (const Person*)element;
     return strcmp(p->name, "Charlie Brown") == 0;
 }
+```
 
-// ... later in the code ...
+And then you can use it with `index_of`:
+
+```c
 int index = index_of(people_list, is_charlie_brown);
 
 if (index >= 0) {
@@ -711,36 +646,38 @@ Similar to `index_of`, but allows you to specify the search direction (`START_FR
 
 **Example:**
 
-To find the *last* person in the list who is a minor (under 18):
+To find the *last* person in the list who is a minor (under 18), you would define a predicate function like this:
 
 ```c
-// Predicate to check if a person is a minor.
 bool is_minor(const void* element) {
     const Person* p = (const Person*)element;
     return p->age < 18;
 }
+```
 
-// ... later in the code ...
+And then use it with `index_of_advanced`:
+
+```c
 int last_minor_index = index_of_advanced(people_list, START_FROM_TAIL, is_minor);
 
 if (last_minor_index >= 0) {
-    Person* p = (Person*)get(people_list, last_minor_index);
-    printf("The last minor found is '%s' at index %d.\n", p->name, last_minor_index);
+    Person* minor = (Person*)get(people_list, last_minor_index);
+    printf("The last minor found is '%s'.\n", minor->name);
 } else {
     printf("No minors found in the list.\n");
 }
 ```
 
-### `count_if`
+### `count_matching`
 
-`size_t count_if(const LinkedList* list, PredicateFunction predicate);`
+`size_t count_matching(const LinkedList* list, PredicateFunction predicate);`
 
 This function iterates through the entire list and counts how many elements satisfy the given `predicate`.
 
 **Receives:**
 
 - `list`: A pointer to the `LinkedList`.
-- `predicate`: A function that takes an element and returns `true` if it satisfies the condition.
+- `predicate`: A function that takes an element and returns `true` if it satisfies the condition, and `false` otherwise.
 
 **Returns:**
 
@@ -748,18 +685,77 @@ This function iterates through the entire list and counts how many elements sati
 
 **Example:**
 
-To count how many people in the list are minors (under 18):
+To count how many people have names with 10 or fewer characters, you would define a predicate function like this:
 
 ```c
-// Predicate to check if a person is a minor.
-bool is_minor(const void* element) {
+bool has_short_name(const void* element) {
     const Person* p = (const Person*)element;
-    return p->age < 18;
+    return p->name && strlen(p->name) <= 10;
 }
+```
 
-// ... later in the code ...
-size_t minor_count = count_if(people_list, is_minor);
-printf("There are %zu minors in the list.\n", minor_count);
+And then use it with `count_matching`:
+
+```c
+size_t short_names_count = count_matching(people_list, has_short_name);
+printf("Number of people with short names (10 characters or less): %zu\n", short_names_count);
+```
+
+### `set_field`
+
+`void set_field(LinkedList* list, size_t index, struct_type, field_name, new_value);`
+
+This function updates a primitive field (such as `int`, `double`, `char`, etc.) of a struct stored at a specific index in the list. It performs a simple copy operation using `memcpy`.
+
+> [!NOTE]
+> If the field you want to update is a pointer that requires dynamic memory allocation (like a `char*` for unknown length strings), you should use the [next function](#set_allocated_field) `set_allocated_field`.
+
+**Receives:**
+
+- `list`: A pointer to the `LinkedList`.
+- `index`: The index of the element to modify.
+- `struct_type`: The type of struct being modified (e.g., `Person`).
+- `field_name`: The name of the field to update.
+- `new_value`: The new value to assign to the field.
+
+**Returns:**
+
+- Nothing.
+
+**Example:**
+
+```c
+set_field(people_list, 0, Person, age, 99);
+set_field(people_list, 0, Person, id, 5555);
+```
+
+### `set_allocated_field`
+
+`void set_allocated_field(LinkedList* list, size_t index, struct_type, field_name, data_size, new_data);`
+
+This function updates a field that requires dynamic memory allocation (such as strings or arrays). It automatically frees the old allocated memory and allocates new memory for the new data. This is typically used for `char*` fields or other pointer fields that own their memory.
+
+> [!NOTE]
+> If inside your allocated field you have another pointer that also requires dynamic memory allocation, you must handle that manually in your own code before calling this function. The `set_allocated_field` function only manages the memory for the top-level field you are updating.
+
+**Receives:**
+
+- `list`: A pointer to the `LinkedList`.
+- `index`: The index of the element to modify.
+- `struct_type`: The type of struct being modified (e.g., `Person`).
+- `field_name`: The name of the field to update.
+- `data_size`: The size in bytes of the new data to allocate.
+- `new_data`: A pointer to the new data to copy.
+
+**Returns:**
+
+- Nothing.
+
+**Example:**
+
+```c
+const char* new_name = "David Parker";
+set_allocated_field(people_list, 0, Person, name, strlen(new_name) + 1, new_name);
 ```
 
 <br></br>

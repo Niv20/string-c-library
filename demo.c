@@ -19,7 +19,7 @@ int compare_person_age(const void* a, const void* b);
 void free_person(void* data);
 void copy_person(void* dest, const void* src);
 Person create_person(int id, const char* name, int age);
-// Predicate for count_if (signature requires (element, arg))
+// Predicate for count_matching (signature requires (element, arg))
 bool is_adult_predicate(const void* element, void* arg);
 // Simple filter function (signature requires only data)
 bool is_adult(const void* data);
@@ -32,6 +32,7 @@ bool is_person_name_contains_e(const void* element);
 bool is_person_id_divisible_by_2(const void* element);
 bool is_charlie_brown(const void* element);
 bool is_minor(const void* element);
+bool has_short_name(const void* element);
 void print_int(void* data);
 
 // Implementation of helper functions
@@ -163,6 +164,12 @@ bool is_minor(const void* element) {
     return p->age < 18;
 }
 
+// Predicate: returns true if Person's name has 10 characters or less (including spaces)
+bool has_short_name(const void* element) {
+    const Person* p = (const Person*)element;
+    return p->name && strlen(p->name) <= 10;
+}
+
 // Print function for integers
 void print_int(void* data) {
     printf("%d", *(int*)data);
@@ -273,59 +280,51 @@ int main(void) {
     ///////
     // 6 //
     ///////
-
-    /*
     banner("6. Search and Access Functions");
-    
-    printf("get the element at index 0:\n");
+
+    // get()
+    printf("Getting element at index 0...\n");
     Person* first_person = (Person*)get(people_list, 0);
     if (first_person) {
-        printf("The id of the first person is: %d\n", first_person->id);
+        printf("The ID of the first person is: %d\n", first_person->id);
     }
-
-    printf("Updating element at index 1 by setting individual fields\n");
-    set_field(people_list, 1, Person, id, 999);
-    set_field(people_list, 1, Person, name, "Charlie Updated");
-    set_field(people_list, 1, Person, age, 12);
-    printf("List after set_field():\n");
-    print_list(people_list);
-
-    printf("Updating element at index 2 by setting individual fields\n");
-    set_field(people_list, 2, Person, id, 888);
-    set_field(people_list, 2, Person, name, "Alice on Heap");
-    set_field(people_list, 2, Person, age, 17);
-    printf("List after set_field():\n");
-    print_list(people_list);
-
-    printf("Searching for 'Charlie Updated'...\n");
-    int index = index_of(people_list, is_charlie_brown);
-    if (index >= 0) {
-        printf("'Charlie Brown' found at index: %d\n", index);
+    
+    // index_of()
+    printf("Searching for 'Charlie Brown'...\n");
+    int charlie_index = index_of(people_list, is_charlie_brown);
+    if (charlie_index >= 0) {
+        printf("'Charlie Brown' found at index: %d\n", charlie_index);
     } else {
-        printf("'Charlie Brown' not found (may have been updated).\n");
+        printf("'Charlie Brown' not found.\n");
     }
-
-    printf("\n--- 5. index_of_advanced() ---\n");
+    
+    // index_of_advanced()
     printf("Searching for the last minor (age < 18) from the tail...\n");
     int last_minor_index = index_of_advanced(people_list, START_FROM_TAIL, is_minor);
     if (last_minor_index >= 0) {
-        printf("Last minor found at index: %d\n", last_minor_index);
         Person* minor = (Person*)get(people_list, last_minor_index);
         if (minor) {
-            printf("  -> Details: ");
-            print_person(minor);
-            printf("\n");
+            printf("The name of the last minor is: %s\n", minor->name);
         }
     } else {
         printf("No minors found.\n");
     }
-
-    printf("\n--- 6. count_if() ---\n");
-    size_t minor_count = count_if(people_list, is_minor);
-    printf("Total number of minors in the list: %zu\n", minor_count);
     
-    */
+    // count_matching()
+    size_t short_names_count = count_matching(people_list, has_short_name);
+    printf("Number of people with short names (10 characters or less): %zu\n", short_names_count);
+    
+    // set_field()
+    printf("Updating the ID and the age of first person...\n");
+    set_field(people_list, 0, Person, age, 99);
+    set_field(people_list, 0, Person, id, 5555);
 
+    // set_allocated_field()
+    printf("Updating name of first person...\n");
+    const char* new_name = "David Parker";
+    set_allocated_field(people_list, 0, Person, name, strlen(new_name) + 1, new_name);
+    
+    /*
     ///////
     // 7 //
     ///////
@@ -346,9 +345,6 @@ int main(void) {
     sort_list(people_list, compare_person_name);
     printf("List sorted by name (alphabetical):\n");
     print_list(people_list);
-    
-    
-     /*
    
     ///////
     // 8 //
@@ -436,11 +432,11 @@ int main(void) {
     }
     
     // Count adults (age >= 18)
-    size_t adult_count = count_if(people_list, is_adult_filter);
+    size_t adult_count = count_matching(people_list, is_adult_filter);
     printf("Number of adults (age >= 18): %zu\n", adult_count);
     
     // Count people named "Alice" - we'll need to find them manually for now
-    // Note: count_if doesn't support additional arguments in this implementation
+    // Note: count_matching doesn't support additional arguments in this implementation
     printf("Note: Counting by name requires manual iteration in this implementation\n");
     
     ////////
