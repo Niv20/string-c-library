@@ -897,7 +897,7 @@ size_t count_if(const LinkedList* list, PredicateFunction predicate) {
  * @param compare_fn Comparison function.
  * @return LIST_SUCCESS on success, error code on failure.
  */
-ListResult sort(LinkedList* list, CompareFunction compare_fn) {
+ListResult sort_list(LinkedList* list, CompareFunction compare_fn) {
 
     if (!list) return LIST_ERROR_NULL_POINTER;
     if (!compare_fn) return LIST_ERROR_NO_COMPARE_FUNCTION;

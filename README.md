@@ -766,23 +766,75 @@ printf("There are %zu minors in the list.\n", minor_count);
 
 ## 7. Sorting Functions
 
-### `sort`
+### `sort_list`
 
-`ListResult sort(LinkedList* list, bool reverse, CompareFunction compare_fn);`
+`ListResult sort_list(LinkedList* list, CompareFunction compare_fn);`
 
 This function sorts the list in-place using the configured compare function.
 
 **Receives:**
 
 - `list`: A pointer to the `LinkedList`.
+- `compare_fn`: A function that compares two elements and returns:
+  - A positive value if the first element is greater than the second.
+  - Zero if they are equal.
+  - A negative value if the first element is less than the second.
 
 **Returns:**
 
 - `LIST_SUCCESS` on success, or an error code on failure.
 
-**Example:**
+**Examples:**
+
+To sort the list by age in ascending order, you would define a compare function like this:
 
 ```c
+int compare_person_age(const void* a, const void* b) {
+    const Person* p1 = (const Person*)a;
+    const Person* p2 = (const Person*)b;
+    return (p1->age - p2->age);
+}
+```
+
+And then call `sort_list`:
+
+```c
+sort_list(people_list, compare_person_age);
+```
+
+To sort by ID in ascending order, you could use this compare function:
+
+```c
+int compare_person_id(const void* a, const void* b) {
+    const Person* p1 = (const Person*)a;
+    const Person* p2 = (const Person*)b;
+    return (p1->id - p2->id);
+}
+```
+
+And then call `sort_list`:
+
+```c
+sort_list(people_list, compare_person_id);
+```
+
+Similarly, to sort by name in alphabetical order, you could use this compare function:
+
+```c
+int compare_person_name(const void* a, const void* b) {
+    const Person* p1 = (const Person*)a;
+    const Person* p2 = (const Person*)b;
+    if (!p1->name && !p2->name) return 0;
+    if (!p1->name) return -1;
+    if (!p2->name) return 1;
+    return strcmp(p1->name, p2->name);
+}
+```
+
+And then call `sort_list`:
+
+```c
+sort_list(people_list, compare_person_name);
 ```
 
 <br></br>

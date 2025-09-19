@@ -40,28 +40,6 @@ void print_person(void* data) {
     printf("{ID:%04d, Name:\"%s\", Age:%d}", p->id, p->name, p->age);
 }
 
-
-int compare_person_id(const void* a, const void* b) {
-    const Person* p1 = (const Person*)a;
-    const Person* p2 = (const Person*)b;
-    return (p1->id - p2->id);
-}
-
-int compare_person_name(const void* a, const void* b) {
-    const Person* p1 = (const Person*)a;
-    const Person* p2 = (const Person*)b;
-    if (!p1->name && !p2->name) return 0;
-    if (!p1->name) return -1;
-    if (!p2->name) return 1;
-    return strcmp(p1->name, p2->name);
-}
-
-int compare_person_age(const void* a, const void* b) {
-    const Person* p1 = (const Person*)a;
-    const Person* p2 = (const Person*)b;
-    return (p1->age - p2->age);
-}
-
 void free_person(void* data) {
     Person* p = (Person*)data;
     if (p && p->name) {
@@ -86,6 +64,27 @@ void copy_person(void* dest, const void* src) {
     } else {
         dest_p->name = NULL;
     }
+}
+
+int compare_person_age(const void* a, const void* b) {
+    const Person* p1 = (const Person*)a;
+    const Person* p2 = (const Person*)b;
+    return (p1->age - p2->age);
+}
+
+int compare_person_id(const void* a, const void* b) {
+    const Person* p1 = (const Person*)a;
+    const Person* p2 = (const Person*)b;
+    return (p1->id - p2->id);
+}
+
+int compare_person_name(const void* a, const void* b) {
+    const Person* p1 = (const Person*)a;
+    const Person* p2 = (const Person*)b;
+    if (!p1->name && !p2->name) return 0;
+    if (!p1->name) return -1;
+    if (!p2->name) return 1;
+    return strcmp(p1->name, p2->name);
 }
 
 Person create_person(int id, const char* name, int age) {
@@ -274,6 +273,8 @@ int main(void) {
     ///////
     // 6 //
     ///////
+
+    /*
     banner("6. Search and Access Functions");
     
     printf("get the element at index 0:\n");
@@ -323,26 +324,32 @@ int main(void) {
     size_t minor_count = count_if(people_list, is_minor);
     printf("Total number of minors in the list: %zu\n", minor_count);
     
-    /*
+    */
+
     ///////
     // 7 //
     ///////
     banner("7. Sorting Functions");
-    
+
+    printf("List before sorting:\n");
+    print_list(people_list);
+
     printf("Sorting by age\n");
-    sort(people_list, compare_person_age);
+    sort_list(people_list, compare_person_age);
     print_list(people_list);
     
-    printf("Sorting by age\n");
-    sort(people_list, compare_person_age);
+    printf("Sorting by ID\n");
+    sort_list(people_list, compare_person_id);
     print_list(people_list);
     
     printf("Sorting by name\n");
-    sort(people_list, compare_person_name);
+    sort_list(people_list, compare_person_name);
     printf("List sorted by name (alphabetical):\n");
     print_list(people_list);
     
     
+     /*
+   
     ///////
     // 8 //
     ///////
@@ -538,14 +545,6 @@ int main(void) {
     
     people_list = NULL; // Good practice to avoid dangling pointer
     
-    // Cleanup other lists
-    if (copy_list) destroy(copy_list);
-    if (adults_only) destroy(adults_only);
-    if (older_people) destroy(older_people);
-    if (numbers_list) destroy(numbers_list);
-    if (loaded_numbers) destroy(loaded_numbers);
-    if (numbers_str) free(numbers_str);
-
     printf("\n✓ Demo completed successfully!\n");
     return 0;
 }
