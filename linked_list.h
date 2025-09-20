@@ -1,5 +1,9 @@
 /**
- * @file linked_list.h
+ * @fil * Key Features:
+ * - Simplified field setting: Use set_list_struct_name() once, then set_field()
+ * - Memory management control with set_field_advanced()
+ * - Type safety using offsetof and sizeof
+ * - Backward compatibility with original set_field_legacy() and set_field_advanced_legacy()ked_list.h
  * @author Niv Libovitch
  * @date 25 Aug 2025
  * @brief A generic doubly linked list library in C with simplified field setting API.
@@ -10,7 +14,7 @@
  * contain pointers, custom copy and free functions should be provided.
  * 
  * Key Features:
- * - Simplified field setting: Use set_list_struct_name() once, then set_field_simple()
+ * - Simplified field setting: Use set_list_struct_name() once, then set_field()
  * - Memory management control with set_field_advanced_simple()
  * - Type safety using offsetof and sizeof
  * - Backward compatibility with original set_field() and set_field_advanced()
@@ -190,7 +194,7 @@ void set_copy_function(LinkedList* list, CopyFunction copy_fn);
  * @param list The LinkedList to configure.
  * @param struct_name The name of the struct type (e.g., "Person").
  * 
- * This enables the use of set_field_simple() and set_field_advanced_simple()
+ * This enables the use of set_field() and set_field_advanced_simple()
  * without needing to specify the struct type repeatedly.
  */
 void set_list_struct_name(LinkedList* list, const char* struct_name);
@@ -266,10 +270,10 @@ ListResult set_field_advanced_impl(LinkedList* list, size_t index, size_t field_
     } while(0)
 
 // User-friendly aliases (legacy API - backward compatibility)
-#define set_field(list, index, struct_type, field_name, new_value) \
+#define set_field_legacy(list, index, struct_type, field_name, new_value) \
     set_field_macro(list, index, struct_type, field_name, new_value)
 
-#define set_field_advanced(list, index, struct_type, field_name, new_value, should_free_old, should_alloc_new, data_size) \
+#define set_field_advanced_legacy(list, index, struct_type, field_name, new_value, should_free_old, should_alloc_new, data_size) \
     set_field_advanced_macro(list, index, struct_type, field_name, new_value, should_free_old, should_alloc_new, data_size)
 
 /**
@@ -280,28 +284,66 @@ ListResult set_field_advanced_impl(LinkedList* list, size_t index, size_t field_
  * Currently supports "Person" struct type (can be extended for other types).
  */
 
-// Simplified field setting (no struct type parameter needed)
-#define set_field_simple(list, field_name, index, new_value) \
+// Field setting (no struct type parameter needed)
+#define set_field(list, field_name, index, new_value) \
     do { \
         if (!(list) || !(list)->struct_name) { \
             printf("Error: List or struct_name is NULL\n"); \
             break; \
         } \
         if (strcmp((list)->struct_name, "Person") == 0) { \
-            set_field(list, index, Person, field_name, new_value); \
+            set_field_legacy(list, index, Person, field_name, new_value); \
         } else { \
             printf("Error: Unsupported struct type: %s\n", (list)->struct_name); \
         } \
     } while(0)
 
-#define set_field_advanced_simple(list, field_name, index, new_value, should_free_old, should_alloc_new, data_size) \
+#define set_field_advanced(list, field_name, index, new_value, should_free_old, should_alloc_new, data_size) \
     do { \
         if (!(list) || !(list)->struct_name) { \
             printf("Error: List or struct_name is NULL\n"); \
             break; \
         } \
         if (strcmp((list)->struct_name, "Person") == 0) { \
-            set_field_advanced(list, index, Person, field_name, new_value, should_free_old, should_alloc_new, data_size); \
+            set_field_advanced_legacy(list, index, Person, field_name, new_value, should_free_old, should_alloc_new, data_size); \
+        } else { \
+            printf("Error: Unsupported struct type: %s\n", (list)->struct_name); \
+        } \
+    } while(0)
+
+/**
+ * @brief Node replacement functions - replace entire structs at specific indices.
+ * 
+ * These functions delete the existing element at the specified index and insert
+ * a new one in its place. This is more efficient than updating many fields individually.
+ */
+
+// Function declarations for set_node functionality
+ListResult set_node_value_impl(LinkedList* list, size_t index, const void* new_value);
+ListResult set_node_ptr_impl(LinkedList* list, size_t index, void* new_value);
+
+// Node setting macros
+#define set_node(list, index, new_value) \
+    do { \
+        if (!(list) || !(list)->struct_name) { \
+            printf("Error: List or struct_name is NULL\n"); \
+            break; \
+        } \
+        if (strcmp((list)->struct_name, "Person") == 0) { \
+            set_node_value_impl(list, index, &(new_value)); \
+        } else { \
+            printf("Error: Unsupported struct type: %s\n", (list)->struct_name); \
+        } \
+    } while(0)
+
+#define set_node_ptr(list, index, new_value_ptr) \
+    do { \
+        if (!(list) || !(list)->struct_name) { \
+            printf("Error: List or struct_name is NULL\n"); \
+            break; \
+        } \
+        if (strcmp((list)->struct_name, "Person") == 0) { \
+            set_node_ptr_impl(list, index, new_value_ptr); \
         } else { \
             printf("Error: Unsupported struct type: %s\n", (list)->struct_name); \
         } \

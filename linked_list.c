@@ -980,6 +980,74 @@ ListResult set_field_advanced_impl(LinkedList* list, size_t index, size_t field_
 /*
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
 ┃                                               ┃
+┃             6B. Node Setting Functions        ┃
+┃                                               ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+ */
+
+/**
+ * @brief Replaces an entire element by value at the specified index.
+ * @param list The list to modify.
+ * @param index The index of the element to replace.
+ * @param new_value Pointer to the new value to copy into place.
+ * @return LIST_SUCCESS on success, error code on failure.
+ * 
+ * This function directly replaces the data in the existing node instead of deleting and inserting.
+ * This is more efficient and avoids memory management issues.
+ */
+ListResult set_node_value_impl(LinkedList* list, size_t index, const void* new_value) {
+    if (!list) return LIST_ERROR_NULL_POINTER;
+    if (!new_value) return LIST_ERROR_NULL_POINTER;
+    if (index >= list->length) return LIST_ERROR_INDEX_OUT_OF_BOUNDS;
+    
+    Node* current = find_node_by_index(list, index);
+    if (!current) return LIST_ERROR_INDEX_OUT_OF_BOUNDS;
+    
+    // Free the old data if there's a free function
+    if (list->free_node_function) {
+        list->free_node_function(current->data);
+    }
+    
+    // Copy the new data into the existing node
+    memcpy(current->data, new_value, list->element_size);
+    
+    return LIST_SUCCESS;
+}
+
+/**
+ * @brief Replaces an entire element by pointer at the specified index.
+ * @param list The list to modify.
+ * @param index The index of the element to replace.
+ * @param new_value_ptr Pointer to the new element (ownership transfers to list).
+ * @return LIST_SUCCESS on success, error code on failure.
+ * 
+ * This function directly replaces the data in the existing node with the provided pointer data.
+ */
+ListResult set_node_ptr_impl(LinkedList* list, size_t index, void* new_value_ptr) {
+    if (!list) return LIST_ERROR_NULL_POINTER;
+    if (!new_value_ptr) return LIST_ERROR_NULL_POINTER;
+    if (index >= list->length) return LIST_ERROR_INDEX_OUT_OF_BOUNDS;
+    
+    Node* current = find_node_by_index(list, index);
+    if (!current) return LIST_ERROR_INDEX_OUT_OF_BOUNDS;
+    
+    // Free the old data if there's a free function
+    if (list->free_node_function) {
+        list->free_node_function(current->data);
+    }
+    
+    // Copy the new data from the pointer into the existing node
+    memcpy(current->data, new_value_ptr, list->element_size);
+    
+    // Free the provided pointer since we copied its contents
+    free(new_value_ptr);
+    
+    return LIST_SUCCESS;
+}
+
+/*
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃                                               ┃
 ┃             7. Sorting Functions              ┃
 ┃                                               ┃
 ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛

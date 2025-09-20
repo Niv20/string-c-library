@@ -4,7 +4,7 @@ This is a comprehensive, generic linked list library written in C. It is designe
 
 ## Key Features
 
-- **Simplified Field Setting**: Configure once with `set_list_struct_name()`, then use `set_field_simple()` without repeating the struct type
+- **Simplified Field Setting**: Configure once with `set_list_struct_name()`, then use `set_field()` without repeating the struct type
 - **Memory Management Control**: Advanced field setting with customizable memory allocation and deallocation
 - **Type Safety**: Compile-time type checking using `offsetof` and `sizeof`
 - **Generic Design**: Works with any struct type
@@ -732,14 +732,14 @@ printf("Number of people with short names (10 characters or less): %zu\n", short
 
 The library provides two convenient approaches for setting fields in your structs, with simplified syntax that leverages the struct name you configured.
 
-#### `set_field_simple`
+#### `set_field`
 
-`void set_field_simple(LinkedList* list, field_name, index, new_value);`
+`void set_field(LinkedList* list, field_name, index, new_value);`
 
 This function updates a field of a struct stored at a specific index in the list using simple memory copy (`memcpy`). This is the recommended approach for most use cases, especially for primitive types like `int`, `float`, etc.
 
 > [!NOTE]
-> This function uses simple `memcpy` and does NOT free old memory or allocate new memory. For pointer fields that require memory management, use `set_field_advanced_simple`.
+>> This function uses simple `memcpy` and does NOT free old memory or allocate new memory. For pointer fields that require memory management, use `set_field_advanced`.
 
 **Receives:**
 
@@ -759,18 +759,18 @@ This function updates a field of a struct stored at a specific index in the list
 set_list_struct_name(people_list, "Person");
 
 // Now you can use simplified field setting
-set_field_simple(people_list, age, 0, 99);
-set_field_simple(people_list, id, 0, 5555);
+set_field(people_list, age, 0, 99);
+set_field(people_list, id, 0, 5555);
 
 // For pointer fields - only replaces the pointer value
 char* new_name_ptr = malloc(20);
 strcpy(new_name_ptr, "New Name");
-set_field_simple(people_list, name, 0, new_name_ptr);
+set_field(people_list, name, 0, new_name_ptr);
 ```
 
-#### `set_field_advanced_simple`
+#### `set_field_advanced`
 
-`void set_field_advanced_simple(LinkedList* list, field_name, index, new_value, should_free_old, should_alloc_new, data_size);`
+`void set_field_advanced(LinkedList* list, field_name, index, new_value, should_free_old, should_alloc_new, data_size);`
 
 This function provides full control over memory management when setting pointer fields. It uses the simplified syntax with the struct name from the list configuration.
 
@@ -796,18 +796,77 @@ set_list_struct_name(people_list, "Person");
 
 // Allocate new memory and copy string data
 const char* new_name = "David Parker";
-set_field_advanced_simple(people_list, name, 0, new_name, true, true, strlen(new_name) + 1);
+set_field_advanced(people_list, name, 0, new_name, true, true, strlen(new_name) + 1);
 
 // Just replace pointer (for pre-allocated data)
 char* pre_allocated = malloc(50);
 strcpy(pre_allocated, "Pre-allocated");
-set_field_advanced_simple(people_list, name, 0, pre_allocated, true, false, 0);
+set_field_advanced(people_list, name, 0, pre_allocated, true, false, 0);
 
 // Free old memory and set to NULL
-set_field_advanced_simple(people_list, name, 0, NULL, true, false, 0);
+set_field_advanced(people_list, name, 0, NULL, true, false, 0);
 
-// Simple assignment without memory management (same as set_field_simple)
-set_field_advanced_simple(people_list, age, 0, 30, false, false, 0);
+// Simple assignment without memory management (same as set_field)
+set_field_advanced(people_list, age, 0, 30, false, false, 0);
+```
+
+#### Node Setting Functions (Replace Entire Structs)
+
+For cases where you need to replace many fields in a struct, it's more efficient to replace the entire struct at once rather than updating individual fields.
+
+##### `set_node`
+
+`void set_node(LinkedList* list, index, new_value);`
+
+This function replaces an entire struct at the specified index with a new value.
+
+**Receives:**
+
+- `list`: A pointer to the `LinkedList` (must have struct name set with `set_list_struct_name`).
+- `index`: The index of the element to replace.
+- `new_value`: The new struct value to replace the existing one.
+
+**Example:**
+
+```c
+// First, set the struct name for the list
+set_list_struct_name(people_list, "Person");
+
+// Replace entire struct at index 0
+Person new_person = create_person(9999, "New Person", 50);
+set_node(people_list, 0, new_person);
+```
+
+##### `set_node_ptr`
+
+`void set_node_ptr(LinkedList* list, index, new_value_ptr);`
+
+This function replaces an entire struct at the specified index with data from a heap-allocated pointer.
+
+**Receives:**
+
+- `list`: A pointer to the `LinkedList` (must have struct name set with `set_list_struct_name`).
+- `index`: The index of the element to replace.
+- `new_value_ptr`: Pointer to the new struct data (will be copied and then freed).
+
+**Example:**
+
+```c
+// Replace with heap-allocated data
+Person* heap_person = malloc(sizeof(Person));
+*heap_person = create_person(8888, "Heap Person", 35);
+set_node_ptr(people_list, 0, heap_person);
+// heap_person is automatically freed after copying
+```
+
+> [!TIP]
+> **Legacy API Still Available**: The original functions `set_field()` and `set_field_advanced()` that require the struct type parameter are still available for backward compatibility and advanced use cases where you need to work with multiple struct types in the same code.
+
+<br></br>
+
+## 7. Sorting Functions
+
+### `sort_list`
 ```
 
 > [!TIP]

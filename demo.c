@@ -330,7 +330,7 @@ int main(void) {
     printf("Allocating new memory for name change:\n");
     char* new_name1 = malloc(20);
     strcpy(new_name1, "David Parker");
-    set_field_advanced_simple(people_list, name, 0, new_name1, true, false, 0);  // Use pre-allocated memory
+    set_field_advanced(people_list, name, 0, new_name1, true, false, 0);  // Use pre-allocated memory
     printf("Updated first person: ");
     print_person(get(people_list, 0));
     printf("\n");
@@ -341,6 +341,34 @@ int main(void) {
     printf("Updated second person: ");
     print_person(get(people_list, 1));
     printf("\n");
+    
+    printf("\n3. Node setting examples (replace entire structs):\n");
+    
+    // Example 1: Create a clean new list for node setting demos
+    printf("Creating a clean list for node setting demo:\n");
+    LinkedList* clean_list = create_list(sizeof(Person));
+    set_print_function(clean_list, print_person);
+    set_free_function(clean_list, free_person);
+    set_list_struct_name(clean_list, "Person");
+    
+    // Add some clean data
+    Person clean_person1 = create_person(100, "Original Person 1", 20);
+    Person clean_person2 = create_person(200, "Original Person 2", 30);
+    insert_tail_value(clean_list, clean_person1);
+    insert_tail_value(clean_list, clean_person2);
+    
+    printf("Original clean list:\n");
+    print_list(clean_list);
+    
+    // Now test node setting
+    printf("Replacing entire person at index 0 with new value:\n");
+    Person new_person = create_person(9999, "Replacement Person", 50);
+    set_node(clean_list, 0, new_person);
+    printf("Updated list after node replacement:\n");
+    print_list(clean_list);
+    
+    // Clean up
+    destroy(clean_list);
     
     /*
     ///////
