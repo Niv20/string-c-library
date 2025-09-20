@@ -103,7 +103,7 @@ set_free_function(person_list, free_person);
 ```
 
 ### `set_list_struct_name`
-After setting the print and free functions, you need to set the struct name using `set_list_struct_name()`. This allows you to use the `set_field()` and `set_field_advanced()` functions without needing to specify the struct name each time.
+After setting the print and free functions, you need to set the struct name using `set_list_struct_name()`. This allows you to use the `set_field_value()` and `set_field_ptr()` functions without needing to specify the struct name each time.
 
 ```c
 set_list_struct_name(person_list, "Person");
@@ -710,14 +710,14 @@ size_t short_names_count = count_matching(people_list, has_short_name);
 printf("Number of people with short names (10 characters or less): %zu\n", short_names_count);
 ```
 
-### `set_field`
+### `set_field_value`
 
-`void set_field(LinkedList* list, field_name, index, new_value);`
+`ListResult set_field_value(LinkedList* list, field_name, index, new_value);`
 
 This function updates a field of a struct stored at a specific index in the list. 
 
 > [!NOTE]
->> This function uses simple `memcpy` and does NOT free old memory or allocate new memory. For pointer fields that require memory management, use [`set_field_advanced`](#set_field_advanced).
+>> This function uses simple `memcpy` and does NOT free old memory or allocate new memory. For pointer fields that require memory management, use [`set_field_ptr`](#set_field_ptr).
 
 **Receives:**
 
@@ -728,18 +728,29 @@ This function updates a field of a struct stored at a specific index in the list
 
 **Returns:**
 
-- Nothing.
+- `LIST_SUCCESS` on success, or an error code on failure.
 
 **Example:**
 
 ```c
-set_field(people_list, age, 1, 99);
-set_field(people_list, id, 2, 5555);
+ListResult result = set_field_value(people_list, age, 1, 99);
+if (result == LIST_SUCCESS) {
+    printf("Age updated successfully\n");
+} else {
+    printf("Failed to update age: %s\n", error_string(result));
+}
+
+result = set_field_value(people_list, id, 2, 5555);
+if (result != LIST_SUCCESS) {
+    printf("Failed to update ID: %s\n", error_string(result));
+}
 ```
 
-### `set_field_advanced`
+> **Legacy Support**: The old name `set_field()` still works for backward compatibility but is deprecated.
 
-`void set_field_advanced(LinkedList* list, field_name, index, new_value, should_free_old, should_alloc_new, data_size);`
+### `set_field_ptr`
+
+`ListResult set_field_ptr(LinkedList* list, field_name, index, new_value, should_free_old, should_alloc_new, data_size);`
 
 This function provides full control over memory management when setting pointer fields. It uses the simplified syntax with the struct name from the list configuration.
 
@@ -755,30 +766,39 @@ This function provides full control over memory management when setting pointer 
 
 **Returns:**
 
-- Nothing.
+- `LIST_SUCCESS` on success, or an error code on failure.
 
 **Examples:**
 
 ```c
 // Allocate new memory and copy string data
 const char* new_name = "David Parker";
-set_field_advanced(people_list, name, 0, new_name, true, true, strlen(new_name) + 1);
+ListResult result = set_field_ptr(people_list, name, 0, new_name, true, true, strlen(new_name) + 1);
+if (result != LIST_SUCCESS) {
+    printf("Failed to update name: %s\n", error_string(result));
+}
 
 // Just replace pointer (for pre-allocated data)
 char* pre_allocated = malloc(50);
 strcpy(pre_allocated, "Pre-allocated");
-set_field_advanced(people_list, name, 0, pre_allocated, true, false, 0);
+result = set_field_ptr(people_list, name, 0, pre_allocated, true, false, 0);
+if (result != LIST_SUCCESS) {
+    printf("Failed to update with pre-allocated data: %s\n", error_string(result));
+    free(pre_allocated); // Clean up on failure
+}
 
 // Free old memory and set to NULL
-set_field_advanced(people_list, name, 0, NULL, true, false, 0);
+result = set_field_ptr(people_list, name, 0, NULL, true, false, 0);
 
-// Simple assignment without memory management (same as set_field)
-set_field_advanced(people_list, age, 0, 30, false, false, 0);
+// Simple assignment without memory management (same as set_field_value)
+result = set_field_ptr(people_list, age, 0, 30, false, false, 0);
 ```
 
-#### `set_node`
+> **Legacy Support**: The old name `set_field_advanced()` still works for backward compatibility but is deprecated.
 
-`void set_node(LinkedList* list, index, new_value);`
+### `set_node_value`
+
+`ListResult set_node_value(LinkedList* list, index, new_value);`
 
 This function replaces an entire struct at the specified index with a new value.
 
@@ -791,16 +811,29 @@ This function replaces an entire struct at the specified index with a new value.
 - `index`: The index of the element to replace.
 - `new_value`: The new struct value to replace the existing one.
 
+**Returns:**
+
+- `LIST_SUCCESS` on success, or an error code on failure.
+
 **Example:**
 
 ```c
 Person new_person = create_person(9999, "New Person", 50);
-set_node(people_list, 0, new_person);
+ListResult result = set_node_value(people_list, 0, new_person);
+if (result == LIST_SUCCESS) {
+    printf("Node replaced successfully\n");
+} else {
+    printf("Failed to replace node: %s\n", error_string(result));
+    // Clean up the new_person's allocated memory if operation failed
+    free_person(&new_person);
+}
 ```
 
-#### `set_node_ptr`
+> **Legacy Support**: The old name `set_node()` still works for backward compatibility but is deprecated.
 
-`void set_node_ptr(LinkedList* list, index, new_value_ptr);`
+### `set_node_ptr`
+
+`ListResult set_node_ptr(LinkedList* list, index, new_value_ptr);`
 
 This function replaces an entire struct at the specified index with data from a heap-allocated pointer.
 
@@ -810,25 +843,27 @@ This function replaces an entire struct at the specified index with data from a 
 - `index`: The index of the element to replace.
 - `new_value_ptr`: Pointer to the new struct data (will be copied and then freed).
 
+**Returns:**
+
+- `LIST_SUCCESS` on success, or an error code on failure.
+
 **Example:**
 
 ```c
 // Replace with heap-allocated data
 Person* heap_person = malloc(sizeof(Person));
 *heap_person = create_person(8888, "Heap Person", 35);
-set_node_ptr(people_list, 0, heap_person);
-// heap_person is automatically freed after copying
+ListResult result = set_node_ptr(people_list, 0, heap_person);
+if (result == LIST_SUCCESS) {
+    printf("Node replaced successfully\n");
+    // heap_person is automatically freed after copying
+} else {
+    printf("Failed to replace node: %s\n", error_string(result));
+    // Clean up manually if operation failed
+    free_person(heap_person);
+    free(heap_person);
+}
 ```
-
-<br></br>
-
-## 7. Sorting Functions
-
-### `sort_list`
-```
-
-> [!TIP]
-> **Legacy API Still Available**: The original functions `set_field()` and `set_field_advanced()` that require the struct type parameter are still available for backward compatibility and advanced use cases where you need to work with multiple struct types in the same code.
 
 <br></br>
 

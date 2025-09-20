@@ -318,8 +318,21 @@ int main(void) {
     printf("\n--- Field Setting Examples ---\n");
     printf("1. Simple field setting (using simplified macros):\n");
     printf("Updating the ID and age of first person...\n");
-    set_field(people_list, age, 0, 99);
-    set_field(people_list, id, 0, 5555);
+    
+    ListResult result = set_field_value(people_list, age, 0, 99);
+    if (result == LIST_SUCCESS) {
+        printf("Successfully updated age\n");
+    } else {
+        printf("Failed to update age: %s\n", error_string(result));
+    }
+    
+    result = set_field_value(people_list, id, 0, 5555);
+    if (result == LIST_SUCCESS) {
+        printf("Successfully updated ID\n");
+    } else {
+        printf("Failed to update ID: %s\n", error_string(result));
+    }
+    
     printf("Updated first person: ");
     print_person(get(people_list, 0));
     printf("\n");
@@ -330,14 +343,25 @@ int main(void) {
     printf("Allocating new memory for name change:\n");
     char* new_name1 = malloc(20);
     strcpy(new_name1, "David Parker");
-    set_field_advanced(people_list, name, 0, new_name1, true, false, 0);  // Use pre-allocated memory
+    result = set_field_ptr(people_list, name, 0, new_name1, true, false, 0);  // Use pre-allocated memory
+    if (result == LIST_SUCCESS) {
+        printf("Successfully updated name with pre-allocated memory\n");
+    } else {
+        printf("Failed to update name: %s\n", error_string(result));
+        free(new_name1); // Free if operation failed
+    }
     printf("Updated first person: ");
     print_person(get(people_list, 0));
     printf("\n");
     
     // Example 2: Simple field setting for integer value
     printf("Updating age using simple field setting:\n");
-    set_field(people_list, age, 1, 25);
+    result = set_field_value(people_list, age, 1, 25);
+    if (result == LIST_SUCCESS) {
+        printf("Successfully updated age\n");
+    } else {
+        printf("Failed to update age: %s\n", error_string(result));
+    }
     printf("Updated second person: ");
     print_person(get(people_list, 1));
     printf("\n");
@@ -363,7 +387,14 @@ int main(void) {
     // Now test node setting
     printf("Replacing entire person at index 0 with new value:\n");
     Person new_person = create_person(9999, "Replacement Person", 50);
-    set_node(clean_list, 0, new_person);
+    result = set_node_value(clean_list, 0, new_person);
+    if (result == LIST_SUCCESS) {
+        printf("Successfully replaced entire node\n");
+    } else {
+        printf("Failed to replace node: %s\n", error_string(result));
+        // Clean up the new_person's allocated memory if operation failed
+        free_person(&new_person);
+    }
     printf("Updated list after node replacement:\n");
     print_list(clean_list);
     

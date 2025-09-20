@@ -255,19 +255,19 @@ ListResult set_field_advanced_impl(LinkedList* list, size_t index, size_t field_
 
 // Convenient macros for setting fields in structs
 #define set_field_macro(list, index, struct_type, field_name, new_value) \
-    do { \
+    ({ \
         __typeof__(((struct_type*)0)->field_name) temp_value = (new_value); \
         set_field_impl(list, index, offsetof(struct_type, field_name), \
                   sizeof(((struct_type*)0)->field_name), &temp_value); \
-    } while(0)
+    })
 
 #define set_field_advanced_macro(list, index, struct_type, field_name, new_value, should_free_old, should_alloc_new, data_size) \
-    do { \
+    ({ \
         __typeof__(((struct_type*)0)->field_name) temp_value = (new_value); \
         set_field_advanced_impl(list, index, offsetof(struct_type, field_name), \
                                sizeof(((struct_type*)0)->field_name), &temp_value, \
                                should_free_old, should_alloc_new, data_size); \
-    } while(0)
+    })
 
 // User-friendly aliases (legacy API - backward compatibility)
 #define set_field_legacy(list, index, struct_type, field_name, new_value) \
@@ -285,31 +285,27 @@ ListResult set_field_advanced_impl(LinkedList* list, size_t index, size_t field_
  */
 
 // Field setting (no struct type parameter needed)
-#define set_field(list, field_name, index, new_value) \
-    do { \
-        if (!(list) || !(list)->struct_name) { \
-            printf("Error: List or struct_name is NULL\n"); \
-            break; \
-        } \
-        if (strcmp((list)->struct_name, "Person") == 0) { \
-            set_field_legacy(list, index, Person, field_name, new_value); \
-        } else { \
-            printf("Error: Unsupported struct type: %s\n", (list)->struct_name); \
-        } \
-    } while(0)
+#define set_field_value(list, field_name, index, new_value) \
+    (!(list) || !(list)->struct_name) ? \
+        (printf("Error: List or struct_name is NULL\n"), LIST_ERROR_NULL_POINTER) : \
+    (strcmp((list)->struct_name, "Person") == 0) ? \
+        set_field_legacy(list, index, Person, field_name, new_value) : \
+        (printf("Error: Unsupported struct type: %s\n", (list)->struct_name), LIST_ERROR_INVALID_OPERATION)
 
+// Legacy alias for backward compatibility
+#define set_field(list, field_name, index, new_value) \
+    set_field_value(list, field_name, index, new_value)
+
+#define set_field_ptr(list, field_name, index, new_value, should_free_old, should_alloc_new, data_size) \
+    (!(list) || !(list)->struct_name) ? \
+        (printf("Error: List or struct_name is NULL\n"), LIST_ERROR_NULL_POINTER) : \
+    (strcmp((list)->struct_name, "Person") == 0) ? \
+        set_field_advanced_legacy(list, index, Person, field_name, new_value, should_free_old, should_alloc_new, data_size) : \
+        (printf("Error: Unsupported struct type: %s\n", (list)->struct_name), LIST_ERROR_INVALID_OPERATION)
+
+// Legacy alias for backward compatibility
 #define set_field_advanced(list, field_name, index, new_value, should_free_old, should_alloc_new, data_size) \
-    do { \
-        if (!(list) || !(list)->struct_name) { \
-            printf("Error: List or struct_name is NULL\n"); \
-            break; \
-        } \
-        if (strcmp((list)->struct_name, "Person") == 0) { \
-            set_field_advanced_legacy(list, index, Person, field_name, new_value, should_free_old, should_alloc_new, data_size); \
-        } else { \
-            printf("Error: Unsupported struct type: %s\n", (list)->struct_name); \
-        } \
-    } while(0)
+    set_field_ptr(list, field_name, index, new_value, should_free_old, should_alloc_new, data_size)
 
 /**
  * @brief Node replacement functions - replace entire structs at specific indices.
@@ -323,31 +319,23 @@ ListResult set_node_value_impl(LinkedList* list, size_t index, const void* new_v
 ListResult set_node_ptr_impl(LinkedList* list, size_t index, void* new_value);
 
 // Node setting macros
+#define set_node_value(list, index, new_value) \
+    (!(list) || !(list)->struct_name) ? \
+        (printf("Error: List or struct_name is NULL\n"), LIST_ERROR_NULL_POINTER) : \
+    (strcmp((list)->struct_name, "Person") == 0) ? \
+        set_node_value_impl(list, index, &(new_value)) : \
+        (printf("Error: Unsupported struct type: %s\n", (list)->struct_name), LIST_ERROR_INVALID_OPERATION)
+
+// Legacy alias for backward compatibility
 #define set_node(list, index, new_value) \
-    do { \
-        if (!(list) || !(list)->struct_name) { \
-            printf("Error: List or struct_name is NULL\n"); \
-            break; \
-        } \
-        if (strcmp((list)->struct_name, "Person") == 0) { \
-            set_node_value_impl(list, index, &(new_value)); \
-        } else { \
-            printf("Error: Unsupported struct type: %s\n", (list)->struct_name); \
-        } \
-    } while(0)
+    set_node_value(list, index, new_value)
 
 #define set_node_ptr(list, index, new_value_ptr) \
-    do { \
-        if (!(list) || !(list)->struct_name) { \
-            printf("Error: List or struct_name is NULL\n"); \
-            break; \
-        } \
-        if (strcmp((list)->struct_name, "Person") == 0) { \
-            set_node_ptr_impl(list, index, new_value_ptr); \
-        } else { \
-            printf("Error: Unsupported struct type: %s\n", (list)->struct_name); \
-        } \
-    } while(0)
+    (!(list) || !(list)->struct_name) ? \
+        (printf("Error: List or struct_name is NULL\n"), LIST_ERROR_NULL_POINTER) : \
+    (strcmp((list)->struct_name, "Person") == 0) ? \
+        set_node_ptr_impl(list, index, new_value_ptr) : \
+        (printf("Error: Unsupported struct type: %s\n", (list)->struct_name), LIST_ERROR_INVALID_OPERATION)
 
 ///////
 // 7 //
