@@ -3,7 +3,20 @@
 This is a comprehensive, generic linked list library written in C. It is designed to be type-agnostic by using void pointers for data storage, with a **simplified API for field setting** that eliminates the need to specify struct types repeatedly.
 
 ## Key Features
-להשלים!
+
+- **Generic Data Storage**: Works with any data type using void pointers - store integers, strings, structs, or even custom objects.
+- **Automatic Memory Management**: Handles memory allocation and deallocation for both value-based and pointer-based data storage
+- **Comprehensive Search Capabilities**: Find elements by position, custom criteria, or count matching items with flexible search directions
+- **Mathematical Set Operations**: Built-in support for finding minimum and maximum values, removing duplicates, and performing set intersections and unions
+- **Structural Transformations**: Copy entire lists, combine multiple lists, extract portions, rotate elements, and reverse order
+- **File Input/Output**: Save and load lists in both binary and human-readable text formats with customizable formatting
+- **Array Interoperability**: Seamlessly convert between linked lists and standard C arrays for integration with existing code
+- **Flexible Data Insertion**: Add elements at the beginning, end, or any position using either direct values or pre-allocated pointers
+- **Advanced Element Removal**: Delete single elements or multiple items based on position, criteria, or custom filter functions
+- **Size Control**: Optional capacity limits with configurable behavior when limits are reached
+- **Performance Optimizations**: Efficient bidirectional traversal, in-place operations, and minimal memory overhead
+- **Node-Level Control**: Replace entire data structures or modify individual fields with fine-grained memory management
+- **String Representation**: Convert list contents to formatted strings for debugging, logging, or display purposes
 
 ## Setup for Examples
 
@@ -53,6 +66,25 @@ void free_person(void* data) {
 
 > [!NOTE]
 > If your struct does **not** contain any dynamically allocated fields (such as pointers to memory allocated with `malloc`), you do **not** need to implement the last function at all.
+
+## Debugging and Error Handling
+
+As you will see, most functions in the library return a detailed result code (`ListResult`) that indicates whether the operation succeeded or the reason for failure. This allows you to easily check for errors and handle them appropriately in your code.
+
+You can use the `error_string(result)` function to get a human-readable description of any error code returned by the library. This makes debugging and troubleshooting much easier, as you can quickly identify issues such as invalid indices, memory allocation failures, or missing configuration.
+
+**Example:**
+
+```c
+ListResult result = insert_head_value(people_list, alice);
+if (result != LIST_SUCCESS) {
+    printf("Insertion failed: %s\n", error_string(result));
+}
+```
+
+Most of the time, you will not need to check the return value of every function call, but it is good practice to do so during development and debugging to catch any potential issues early.
+
+To keep the examples short and simple, this documentation does not handle errors or show error handling in the example code.
 
 <br></br>
 
