@@ -193,7 +193,7 @@ int main(void) {
         return 1;
     }
     printf("✓ List created successfully\n");
-    
+        
     ///////
     // 2 //
     ///////
@@ -201,9 +201,9 @@ int main(void) {
     printf("Configuring list with helper functions...\n");
 
     set_print_function(people_list, print_person);
-    // compare_person_id used per-call now
     set_free_function(people_list, free_person);
     set_copy_function(people_list, copy_person);
+    set_list_struct_name(people_list, "Person");
 
     printf("✓ List configured with print, compare, free, and copy functions\n");
     
@@ -314,15 +314,33 @@ int main(void) {
     size_t short_names_count = count_matching(people_list, has_short_name);
     printf("Number of people with short names (10 characters or less): %zu\n", short_names_count);
     
-    // set_field()
-    printf("Updating the ID and the age of first person...\n");
-    set_field(people_list, 0, Person, age, 99);
-    set_field(people_list, 0, Person, id, 5555);
-
-    // set_allocated_field()
-    printf("Updating name of first person...\n");
-    const char* new_name = "David Parker";
-    set_allocated_field(people_list, 0, Person, name, strlen(new_name) + 1, new_name);
+    // Field setting examples
+    printf("\n--- Field Setting Examples ---\n");
+    printf("1. Simple field setting (using simplified macros):\n");
+    printf("Updating the ID and age of first person...\n");
+    set_field(people_list, age, 0, 99);
+    set_field(people_list, id, 0, 5555);
+    printf("Updated first person: ");
+    print_person(get(people_list, 0));
+    printf("\n");
+    
+    printf("\n2. Advanced field setting with memory management:\n");
+    
+    // Example 1: Allocate new memory and copy string data
+    printf("Allocating new memory for name change:\n");
+    char* new_name1 = malloc(20);
+    strcpy(new_name1, "David Parker");
+    set_field_advanced_simple(people_list, name, 0, new_name1, true, false, 0);  // Use pre-allocated memory
+    printf("Updated first person: ");
+    print_person(get(people_list, 0));
+    printf("\n");
+    
+    // Example 2: Simple field setting for integer value
+    printf("Updating age using simple field setting:\n");
+    set_field(people_list, age, 1, 25);
+    printf("Updated second person: ");
+    print_person(get(people_list, 1));
+    printf("\n");
     
     /*
     ///////

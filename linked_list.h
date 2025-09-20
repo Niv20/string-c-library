@@ -2,12 +2,18 @@
  * @file linked_list.h
  * @author Niv Libovitch
  * @date 25 Aug 2025
- * @brief A generic doubly linked list library in C.
+ * @brief A generic doubly linked list library in C with simplified field setting API.
  *
  * This header file defines the public interface for a doubly linked list.
  * It is designed to be type-agnostic by using void pointers and manages memory
  * internally by copying data provided by the user. For complex data types that
  * contain pointers, custom copy and free functions should be provided.
+ * 
+ * Key Features:
+ * - Simplified field setting: Use set_list_struct_name() once, then set_field_simple()
+ * - Memory management control with set_field_advanced_simple()
+ * - Type safety using offsetof and sizeof
+ * - Backward compatibility with original set_field() and set_field_advanced()
  */
 
 #ifndef LINKED_LIST_H
@@ -146,6 +152,9 @@ typedef struct LinkedList {
     size_t element_size;       /**< The size in bytes of the data type stored. */
     size_t max_size;           /**< Maximum number of elements (UNLIMITED = no limit). */
     OverflowBehavior allow_overwrite; /**< Behavior when list reaches max capacity. */
+    
+    // Struct type information
+    char* struct_name;         /**< Name of the struct type stored in this list. */
 
     // User-provided helper functions
     PrintFunction print_node_function;   /**< Function to print an element. */
@@ -175,6 +184,16 @@ LinkedList* create_list(size_t element_size);
 void set_print_function(LinkedList* list, PrintFunction print_fn);
 void set_free_function(LinkedList* list, FreeFunction free_fn);
 void set_copy_function(LinkedList* list, CopyFunction copy_fn);
+
+/**
+ * @brief Sets the struct type name for simplified field setting.
+ * @param list The LinkedList to configure.
+ * @param struct_name The name of the struct type (e.g., "Person").
+ * 
+ * This enables the use of set_field_simple() and set_field_advanced_simple()
+ * without needing to specify the struct type repeatedly.
+ */
+void set_list_struct_name(LinkedList* list, const char* struct_name);
 
 // Size and Overwrite Management
 ListResult set_max_size(LinkedList* list, size_t max_size, OverflowBehavior behavior);
@@ -227,9 +246,10 @@ int index_of_advanced(const LinkedList* list, Direction direction, PredicateFunc
 size_t count_matching(const LinkedList* list, PredicateFunction predicate);
 
 ListResult set_field_impl(LinkedList* list, size_t index, size_t field_offset, size_t field_size, const void* new_value);
-ListResult set_allocated_field_impl(LinkedList* list, size_t index, size_t field_offset, size_t data_size, const void* new_data);
+ListResult set_field_advanced_impl(LinkedList* list, size_t index, size_t field_offset, size_t field_size, 
+                                   const void* new_value, bool should_free_old, bool should_alloc_new, size_t data_size);
 
-// Convenient macros for setting fields in structs (internal names)
+// Convenient macros for setting fields in structs
 #define set_field_macro(list, index, struct_type, field_name, new_value) \
     do { \
         __typeof__(((struct_type*)0)->field_name) temp_value = (new_value); \
@@ -237,15 +257,55 @@ ListResult set_allocated_field_impl(LinkedList* list, size_t index, size_t field
                   sizeof(((struct_type*)0)->field_name), &temp_value); \
     } while(0)
 
-#define set_allocated_field_macro(list, index, struct_type, field_name, data_size, new_data) \
-    set_allocated_field_impl(list, index, offsetof(struct_type, field_name), data_size, new_data)
+#define set_field_advanced_macro(list, index, struct_type, field_name, new_value, should_free_old, should_alloc_new, data_size) \
+    do { \
+        __typeof__(((struct_type*)0)->field_name) temp_value = (new_value); \
+        set_field_advanced_impl(list, index, offsetof(struct_type, field_name), \
+                               sizeof(((struct_type*)0)->field_name), &temp_value, \
+                               should_free_old, should_alloc_new, data_size); \
+    } while(0)
 
-// User-friendly aliases (hide the fact that these are macros)
+// User-friendly aliases (legacy API - backward compatibility)
 #define set_field(list, index, struct_type, field_name, new_value) \
     set_field_macro(list, index, struct_type, field_name, new_value)
 
-#define set_allocated_field(list, index, struct_type, field_name, data_size, new_data) \
-    set_allocated_field_macro(list, index, struct_type, field_name, data_size, new_data)
+#define set_field_advanced(list, index, struct_type, field_name, new_value, should_free_old, should_alloc_new, data_size) \
+    set_field_advanced_macro(list, index, struct_type, field_name, new_value, should_free_old, should_alloc_new, data_size)
+
+/**
+ * @brief Simplified field setting macros that use the struct name from the list.
+ * 
+ * These macros require set_list_struct_name() to be called first to configure
+ * the struct type. They eliminate the need to specify the struct type repeatedly.
+ * Currently supports "Person" struct type (can be extended for other types).
+ */
+
+// Simplified field setting (no struct type parameter needed)
+#define set_field_simple(list, field_name, index, new_value) \
+    do { \
+        if (!(list) || !(list)->struct_name) { \
+            printf("Error: List or struct_name is NULL\n"); \
+            break; \
+        } \
+        if (strcmp((list)->struct_name, "Person") == 0) { \
+            set_field(list, index, Person, field_name, new_value); \
+        } else { \
+            printf("Error: Unsupported struct type: %s\n", (list)->struct_name); \
+        } \
+    } while(0)
+
+#define set_field_advanced_simple(list, field_name, index, new_value, should_free_old, should_alloc_new, data_size) \
+    do { \
+        if (!(list) || !(list)->struct_name) { \
+            printf("Error: List or struct_name is NULL\n"); \
+            break; \
+        } \
+        if (strcmp((list)->struct_name, "Person") == 0) { \
+            set_field_advanced(list, index, Person, field_name, new_value, should_free_old, should_alloc_new, data_size); \
+        } else { \
+            printf("Error: Unsupported struct type: %s\n", (list)->struct_name); \
+        } \
+    } while(0)
 
 ///////
 // 7 //

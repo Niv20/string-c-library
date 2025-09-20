@@ -94,13 +94,40 @@ LinkedList* create_list(size_t element_size) {
     list->element_size = element_size;
     list->max_size = UNLIMITED;                     // Unlimited by default
     list->allow_overwrite = REJECT_NEW_WHEN_FULL;   // Reject new when full by default
+    
+    // Initialize struct name
+    list->struct_name = NULL;
+    
     list->print_node_function = NULL;      
     // Removed compare_node_function field usage.
     list->free_node_function = NULL;       
     list->copy_node_function = NULL;       
 
     return list;
+}
+
+/**
+ * @brief Sets the struct name for the list.
+ * @param list The list to configure.
+ * @param struct_name The name of the struct type.
+ */
+void set_list_struct_name(LinkedList* list, const char* struct_name) {
+    if (!list) return;
+    
+    // Free old struct name if exists
+    if (list->struct_name) {
+        free(list->struct_name);
+        list->struct_name = NULL;
     }
+    
+    // Set new struct name
+    if (struct_name) {
+        list->struct_name = malloc(strlen(struct_name) + 1);
+        if (list->struct_name) {
+            strcpy(list->struct_name, struct_name);
+        }
+    }
+}
     // EOF
 
 
@@ -627,6 +654,11 @@ void destroy(LinkedList* list) {
     free(list->head);
     free(list->tail);
     
+    // Free struct name if allocated
+    if (list->struct_name) {
+        free(list->struct_name);
+    }
+    
     // Finally, free the list manager itself
     free(list);
 }
@@ -844,20 +876,7 @@ size_t count_matching(const LinkedList* list, PredicateFunction predicate) {
  * @note Use this for primitive types and when you manage memory yourself.
  */
 ListResult set_field_impl(LinkedList* list, size_t index, size_t field_offset, size_t field_size, const void* new_value) {
-    if (!list || !new_value) return LIST_ERROR_NULL_POINTER;
-    if (index >= list->length) return LIST_ERROR_INDEX_OUT_OF_BOUNDS;
-    if (field_offset + field_size > list->element_size) return LIST_ERROR_INVALID_OPERATION;
-
-    Node* current = find_node_by_index(list, index);
-    if (!current) return LIST_ERROR_INDEX_OUT_OF_BOUNDS;
-    
-    // Calculate the address of the specific field
-    char* field_ptr = (char*)current->data + field_offset;
-    
-    // Simple memory copy - overwrites whatever was there
-    memcpy(field_ptr, new_value, field_size);
-    
-    return LIST_SUCCESS;
+    return set_field_advanced_impl(list, index, field_offset, field_size, new_value, false, false, 0);
 }
 
 /**
@@ -896,6 +915,63 @@ ListResult set_allocated_field_impl(LinkedList* list, size_t index, size_t field
         }
     } else {
         *ptr_field = NULL;
+    }
+    
+    return LIST_SUCCESS;
+}
+
+/**
+ * @brief Sets a field with advanced memory management control.
+ * @param list The list containing the element.
+ * @param index The index of the element to modify.
+ * @param field_offset The byte offset of the field within the struct.
+ * @param field_size The size of the field in bytes.
+ * @param new_value Pointer to the new value or data.
+ * @param should_free_old Whether to free existing memory (for pointer fields).
+ * @param should_alloc_new Whether to allocate new memory and copy data.
+ * @param data_size Size of data to allocate (when should_alloc_new is true).
+ * @return LIST_SUCCESS on success, error code on failure.
+ */
+ListResult set_field_advanced_impl(LinkedList* list, size_t index, size_t field_offset, size_t field_size, 
+                                   const void* new_value, bool should_free_old, bool should_alloc_new, size_t data_size) {
+    if (!list) return LIST_ERROR_NULL_POINTER;
+    if (index >= list->length) return LIST_ERROR_INDEX_OUT_OF_BOUNDS;
+    if (field_offset + field_size > list->element_size) return LIST_ERROR_INVALID_OPERATION;
+
+    Node* current = find_node_by_index(list, index);
+    if (!current) return LIST_ERROR_INDEX_OUT_OF_BOUNDS;
+    
+    // Handle different memory management modes
+    if (field_size == sizeof(void*) && (should_free_old || should_alloc_new)) {
+        // This is likely a pointer field with memory management
+        void** ptr_field = (void**)((char*)current->data + field_offset);
+        
+        // Free old memory if requested
+        if (should_free_old && *ptr_field) {
+            free(*ptr_field);
+            *ptr_field = NULL;
+        }
+        
+        // Set new value based on allocation mode
+        if (should_alloc_new && new_value && data_size > 0) {
+            // Allocate new memory and copy data
+            *ptr_field = malloc(data_size);
+            if (!*ptr_field) return LIST_ERROR_MEMORY_ALLOC;
+            memcpy(*ptr_field, new_value, data_size);
+        } else if (new_value) {
+            // Just store the provided pointer (could be NULL)
+            // Cast away const since we're storing it as void*
+            *ptr_field = (void*)(uintptr_t)new_value;
+        } else {
+            // Set to NULL
+            *ptr_field = NULL;
+        }
+    } else {
+        // Simple field assignment using memcpy (equivalent to set_field_impl)
+        if (new_value) {
+            char* field_ptr = (char*)current->data + field_offset;
+            memcpy(field_ptr, new_value, field_size);
+        }
     }
     
     return LIST_SUCCESS;
@@ -961,6 +1037,14 @@ static void copy_list_configuration(LinkedList* dest, const LinkedList* src) {
     dest->print_node_function = src->print_node_function;
     dest->free_node_function = src->free_node_function;
     dest->copy_node_function = src->copy_node_function;
+    
+    // Copy struct name
+    if (src->struct_name) {
+        dest->struct_name = malloc(strlen(src->struct_name) + 1);
+        if (dest->struct_name) {
+            strcpy(dest->struct_name, src->struct_name);
+        }
+    }
 }
 
 /**

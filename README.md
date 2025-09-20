@@ -1,6 +1,14 @@
 # Generic Linked List Library in C
 
-This is a comprehensive, generic linked list library written in C. It is designed to be type-agnostic by using void pointers for data storage.
+This is a comprehensive, generic linked list library written in C. It is designed to be type-agnostic by using void pointers for data storage, with a **simplified API for field setting** that eliminates the need to specify struct types repeatedly.
+
+## Key Features
+
+- **Simplified Field Setting**: Configure once with `set_list_struct_name()`, then use `set_field_simple()` without repeating the struct type
+- **Memory Management Control**: Advanced field setting with customizable memory allocation and deallocation
+- **Type Safety**: Compile-time type checking using `offsetof` and `sizeof`
+- **Generic Design**: Works with any struct type
+- **Comprehensive API**: Insert, delete, search, sort, filter, map, and more
 
 ## Setup for Examples
 
@@ -59,7 +67,7 @@ void free_person(void* data) {
 
 `LinkedList* create_list(size_t element_size);`
 
-This is the starting point for using the library. It allocates memory for a new, empty `LinkedList` structure and initializes it.
+This function allocates memory for a new, empty `LinkedList` structure and initializes it.
 
 **Receives:**
 
@@ -78,16 +86,14 @@ LinkedList* person_list = create_list(sizeof(Person));
 
 // Check if the list was created successfully
 if (!person_list) {
-    printf("Failed to create list.\n");
-    return 1;
+    printf("Failed to create list.\n");
+    return 1;
 }
 printf("Successfully created a list for Person objects.\n");
 ```
 
 > [!NOTE] 
-> This function sets up dummy head and tail nodes, to simplify the logic for all other list operations by ensuring that every "real" node is always between two other nodes.
-
-This function only creates the list. It is currently "empty" (except for the dummy nodes, of course). Later, we will learn how to [add elements to it](#3-insertion-in-linked-list).
+> This function sets up dummy head and tail nodes, to simplify the logic for all other list operations by ensuring that every "real" node is always between two other nodes.This function only creates the list. It is currently "empty" (except for the dummy nodes, of course). Later, we will learn how to [add elements to it](#3-insertion-in-linked-list).
 
 <br></br>
 
@@ -99,6 +105,27 @@ Before using the list, you need to configure it with the appropriate [helper fun
 // Essential configuration
 set_print_function(person_list, print_person);
 set_free_function(person_list, free_person);
+
+// Set struct name for simplified field setting
+set_list_struct_name(person_list, "Person");
+```
+
+### `set_list_struct_name`
+
+`void set_list_struct_name(LinkedList* list, const char* struct_name);`
+
+This function sets the struct type name for the list, which enables simplified field setting without specifying the struct type repeatedly.
+
+**Receives:**
+
+- `list`: A pointer to the `LinkedList`.
+- `struct_name`: The name of the struct type (e.g., "Person").
+
+**Example:**
+
+```c
+// Set the struct name for simplified field access
+set_list_struct_name(person_list, "Person");
 ```
 
 Additionally, you can set a maximum size limit for your list using `set_max_size()`. This function is particularly useful when implementing caches or buffers that shouldn't grow indefinitely. You can specify the maximum number of elements allowed (or `UNLIMITED` for no limit), and choose the behavior when the list reaches capacity - either reject new insertions or automatically delete the oldest elements to make room.
@@ -701,21 +728,24 @@ size_t short_names_count = count_matching(people_list, has_short_name);
 printf("Number of people with short names (10 characters or less): %zu\n", short_names_count);
 ```
 
-### `set_field`
+### Field Setting Functions
 
-`void set_field(LinkedList* list, size_t index, struct_type, field_name, new_value);`
+The library provides two convenient approaches for setting fields in your structs, with simplified syntax that leverages the struct name you configured.
 
-This function updates a primitive field (such as `int`, `double`, `char`, etc.) of a struct stored at a specific index in the list. It performs a simple copy operation using `memcpy`.
+#### `set_field_simple`
+
+`void set_field_simple(LinkedList* list, field_name, index, new_value);`
+
+This function updates a field of a struct stored at a specific index in the list using simple memory copy (`memcpy`). This is the recommended approach for most use cases, especially for primitive types like `int`, `float`, etc.
 
 > [!NOTE]
-> If the field you want to update is a pointer that requires dynamic memory allocation (like a `char*` for unknown length strings), you should use the [next function](#set_allocated_field) `set_allocated_field`.
+> This function uses simple `memcpy` and does NOT free old memory or allocate new memory. For pointer fields that require memory management, use `set_field_advanced_simple`.
 
 **Receives:**
 
-- `list`: A pointer to the `LinkedList`.
-- `index`: The index of the element to modify.
-- `struct_type`: The type of struct being modified (e.g., `Person`).
+- `list`: A pointer to the `LinkedList` (must have struct name set with `set_list_struct_name`).
 - `field_name`: The name of the field to update.
+- `index`: The index of the element to modify.
 - `new_value`: The new value to assign to the field.
 
 **Returns:**
@@ -725,38 +755,63 @@ This function updates a primitive field (such as `int`, `double`, `char`, etc.) 
 **Example:**
 
 ```c
-set_field(people_list, 0, Person, age, 99);
-set_field(people_list, 0, Person, id, 5555);
+// First, set the struct name for the list
+set_list_struct_name(people_list, "Person");
+
+// Now you can use simplified field setting
+set_field_simple(people_list, age, 0, 99);
+set_field_simple(people_list, id, 0, 5555);
+
+// For pointer fields - only replaces the pointer value
+char* new_name_ptr = malloc(20);
+strcpy(new_name_ptr, "New Name");
+set_field_simple(people_list, name, 0, new_name_ptr);
 ```
 
-### `set_allocated_field`
+#### `set_field_advanced_simple`
 
-`void set_allocated_field(LinkedList* list, size_t index, struct_type, field_name, data_size, new_data);`
+`void set_field_advanced_simple(LinkedList* list, field_name, index, new_value, should_free_old, should_alloc_new, data_size);`
 
-This function updates a field that requires dynamic memory allocation (such as strings or arrays). It automatically frees the old allocated memory and allocates new memory for the new data. This is typically used for `char*` fields or other pointer fields that own their memory.
-
-> [!NOTE]
-> If inside your allocated field you have another pointer that also requires dynamic memory allocation, you must handle that manually in your own code before calling this function. The `set_allocated_field` function only manages the memory for the top-level field you are updating.
+This function provides full control over memory management when setting pointer fields. It uses the simplified syntax with the struct name from the list configuration.
 
 **Receives:**
 
-- `list`: A pointer to the `LinkedList`.
-- `index`: The index of the element to modify.
-- `struct_type`: The type of struct being modified (e.g., `Person`).
+- `list`: A pointer to the `LinkedList` (must have struct name set with `set_list_struct_name`).
 - `field_name`: The name of the field to update.
-- `data_size`: The size in bytes of the new data to allocate.
-- `new_data`: A pointer to the new data to copy.
+- `index`: The index of the element to modify.
+- `new_value`: The new value or data to assign.
+- `should_free_old`: `true` to free existing memory, `false` to leave it.
+- `should_alloc_new`: `true` to allocate new memory and copy data, `false` to use provided pointer.
+- `data_size`: Size of data to allocate (when `should_alloc_new` is `true`).
 
 **Returns:**
 
 - Nothing.
 
-**Example:**
+**Examples:**
 
 ```c
+// First, set the struct name for the list
+set_list_struct_name(people_list, "Person");
+
+// Allocate new memory and copy string data
 const char* new_name = "David Parker";
-set_allocated_field(people_list, 0, Person, name, strlen(new_name) + 1, new_name);
+set_field_advanced_simple(people_list, name, 0, new_name, true, true, strlen(new_name) + 1);
+
+// Just replace pointer (for pre-allocated data)
+char* pre_allocated = malloc(50);
+strcpy(pre_allocated, "Pre-allocated");
+set_field_advanced_simple(people_list, name, 0, pre_allocated, true, false, 0);
+
+// Free old memory and set to NULL
+set_field_advanced_simple(people_list, name, 0, NULL, true, false, 0);
+
+// Simple assignment without memory management (same as set_field_simple)
+set_field_advanced_simple(people_list, age, 0, 30, false, false, 0);
 ```
+
+> [!TIP]
+> **Legacy API Still Available**: The original functions `set_field()` and `set_field_advanced()` that require the struct type parameter are still available for backward compatibility and advanced use cases where you need to work with multiple struct types in the same code.
 
 <br></br>
 
