@@ -1169,7 +1169,7 @@ Creates a new list by applying a transformation function to every element of the
 ```c
 // A map function to get the age from a Person and store it as an int
 void get_age(void* dest, const void* src) {
-    *(int*)dest = ((Person*)src)->age;
+    *(int*)dest = ((Person*)src)->age;
 }
 
 LinkedList* person_list = create_list(sizeof(Person));
@@ -1177,12 +1177,7 @@ LinkedList* person_list = create_list(sizeof(Person));
 // Create a new list containing only the ages
 LinkedList* age_list = list_map(person_list, get_age, sizeof(int));
 // 'age_list' is a new list of ints: [30, 25]
-destroy(num_list);
-```
-
-<br></br>
-
-## 11. List <--> String / File
+destroy(person_list);
 destroy(age_list);
 ```
 
@@ -1190,16 +1185,17 @@ destroy(age_list);
 
 ## 9. Mathematical Functions
 
-### `list_min` / `list_max`
+### `min_by` / `max_by`
 
 `void* min_by(const LinkedList* list, int (*compare)(const void *a, const void *b));`
 `void* max_by(const LinkedList* list, int (*compare)(const void *a, const void *b));`
 
-These functions find the minimum or maximum element in the list, respectively. They require a compare function to be set to determine the ordering.
+These functions find the minimum or maximum element in the list, respectively. They require a compare function to determine the ordering.
 
 **Receives:**
 
 - `list`: The list to search in.
+- `compare`: A function that compares two elements and returns a negative, zero, or positive value.
 
 **Returns:**
 
@@ -1208,26 +1204,33 @@ These functions find the minimum or maximum element in the list, respectively. T
 **Example:**
 
 ```c
-LinkedList* list = create_list(sizeof(Person));
-set_compare_function(list, compare_person_age);
-// ... add Alice (30), Bob (25), Charlie (35) ...
-Person* youngest = (Person*)list_min(list);
-Person* oldest = (Person*)list_max(list);
-if (youngest && oldest) {
-    printf("Youngest: %s, Oldest: %s\n", youngest->name, oldest->name);
+// Compare function for Person age
+int compare_person_age(const void* a, const void* b) {
+    const Person* p1 = (const Person*)a;
+    const Person* p2 = (const Person*)b;
+    return (p1->age - p2->age);
 }
-destroy(list);
+
+LinkedList* person_list = create_list(sizeof(Person));
+// ... add Alice (30), Bob (25), Charlie (35) ...
+Person* youngest = (Person*)min_by(person_list, compare_person_age);
+Person* oldest = (Person*)max_by(person_list, compare_person_age);
+if (youngest && oldest) {
+    printf("Youngest: %s, Oldest: %s\n", youngest->name, oldest->name);
+}
+destroy(person_list);
 ```
 
-### `list_unique`
+### `unique`
 
 `LinkedList* unique(const LinkedList* list, CompareFunction compare_fn);`
 
-This function creates a new list containing only the unique elements from the original list. It preserves the order of the first occurrence of each element. Requires a compare function.
+This function creates a new list containing only the unique elements from the original list. It preserves the order of the first occurrence of each element.
 
 **Receives:**
 
 - `list`: The source list.
+- `compare_fn`: A function to compare elements for equality.
 
 **Returns:**
 
@@ -1236,36 +1239,308 @@ This function creates a new list containing only the unique elements from the or
 **Example:**
 
 ```c
-// Assume a compare_int function exists for comparing integers
+// Compare function for integers
 int compare_int(const void* a, const void* b) {
-    return (*(int*)a - *(int*)b);
+    return (*(int*)a - *(int*)b);
 }
 
 LinkedList* list = create_list(sizeof(int));
-set_compare_function(list, compare_int);
 int nums[] = {10, 20, 10, 30, 20, 10};
-// array_to_list(list, nums, 6);
+from_array(list, nums, 6);
 // List: [10, 20, 10, 30, 20, 10]
-LinkedList* unique_list = list_unique(list);
+LinkedList* unique_list = unique(list, compare_int);
 // 'unique_list' is a new list: [10, 20, 30]
 destroy(list);
 destroy(unique_list);
 ```
 
-### `list_intersection`
+### `intersection`
 
 `LinkedList* intersection(const LinkedList* list1, const LinkedList* list2, CompareFunction compare_fn);`
 
-This function creates a new list containing only the elements that are present in both input lists. Requires a compare function.
+This function creates a new list containing only the elements that are present in both input lists.
 
 **Receives:**
 
 - `list1`: The first list.
 - `list2`: The second list.
+- `compare_fn`: A function to compare elements for equality.
 
 **Returns:**
 
 - A new `LinkedList` with the common elements, or `NULL` on failure.
+
+**Example:**
+
+```c
+// Compare function for integers
+int compare_int(const void* a, const void* b) {
+    return (*(int*)a - *(int*)b);
+}
+
+LinkedList* list1 = create_list(sizeof(int)); // Contains [10, 20, 30]
+LinkedList* list2 = create_list(sizeof(int)); // Contains [20, 40, 30]
+// ... populate lists ...
+LinkedList* intersection_list = intersection(list1, list2, compare_int);
+// 'intersection_list' is a new list: [20, 30]
+destroy(list1);
+destroy(list2);
+destroy(intersection_list);
+```
+
+### `union_lists`
+
+`LinkedList* union_lists(const LinkedList* list1, const LinkedList* list2, CompareFunction compare_fn);`
+
+This function creates a new list containing all unique elements from both input lists combined.
+
+**Receives:**
+
+- `list1`: The first list.
+- `list2`: The second list.
+- `compare_fn`: A function to compare elements for equality.
+
+**Returns:**
+
+- A new `LinkedList` with the union of elements, or `NULL` on failure.
+
+**Example:**
+
+```c
+// Compare function for integers
+int compare_int(const void* a, const void* b) {
+    return (*(int*)a - *(int*)b);
+}
+
+LinkedList* list1 = create_list(sizeof(int)); // Contains [10, 20, 30]
+LinkedList* list2 = create_list(sizeof(int)); // Contains [20, 40, 30]
+// ... populate lists ...
+LinkedList* union_list = union_lists(list1, list2, compare_int);
+// 'union_list' is a new list: [10, 20, 30, 40]
+destroy(list1);
+destroy(list2);
+destroy(union_list);
+```
+
+<br></br>
+
+## 10. List \<--\> Array
+
+### `from_array`
+
+`ListResult from_array(LinkedList* list, const void* arr, size_t n);`
+
+This function clears a list and then populates it with all the elements from a standard C array.
+
+**Receives:**
+
+- `list`: The list to populate.
+- `arr`: A pointer to the array data.
+- `n`: The number of elements in the array.
+
+**Returns:**
+
+- `LIST_SUCCESS` on success.
+
+**Example:**
+
+```c
+int numbers[] = {10, 20, 30, 40};
+LinkedList* num_list = create_list(sizeof(int));
+from_array(num_list, numbers, 4);
+// num_list now contains [10, 20, 30, 40]
+destroy(num_list);
+```
+
+### `to_array`
+
+`void* to_array(const LinkedList* list, size_t* out_size);`
+
+Converts the entire linked list into a newly allocated contiguous C array. Useful for interoperability with APIs that expect raw arrays.
+
+**Receives:**
+
+- `list`: The list to convert.
+- `out_size`: A pointer to a `size_t` where the number of elements in the new array will be stored.
+
+**Returns:**
+
+- A `void*` pointer to the newly allocated array.
+
+**Note:** The caller is responsible for freeing this array.
+
+**Example:**
+
+```c
+LinkedList* num_list = create_list(sizeof(int));
+// ... num_list contains [10, 20, 30, 40] ...
+size_t array_size;
+int* new_array = (int*)to_array(num_list, &array_size);
+if (new_array) {
+    printf("Array has %zu elements. First element: %d\n", array_size, new_array[0]);
+    free(new_array); // Don't forget to free!
+}
+destroy(num_list);
+```
+
+<br></br>
+
+## 11. List \<--\> String / File
+
+### `to_string`
+
+`char* to_string(const LinkedList* list, const char* separator);`
+
+Converts the list into a single heap‑allocated string with a custom separator. Intended for primitive element sizes (int / double / char). Other element sizes become the token `[data]` (not a complete reversible serialization).
+
+**Receives:**
+
+- `list`: The list to convert.
+- `separator`: The string to place between elements.
+
+**Returns:**
+
+- A newly allocated string. The caller is responsible for freeing it.
+
+**Example:**
+
+```c
+LinkedList* list = create_list(sizeof(int));
+int nums[] = {10, 20, 30};
+from_array(list, nums, 3);
+char* str = to_string(list, ", ");
+if (str) {
+    printf("List as string: %s\n", str); // Output: 10, 20, 30
+    free(str);
+}
+destroy(list);
+```
+
+### `save_to_file`
+
+`ListResult save_to_file(const LinkedList* list, const char* filename, FileFormat format, const char* separator);`
+
+Saves the list to a file in the specified format.
+
+**Receives:**
+
+- `list`: The list to save.
+- `filename`: The name of the file to create.
+- `format`: `FILE_FORMAT_BINARY` or `FILE_FORMAT_TEXT`.
+- `separator`: For text format - string between elements (default "\n"). For binary format - ignored.
+
+**Returns:**
+
+- `LIST_SUCCESS` on success, or an error code on failure.
+
+**Binary layout:**
+```
+[size_t length][size_t element_size][raw bytes...]
+```
+
+**Text mode rules:**
+- `int` / `double` / `char` → written as readable values.
+- Other sizes → Hex dump (space-separated bytes) when using whitespace tokenization.
+
+**Example (text save):**
+
+```c
+LinkedList* numbers = create_list(sizeof(int));
+for (int i = 1; i <= 5; ++i) insert_tail_value(numbers, i);
+ListResult r = save_to_file(numbers, "numbers.txt", FILE_FORMAT_TEXT, "\n");
+if (r == LIST_SUCCESS) {
+    printf("File saved successfully\n");
+}
+destroy(numbers);
+```
+
+**Example (binary save):**
+
+```c
+LinkedList* numbers = create_list(sizeof(int));
+for (int i = 1; i <= 5; ++i) insert_tail_value(numbers, i);
+ListResult r = save_to_file(numbers, "numbers.bin", FILE_FORMAT_BINARY, NULL);
+if (r == LIST_SUCCESS) {
+    printf("Binary file saved successfully\n");
+}
+destroy(numbers);
+```
+
+### `load_from_file`
+
+`LinkedList* load_from_file(const char* filename, size_t element_size, FileFormat format, const char* separator, PrintFunction print_fn, CompareFunction compare_fn, FreeFunction free_fn, CopyFunction copy_fn);`
+
+Loads a new list from a file (Binary or Text).
+
+**Receives:**
+
+- `filename`: The name of the file to load.
+- `element_size`: The size of each element to load.
+- `format`: `FILE_FORMAT_BINARY` or `FILE_FORMAT_TEXT`.
+- `separator`: For text format - separator string (NULL/"" means whitespace tokens).
+- `print_fn`: Optional print function for the new list.
+- `compare_fn`: Optional compare function for the new list.
+- `free_fn`: Optional free function for the new list.
+- `copy_fn`: Optional copy function for the new list.
+
+**Returns:**
+
+- A new `LinkedList` on success, or `NULL` on failure.
+
+**Text parsing modes:**
+1. `separator == NULL || separator[0] == '\0'` → parses by whitespace/lines. Supports hex for non-primitive types.
+2. Custom `separator` (e.g., ",") → currently supports only int/double/char (no hex in this mode).
+
+**Example (text load):**
+
+```c
+LinkedList* loaded = load_from_file("numbers.txt", sizeof(int),
+                                    FILE_FORMAT_TEXT, "\n",
+                                    NULL, NULL, NULL, NULL);
+if (loaded) {
+    print_list(loaded);
+    destroy(loaded);
+}
+```
+
+**Example (binary load):**
+
+```c
+LinkedList* loaded = load_from_file("numbers.bin", sizeof(int), 
+                                    FILE_FORMAT_BINARY, NULL,
+                                    NULL, NULL, NULL, NULL);
+if (loaded) {
+    print_list(loaded);
+    destroy(loaded);
+}
+```
+
+**Custom separator example:**
+
+Save and load values as comma-separated in a single line:
+
+```c
+LinkedList* ids = create_list(sizeof(int));
+for (int i = 100; i <= 105; ++i) insert_tail_value(ids, i);
+
+// Write as: 100,101,102,103,104,105 (single line + '\n' at end)
+save_to_file(ids, "ids.csv", FILE_FORMAT_TEXT, ",");
+destroy(ids);
+
+// Load back using the SAME separator string
+LinkedList* loaded_ids = load_from_file("ids.csv", sizeof(int), FILE_FORMAT_TEXT, ",",
+                                        NULL, NULL, NULL, NULL);
+if (loaded_ids) {
+    printf("Loaded (comma-separated):\n");
+    print_list(loaded_ids);
+    destroy(loaded_ids);
+}
+```
+
+**Notes:**
+- Binary format is not architecture-neutral (endianness / size_t).
+- If you change the separator between writing and reading, you'll get incorrect parsing.
+- In custom separator mode (not whitespace), there's currently no support for hex for complex types – only int/double/char.- A new `LinkedList` with the common elements, or `NULL` on failure.
 
 **Example:**
 
@@ -1320,110 +1595,7 @@ destroy(list2);
 destroy(union_list);
 ```
 
-<br></br>
-
-## 10. List <--> Array
-```
-
-
-
-## 10. List \<--\> Array
-
-### `array_to_list`
-
-`ListResult from_array(LinkedList* list, const void* arr, size_t n);`
-
-This function clears a list and then populates it with all the elements from a standard C array.
-
-**Receives:**
-
-- `list`: The list to populate.
-- `arr`: A pointer to the array data.
-- `n`: The number of elements in the array.
-
-**Returns:**
-
-- `LIST_SUCCESS` on success.
-
-**Example:**
-
-```c
-int numbers[] = {10, 20, 30, 40};
-LinkedList* num_list = create_list(sizeof(int));
-// array_to_list(num_list, numbers, 4);
-// num_list now contains [10, 20, 30, 40]
-destroy(num_list);
-```
-
-### `to_array`
-
-`void* to_array(const LinkedList* list, size_t* out_size);`
-
-Converts the entire linked list into a newly allocated contiguous C array. Useful for interoperability with APIs that expect raw arrays.
-
-**Receives:**
-
-- `list`: The list to convert.
-- `out_size`: A pointer to a `size_t` where the number of elements in the new array will be stored.
-
-**Returns:**
-
-- A `void*` pointer to the newly allocated array.
-
-**Note:** The caller is responsible for freeing this array.
-
-**Example:**
-
-```c
-LinkedList* num_list = create_list(sizeof(int));
-// ... num_list contains [10, 20, 30, 40] ...
-size_t array_size;
-int* new_array = (int*)to_array(num_list, &array_size);
-if (new_array) {
-    printf("Array has %zu elements. First element: %d\n", array_size, new_array[0]);
-    free(new_array); // Don't forget to free!
-}
-destroy(num_list);
-```
-
-
-
-## 11. List \<--\> String / File
-
-### `to_string`
-
-`char* to_string(const LinkedList* list, const char* separator);`
-
-Converts the list into a single heap‑allocated string with a custom separator. Intended for primitive element sizes (int / double / char). Other element sizes become the token `[data]` (לא סיריאליזציה הפיכה מלאה).
-
-**Receives:**
-
-- `list`: The list to convert.
-- `separator`: The string to place between elements.
-
-**Returns:**
-
-- A newly allocated string. The caller is responsible for freeing it.
-
-**Example:**
-
-```c
-LinkedList* list = create_list(sizeof(int));
-int nums[] = {10, 20, 30};
-// array_to_list(list, nums, 3);
-char* str = to_string(list, ", ");
-if (str) {
-    printf("List as string: %s\n", str); // Output: 10, 20, 30
-    free(str);
-}
-destroy(list);
-```
-
-### `save_to_file` (Unified: Binary / Text)
-
-`ListResult save_to_file(const LinkedList* list, const char* filename, FileFormat format, const char* separator);`
-
-שומר את הרשימה לקובץ בפורמט הנבחר.
+<br></br>שומר את הרשימה לקובץ בפורמט הנבחר.
 
 Signature:
 ```c
@@ -1475,39 +1647,45 @@ Text parsing modes:
 1. `separator == NULL || separator[0] == '\0'` → מפרק לפי רווחים/שורות. תומך גם ב‑hex לטיפוסים לא פרימיטיביים.
 2. `separator` מותאם (למשל ",") → תומך כרגע רק ב‑int/double/char (בלי hex במצב זה).
 
-Example (text load):
+**Example (text load):**
+
 ```c
 LinkedList* loaded = load_from_file("numbers.txt", sizeof(int),
                                     FILE_FORMAT_TEXT, "\n",
-                                    print_int, NULL, NULL, NULL);
+                                    NULL, NULL, NULL, NULL);
 if (loaded) {
     print_list(loaded);
     destroy(loaded);
 }
 ```
 
-Binary example (same API, different flag):
+**Example (binary load):**
+
 ```c
-save_to_file(numbers, "numbers.bin", FILE_FORMAT_BINARY, NULL);
-LinkedList* again = load_from_file("numbers.bin", sizeof(int), FILE_FORMAT_BINARY,
-                                   NULL, print_int, NULL, NULL, NULL);
+LinkedList* loaded = load_from_file("numbers.bin", sizeof(int), 
+                                    FILE_FORMAT_BINARY, NULL,
+                                    NULL, NULL, NULL, NULL);
+if (loaded) {
+    print_list(loaded);
+    destroy(loaded);
+}
 ```
 
-### Custom separator (Comma) Example
+**Custom separator example:**
 
-שמירה וטעינה כשכל הערכים נמצאים בשורה אחת ומופרדים בפסיקים:
+Save and load values as comma-separated in a single line:
 
 ```c
 LinkedList* ids = create_list(sizeof(int));
 for (int i = 100; i <= 105; ++i) insert_tail_value(ids, i);
 
-// Write as: 100,101,102,103,104,105 (שורה אחת + '\n' בסוף אם המפריד לא מכיל אותו)
+// Write as: 100,101,102,103,104,105 (single line + '\n' at end)
 save_to_file(ids, "ids.csv", FILE_FORMAT_TEXT, ",");
 destroy(ids);
 
 // Load back using the SAME separator string
 LinkedList* loaded_ids = load_from_file("ids.csv", sizeof(int), FILE_FORMAT_TEXT, ",",
-                                        print_int, NULL, NULL, NULL);
+                                        NULL, NULL, NULL, NULL);
 if (loaded_ids) {
     printf("Loaded (comma-separated):\n");
     print_list(loaded_ids);
@@ -1515,10 +1693,7 @@ if (loaded_ids) {
 }
 ```
 
-הערות:
-- אם תשנה מפריד בין כתיבה לקריאה תקבל פירוק שגוי.
-- במצב מפריד מותאם (לא רווחים) אין כרגע תמיכה ב‑hex עבור טיפוסים מורכבים – רק int/double/char.
-
-Notes / Future ideas:
-- פורמט בינארי אינו נייטרלי לארכיטקטורה (endianness / size_t).
-- לשיפור: Magic header + גרסת פורמט, המרת endian קבועה, checksum.
+**Notes:**
+- Binary format is not architecture-neutral (endianness / size_t).
+- If you change the separator between writing and reading, you'll get incorrect parsing.
+- In custom separator mode (not whitespace), there's currently no support for hex for complex types – only int/double/char.
